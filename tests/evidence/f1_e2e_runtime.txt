@@ -6,13 +6,13 @@ Target: Real Supabase DEV PostgreSQL at 127.0.0.1:54322
 [SETUP] Synthetic User A & Settings initialized in Supabase DEV
 
 1. RUNNING E2E-A / WF-TEST-002 (Canonical Task Creation):
-   [PASS] E2E-A / WF-TEST-002: Tarea Ãºnica persistida (7759c93d-972b-4546-b9d8-7fe7bd413613) con vencimiento Mon Aug 31 2026 00:00:00 GMT-0300 (hora estÃ¡ndar de Argentina) 15:00:00 y entidad vinculada
+   [PASS] E2E-A / WF-TEST-002: Tarea Ãºnica persistida (75c2a1f2-ffe1-4956-a51b-c68282ffb19f) con vencimiento Mon Aug 31 2026 00:00:00 GMT-0300 (hora estÃ¡ndar de Argentina) 15:00:00 y entidad vinculada
 
 2. RUNNING E2E-B / WF-TEST-004 (Task without Time - DATE-* Rule):
    [PASS] E2E-B / WF-TEST-004: Tarea creada con due_date=Wed Sep 02 2026 00:00:00 GMT-0300 (hora estÃ¡ndar de Argentina), time_known=false, due_time=NULL, due_at=NULL (sin 00:00 inventado)
 
 3. RUNNING E2E-C / WF-TEST-003 (Ambiguous Person & Clarification):
-   [PASS] E2E-C Step 1: Clarification creada pendiente (74c80ce9-3c7a-4c10-9a4c-97f369177b42) sin mutaciÃ³n errÃ³nea de tarea
+   [PASS] E2E-C Step 1: Clarification creada pendiente (be9c1a88-d484-42a9-921f-8e113aa14f07) sin mutaciÃ³n errÃ³nea de tarea
    [PASS] E2E-C / WF-TEST-003 Step 2: Clarification resuelta con Ã©xito -> Juan PÃ©rez asignado inequÃ­vocamente
 
 4. RUNNING E2E-D (Interleaved Query with Active Clarification):

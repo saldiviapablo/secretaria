@@ -249,31 +249,23 @@ BEGIN
         LOOP
             v_task_title := v_task_elem->>'title';
             v_task_desc := v_task_elem->>'description';
+            v_time_known := COALESCE((v_task_elem->>'time_known')::boolean, false);
+
+            -- Strict Date Extraction
             v_due_date := NULL;
             IF v_task_elem->>'resolved_date_candidate' IS NOT NULL AND pg_catalog.btrim(v_task_elem->>'resolved_date_candidate') <> '' THEN
-                IF (v_task_elem->>'resolved_date_candidate') LIKE '%T%' THEN
-                    v_due_date := (pg_catalog.split_part(v_task_elem->>'resolved_date_candidate', 'T', 1))::date;
-                ELSE
-                    v_due_date := (v_task_elem->>'resolved_date_candidate')::date;
-                END IF;
+                v_due_date := (v_task_elem->>'resolved_date_candidate')::date;
             END IF;
 
-            v_time_known := COALESCE((v_task_elem->>'time_known')::boolean, false);
+            -- Strict Time Extraction
             v_due_time := NULL;
-            IF v_time_known AND v_task_elem->>'time_candidate' IS NOT NULL AND pg_catalog.btrim(v_task_elem->>'time_candidate') <> '' THEN
-                DECLARE
-                    v_raw_time text := pg_catalog.btrim(v_task_elem->>'time_candidate');
-                    v_clean_time text;
-                BEGIN
-                    IF v_raw_time LIKE '%T%' THEN
-                        v_clean_time := pg_catalog.split_part(pg_catalog.split_part(pg_catalog.split_part(v_raw_time, 'T', 2), '-', 1), '+', 1);
-                    ELSE
-                        v_clean_time := pg_catalog.split_part(pg_catalog.split_part(v_raw_time, '-', 1), '+', 1);
-                    END IF;
-                    v_due_time := v_clean_time::time;
-                EXCEPTION WHEN OTHERS THEN
-                    v_due_time := NULL;
-                END;
+            IF v_time_known THEN
+                IF v_task_elem->>'time_candidate' IS NULL OR pg_catalog.btrim(v_task_elem->>'time_candidate') = '' THEN
+                    RAISE EXCEPTION 'Invalid task: time_known is true but time_candidate is null or empty';
+                END IF;
+                v_due_time := (v_task_elem->>'time_candidate')::time;
+            ELSE
+                v_due_time := NULL;
             END IF;
 
             v_priority := COALESCE(v_task_elem->>'priority', 'normal');

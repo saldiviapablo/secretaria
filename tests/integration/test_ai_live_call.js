@@ -93,14 +93,33 @@ ${testInput}
     req.end();
   });
 
-  console.log('[2/4] Live response received. Validating Structured Output...');
+  console.log('[2/4] Live response received. Validating Structured Output & Temporal Constraints...');
   const contentStr = responseBody.choices[0].message.content;
   const parsedStructured = JSON.parse(contentStr);
 
   if (parsedStructured.intent !== 'create_task') {
     throw new Error(`Unexpected intent returned by live model: ${parsedStructured.intent}`);
   }
-  console.log(`   [PASS] Model returned intent: ${parsedStructured.intent}`);
+
+  // Deterministic Post-AI Temporal Validation
+  for (const t of (parsedStructured.tasks || [])) {
+    if (t.time_known === true) {
+      if (!t.resolved_date_candidate || !/^\d{4}-\d{2}-\d{2}$/.test(t.resolved_date_candidate)) {
+        throw new Error(`Temporal Validation Failed: resolved_date_candidate '${t.resolved_date_candidate}' is not YYYY-MM-DD`);
+      }
+      if (!t.time_candidate || !/^([01]\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?$/.test(t.time_candidate)) {
+        throw new Error(`Temporal Validation Failed: time_candidate '${t.time_candidate}' is not valid HH:MM:SS format`);
+      }
+      const m = t.time_candidate.match(/^([01]\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?$/);
+      t.time_candidate = m[3] ? `${m[1]}:${m[2]}:${m[3]}` : `${m[1]}:${m[2]}:00`;
+    } else {
+      if (t.time_candidate !== null && t.time_candidate !== undefined && String(t.time_candidate).trim() !== '') {
+        throw new Error(`Temporal Validation Failed: time_known is false but time_candidate was provided: '${t.time_candidate}'`);
+      }
+      t.time_candidate = null;
+    }
+  }
+  console.log(`   [PASS] Model returned intent: ${parsedStructured.intent} with validated temporal constraints`);
 
   console.log('[3/4] Persisting live interpretation & telemetry to Supabase DEV...');
   const client = new Client({
