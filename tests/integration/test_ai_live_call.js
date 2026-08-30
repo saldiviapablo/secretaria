@@ -115,19 +115,62 @@ ${testInput}
     INSERT INTO public.profiles (id, display_name) VALUES ('${userA}', 'Live AI Tester');
   `);
 
-  const ingRes = (await client.query(`
-    SELECT public.register_ingestion('${userA}'::uuid, 'telegram', 'telegram:live:${Date.now()}', '{"text":"${testInput}"}'::jsonb) as res;
-  `)).rows[0].res;
+  const liveUpdateId = Math.floor(1000000 + Math.random() * 8000000);
+  const liveMsgId = Math.floor(100000 + Math.random() * 800000);
+  const liveChatId = 777888999;
+  const liveUserId = 123456789;
+  const idempKey = `telegram:primary:${liveUpdateId}`;
+
+  const ingRaw = (await client.query(
+    `SELECT public.register_ingestion(
+      $1::uuid,
+      'telegram'::text,
+      'text'::text,
+      $2::text,
+      pg_catalog.now(),
+      NULL::text,
+      $3::bigint,
+      $4::bigint,
+      $5::bigint,
+      $6::bigint,
+      NULL::text,
+      NULL::text,
+      NULL::text,
+      '{}'::jsonb
+    ) as res;`,
+    [userA, idempKey, liveUpdateId, liveMsgId, liveChatId, liveUserId]
+  )).rows[0].res;
+  const ingRes = typeof ingRaw === 'string' ? JSON.parse(ingRaw) : ingRaw;
   const ingId = ingRes.ingestion_id;
 
-  const stRes = (await client.query(`
-    SELECT public.get_or_create_source_text('${userA}'::uuid, '${ingId}'::uuid, '${testInput}', 'telegram', 'telegram', 'text', '{}'::jsonb) as res;
-  `)).rows[0].res;
+  const stRaw = (await client.query(
+    `SELECT public.get_or_create_source_text(
+      $1::uuid,
+      $2::uuid,
+      $3::text,
+      $4::text,
+      'telegram_text'::text,
+      true::boolean,
+      NULL::uuid
+    ) as res;`,
+    [userA, ingId, testInput, `tg_msg_${liveMsgId}`]
+  )).rows[0].res;
+  const stRes = typeof stRaw === 'string' ? JSON.parse(stRaw) : stRaw;
   const stId = stRes.source_text_id;
 
-  const bundleRes = (await client.query(`
-    SELECT public.apply_interpretation_bundle('${userA}'::uuid, '${ingId}'::uuid, '${stId}'::uuid, $1::jsonb, $2, 'openai', 'gpt-5.6-luna') as res;
-  `, [JSON.stringify(parsedStructured), contentStr])).rows[0].res;
+  const bundleRaw = (await client.query(
+    `SELECT public.apply_interpretation_bundle(
+      $1::uuid,
+      $2::uuid,
+      $3::uuid,
+      $4::jsonb,
+      $5::text,
+      'openai'::text,
+      'gpt-5.6-luna'::text
+    ) as res;`,
+    [userA, ingId, stId, JSON.stringify(parsedStructured), contentStr]
+  )).rows[0].res;
+  const bundleRes = typeof bundleRaw === 'string' ? JSON.parse(bundleRaw) : bundleRaw;
   const interpId = bundleRes.interpretation_id;
 
   const usage = responseBody.usage || { prompt_tokens: 150, completion_tokens: 60 };
