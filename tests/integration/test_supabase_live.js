@@ -514,7 +514,7 @@ async function runLiveSupabaseTests() {
   if (searchTxtRes.rows.length < 1 || searchFuzzyRes.rows.length < 1) throw new Error('F0-EXTRA-DB-SEARCH-TEXT failed');
   console.log('   [PASS] F0-EXTRA-DB-SEARCH-TEXT: search_memory_text y search_entities_fuzzy funcionando bajo SECURITY INVOKER');
 
-  // F0-COMP-ING-IDEMPOTENCY-DB
+  // 5. RUNNING F0-COMP-ING-IDEMPOTENCY-DB
   console.log('\n5. RUNNING F0-COMP-ING-IDEMPOTENCY-DB:');
   const ikey = `telegram:primary:${Date.now()}`;
   const r1 = (await client.query(`
@@ -536,6 +536,117 @@ async function runLiveSupabaseTests() {
     throw new Error('F0-COMP-ING-IDEMPOTENCY-DB failed');
   }
   console.log('   [PASS] F0-COMP-ING-IDEMPOTENCY-DB: register_ingestion replay retorno is_duplicate=true con ID existente sin duplicar fila');
+
+  // 6. RUNNING F0-SEC-RPC-CROSS-USER: Privilege Authorization & Cross-User Security Definer Audit
+  console.log('\n6. RUNNING F0-SEC-RPC-CROSS-USER (SECURITY DEFINER PRIVILEGE TESTS):');
+  // Create test fixtures for User B
+  const taskBRes = await client.query(`
+    INSERT INTO public.tasks (user_id, title, due_date, time_known)
+    VALUES ('${userB}', 'Secret Task of User B', '2026-10-01', false)
+    RETURNING id;
+  `);
+  const taskBId = taskBRes.rows[0].id;
+
+  const memBRes = await client.query(`
+    INSERT INTO public.memory_items (user_id, memory_type, title)
+    VALUES ('${userB}', 'fact', 'Memoria de Usuario B')
+    RETURNING id;
+  `);
+  const memBId = memBRes.rows[0].id;
+
+  const factBRes = await client.query(`
+    INSERT INTO public.facts (user_id, subject_text, predicate, object_text, status, source_memory_id)
+    VALUES ('${userB}', 'Pablo', 'lives_in', 'Trelew', 'current', '${memBId}')
+    RETURNING id;
+  `);
+  const factBId = factBRes.rows[0].id;
+
+  const clarBRes = await client.query(`
+    INSERT INTO public.pending_clarifications (user_id, question_text, question_type, channel, status)
+    VALUES ('${userB}', 'Cual es tu ciudad?', 'general', 'telegram', 'pending')
+    RETURNING id;
+  `);
+  const clarBId = clarBRes.rows[0].id;
+
+  // Switch to real authenticated context of User A
+  await client.query(`SET ROLE authenticated;`);
+  await client.query(`SET request.jwt.claim.sub = '${userA}';`);
+
+  // A. Attempt to change assistant name of User B from User A session
+  let rpcErrA = null;
+  try {
+    await client.query(`SELECT public.set_assistant_name('${userB}'::uuid, 'AttackerAssistant');`);
+  } catch (err) {
+    rpcErrA = err.message;
+  }
+  if (!rpcErrA || !rpcErrA.includes('Unauthorized')) {
+    throw new Error(`F0-SEC-RPC-CROSS-USER failed: set_assistant_name allowed cross-user mutation (err: ${rpcErrA})`);
+  }
+  console.log('   [PASS] F0-SEC-RPC-CROSS-USER [A. set_assistant_name]: Blocked cross-user mutation on User B');
+
+  // B. Attempt to transition task of User B from User A session
+  let rpcErrB = null;
+  try {
+    await client.query(`SELECT public.transition_task_status('${taskBId}'::uuid, 'completed');`);
+  } catch (err) {
+    rpcErrB = err.message;
+  }
+  if (!rpcErrB || !rpcErrB.includes('Unauthorized')) {
+    throw new Error(`F0-SEC-RPC-CROSS-USER failed: transition_task_status allowed cross-user mutation (err: ${rpcErrB})`);
+  }
+  console.log('   [PASS] F0-SEC-RPC-CROSS-USER [B. transition_task_status]: Blocked cross-user transition on User B task');
+
+  // C. Attempt to correct/supersede fact of User B from User A session
+  let rpcErrC = null;
+  try {
+    await client.query(`SELECT public.correct_fact('${factBId}'::uuid, 'HackedCity');`);
+  } catch (err) {
+    rpcErrC = err.message;
+  }
+  if (!rpcErrC || !rpcErrC.includes('Unauthorized')) {
+    throw new Error(`F0-SEC-RPC-CROSS-USER failed: correct_fact allowed cross-user mutation (err: ${rpcErrC})`);
+  }
+  console.log('   [PASS] F0-SEC-RPC-CROSS-USER [C. correct_fact]: Blocked cross-user supersede on User B fact');
+
+  // D. Attempt to resolve clarification of User B from User A session
+  let rpcErrD = null;
+  try {
+    await client.query(`SELECT public.resolve_clarification('${clarBId}'::uuid, 'HackedAnswer');`);
+  } catch (err) {
+    rpcErrD = err.message;
+  }
+  if (!rpcErrD || !rpcErrD.includes('Unauthorized')) {
+    throw new Error(`F0-SEC-RPC-CROSS-USER failed: resolve_clarification allowed cross-user resolution (err: ${rpcErrD})`);
+  }
+  console.log('   [PASS] F0-SEC-RPC-CROSS-USER [D. resolve_clarification]: Blocked cross-user resolution on User B clarification');
+
+  // E. Attempt to register ingestion for User B from User A session
+  let rpcErrE = null;
+  try {
+    await client.query(`
+      SELECT public.register_ingestion(
+        '${userB}'::uuid, 'telegram', 'text', 'attack_ing_key', now(), 'evt_atk', 111, 222, 333, 444, NULL, NULL, NULL, '{}'::jsonb
+      );
+    `);
+  } catch (err) {
+    rpcErrE = err.message;
+  }
+  if (!rpcErrE || !rpcErrE.includes('Unauthorized')) {
+    throw new Error(`F0-SEC-RPC-CROSS-USER failed: register_ingestion allowed cross-user registration (err: ${rpcErrE})`);
+  }
+  console.log('   [PASS] F0-SEC-RPC-CROSS-USER [E. register_ingestion]: Blocked cross-user ingestion insertion for User B');
+
+  // Reset role to postgres superuser to verify integrity of User B's state
+  await client.query(`RESET ROLE;`);
+  const checkTaskB = (await client.query(`SELECT status FROM public.tasks WHERE id = '${taskBId}';`)).rows[0].status;
+  const checkFactB = (await client.query(`SELECT status FROM public.facts WHERE id = '${factBId}';`)).rows[0].status;
+  const checkClarB = (await client.query(`SELECT status FROM public.pending_clarifications WHERE id = '${clarBId}';`)).rows[0].status;
+  const checkNameB = (await client.query(`SELECT assistant_name FROM public.user_settings WHERE user_id = '${userB}';`)).rows[0].assistant_name;
+
+  if (checkTaskB !== 'pending' || checkFactB !== 'current' || checkClarB !== 'pending' || checkNameB === 'AttackerAssistant') {
+    throw new Error('F0-SEC-RPC-CROSS-USER failed: User B state was tampered');
+  }
+  console.log('   [PASS] F0-SEC-RPC-CROSS-USER: All state of User B verified intact and untampered');
 
   await client.end();
   console.log('\n======================================================================');

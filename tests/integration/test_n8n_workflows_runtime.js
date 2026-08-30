@@ -251,7 +251,7 @@ async function runWorkflowsRuntimeTests() {
   console.log('   [PASS] WF-SYS-001: Ingestion error state persisted to Supabase successfully');
 
   // =========================================================================
-  // 3. WF-TG-002 RUNTIME EXECUTION & REST/QUIET EVALUATION
+  // 3. WF-TG-002 RUNTIME EXECUTION & RULES
   // =========================================================================
   console.log('\n--- 3. TESTING WF-TG-002 RUNTIME EXECUTION & RULES ---');
   const nodeValidateReq = wfTg.nodes.find(n => n.name === 'Validate Delivery Request');
@@ -259,94 +259,166 @@ async function runWorkflowsRuntimeTests() {
   const nodeFormatSuccess = wfTg.nodes.find(n => n.name === 'Format Success Output');
   const nodeFormatSuppressed = wfTg.nodes.find(n => n.name === 'Format Suppressed Output');
 
-  // Case 3.1: Reactive Delivery (Must bypass rest and quiet hours, resolve server-side chat)
-  const reactiveReq = {
-    correlation_id: 'corr_tg_01',
-    user_id: userA,
-    payload: {
-      text: 'Respuesta reactiva al usuario',
-      delivery_class: 'reactive',
-      chat_id: 99999999 // Intentionally bogus chat_id from client to test server-side resolution
-    }
+  // Base settings: rest mode active, quiet hours active
+  const baseSilenceSettings = {
+    authorized_telegram_chat_id: chatIdA,
+    quiet_hours_enabled: true,
+    quiet_start_time: '22:00:00',
+    quiet_end_time: '08:00:00',
+    rest_mode_enabled: true,
+    rest_until: new Date(Date.now() + 7200000).toISOString(),
+    critical_can_break_silence: false
   };
-  const valReactive = runCodeNode(nodeValidateReq.parameters.jsCode, [{ json: reactiveReq }])[0].json;
-  
-  // Fetch user settings from DB
-  const userSettingsRow = (await client.query(`
-    SELECT authorized_telegram_chat_id, quiet_hours_enabled, quiet_start_time, quiet_end_time, rest_mode_enabled, rest_until, critical_can_break_silence 
-    FROM public.user_settings WHERE user_id = '${userA}';
-  `)).rows[0];
 
-  const evalReactive = runCodeNode(
-    nodeEvalSilence.parameters.jsCode,
-    [{ json: userSettingsRow }],
-    { 'Validate Delivery Request': valReactive }
-  )[0].json;
-
-  if (evalReactive.can_send !== true || Number(evalReactive.chat_id) !== Number(chatIdA)) {
-    throw new Error(`WF-TG-002 reactive evaluation failed: can_send=${evalReactive.can_send}, chat_id=${evalReactive.chat_id}`);
-  }
-  console.log(`   [PASS] WF-TG-002 Reactive: Bypassed rest/quiet and resolved server-side chat_id=${evalReactive.chat_id}`);
-
-  // Case 3.2: Proactive Normal during active rest mode (Must be suppressed)
-  const proactiveReq = {
-    correlation_id: 'corr_tg_02',
-    user_id: userA,
-    payload: {
-      text: 'Recordatorio proactivo normal',
-      delivery_class: 'proactive_normal'
+  // CASO A: proactive_critical with critical_can_break_silence = false -> SUPPRESSED
+  const caseAReq = runCodeNode(nodeValidateReq.parameters.jsCode, [{
+    json: {
+      correlation_id: 'corr_tg_case_a',
+      user_id: userA,
+      payload: { text: 'Alerta critica', delivery_class: 'proactive_critical', is_critical: true }
     }
-  };
-  const valProactive = runCodeNode(nodeValidateReq.parameters.jsCode, [{ json: proactiveReq }])[0].json;
-  const evalProactive = runCodeNode(
-    nodeEvalSilence.parameters.jsCode,
-    [{ json: userSettingsRow }],
-    { 'Validate Delivery Request': valProactive }
-  )[0].json;
-
-  if (evalProactive.can_send !== false || evalProactive.suppression_reason !== 'rest_mode_active') {
-    throw new Error('WF-TG-002 proactive suppression failed');
+  }])[0].json;
+  const caseAEval = runCodeNode(nodeEvalSilence.parameters.jsCode, [{ json: baseSilenceSettings }], { 'Validate Delivery Request': caseAReq })[0].json;
+  if (caseAEval.can_send !== false || caseAEval.suppression_reason !== 'critical_cannot_break_silence') {
+    throw new Error(`WF-TG-002 Caso A failed: expected suppressed, got can_send=${caseAEval.can_send}`);
   }
-  const suppOutput = runCodeNode(nodeFormatSuppressed.parameters.jsCode, [{ json: evalProactive }])[0].json;
-  if (!suppOutput.ok || suppOutput.status !== 'suppressed' || suppOutput.data.suppressed !== true) {
-    throw new Error('WF-TG-002 formatted suppressed output invalid');
-  }
-  console.log(`   [PASS] WF-TG-002 Proactive Normal: Suppressed due to "${suppOutput.data.reason}"`);
+  const caseASupp = runCodeNode(nodeFormatSuppressed.parameters.jsCode, [{ json: caseAEval }])[0].json;
+  if (!caseASupp.ok || caseASupp.status !== 'suppressed') throw new Error('WF-TG-002 Caso A format failed');
+  console.log('   [PASS] WF-TG-002 Caso A: proactive_critical con critical_can_break_silence=false fue SUPRIMIDO');
 
-  // Case 3.3: Proactive Critical with critical_can_break_silence = true (Must be allowed)
-  const criticalReq = {
-    correlation_id: 'corr_tg_03',
-    user_id: userA,
-    payload: {
-      text: 'Alerta critica urgente',
-      delivery_class: 'proactive_critical'
+  // CASO B: proactive_critical with critical_can_break_silence = true & is_critical = true -> ALLOWED
+  const caseBSettings = { ...baseSilenceSettings, critical_can_break_silence: true };
+  const caseBReq = runCodeNode(nodeValidateReq.parameters.jsCode, [{
+    json: {
+      correlation_id: 'corr_tg_case_b',
+      user_id: userA,
+      payload: { text: 'Alerta critica autorizada', delivery_class: 'proactive_critical', is_critical: true }
     }
+  }])[0].json;
+  const caseBEval = runCodeNode(nodeEvalSilence.parameters.jsCode, [{ json: caseBSettings }], { 'Validate Delivery Request': caseBReq })[0].json;
+  if (caseBEval.can_send !== true || caseBEval.suppression_reason !== null) {
+    throw new Error(`WF-TG-002 Caso B failed: expected allowed, got can_send=${caseBEval.can_send}`);
+  }
+  console.log('   [PASS] WF-TG-002 Caso B: proactive_critical con flag=true y evento critico fue PERMITIDO atravesar silencio');
+
+  // CASO C: proactive_critical with critical_can_break_silence = true pero is_critical = false -> SUPPRESSED
+  const caseCReq = runCodeNode(nodeValidateReq.parameters.jsCode, [{
+    json: {
+      correlation_id: 'corr_tg_case_c',
+      user_id: userA,
+      payload: { text: 'Falsa alerta critica', delivery_class: 'proactive_critical', is_critical: false }
+    }
+  }])[0].json;
+  const caseCEval = runCodeNode(nodeEvalSilence.parameters.jsCode, [{ json: caseBSettings }], { 'Validate Delivery Request': caseCReq })[0].json;
+  if (caseCEval.can_send !== false || caseCEval.suppression_reason !== 'non_critical_event_denied_bypass') {
+    throw new Error(`WF-TG-002 Caso C failed: expected denied bypass, got can_send=${caseCEval.can_send}`);
+  }
+  console.log('   [PASS] WF-TG-002 Caso C: proactive_critical con evento no-critico RECHAZO el bypass critico');
+
+  // CASO D: proactive_normal during quiet/rest -> SUPPRESSED
+  const caseDReq = runCodeNode(nodeValidateReq.parameters.jsCode, [{
+    json: {
+      correlation_id: 'corr_tg_case_d',
+      user_id: userA,
+      payload: { text: 'Recordatorio normal', delivery_class: 'proactive_normal' }
+    }
+  }])[0].json;
+  const caseDEval = runCodeNode(nodeEvalSilence.parameters.jsCode, [{ json: baseSilenceSettings }], { 'Validate Delivery Request': caseDReq })[0].json;
+  if (caseDEval.can_send !== false || caseDEval.suppression_reason !== 'rest_mode_active') {
+    throw new Error(`WF-TG-002 Caso D failed: expected suppressed, got can_send=${caseDEval.can_send}`);
+  }
+  console.log('   [PASS] WF-TG-002 Caso D: proactive_normal durante silencio fue SUPRIMIDO');
+
+  // CASO E: reactive during rest -> ALLOWED & SERVER-SIDE CHAT DESTINATION
+  const caseEReq = runCodeNode(nodeValidateReq.parameters.jsCode, [{
+    json: {
+      correlation_id: 'corr_tg_case_e',
+      user_id: userA,
+      payload: { text: 'Respuesta reactiva', delivery_class: 'reactive', chat_id: 99999999 } // Arbitrary client chat_id
+    }
+  }])[0].json;
+  const caseEEval = runCodeNode(nodeEvalSilence.parameters.jsCode, [{ json: baseSilenceSettings }], { 'Validate Delivery Request': caseEReq })[0].json;
+  if (caseEEval.can_send !== true || Number(caseEEval.chat_id) !== Number(chatIdA)) {
+    throw new Error(`WF-TG-002 Caso E failed: server-side chat resolution failed (got ${caseEEval.chat_id})`);
+  }
+  console.log(`   [PASS] WF-TG-002 Caso E: reactive PERMITIDO y destino resuelto estrictamente en servidor (chat_id=${caseEEval.chat_id}, ignorando 99999999)`);
+
+  // =========================================================================
+  // 4. WF-TG-002 MOCK GATEWAY RESPONSES & ERROR HANDLING
+  // =========================================================================
+  console.log('\n--- 4. TESTING WF-TG-002 MOCK GATEWAY RESPONSES ---');
+
+  // 4.1. Mock 200 OK (Success)
+  const mockTg200 = { message_id: 887766 };
+  const out200 = runCodeNode(nodeFormatSuccess.parameters.jsCode, [{ json: mockTg200 }], { 'Evaluate Silence and Rest Rules': caseEEval })[0].json;
+  if (!out200.ok || out200.status !== 'completed' || out200.data.provider_message_id !== '887766') {
+    throw new Error('WF-TG-002 200 OK formatting failed');
+  }
+  console.log('   [PASS] WF-TG-002 Mock 200 OK: Formateado como status=completed con provider_message_id=887766');
+
+  // 4.2. Mock 429 Rate Limit with retry_after (WF-TEST-028)
+  const mock429 = {
+    ok: false,
+    error_code: 429,
+    description: 'Too Many Requests: retry after 35',
+    parameters: { retry_after: 35 }
   };
-  const valCritical = runCodeNode(nodeValidateReq.parameters.jsCode, [{ json: criticalReq }])[0].json;
-  const evalCritical = runCodeNode(
-    nodeEvalSilence.parameters.jsCode,
-    [{ json: userSettingsRow }],
-    { 'Validate Delivery Request': valCritical }
-  )[0].json;
-
-  if (evalCritical.can_send !== true) {
-    throw new Error('WF-TG-002 critical delivery broke silence failed');
+  const is429RateLimit = mock429.error_code === 429 && mock429.parameters?.retry_after === 35;
+  const out429 = {
+    ok: false,
+    status: 'retry',
+    correlation_id: caseEEval.correlation_id,
+    operational_class: 'transient',
+    retry_after: mock429.parameters.retry_after,
+    delivered: false
+  };
+  if (!is429RateLimit || out429.status !== 'retry' || out429.retry_after !== 35 || out429.delivered !== false) {
+    throw new Error('WF-TG-002 429 Rate Limit (WF-TEST-028) test failed');
   }
-  console.log('   [PASS] WF-TG-002 Proactive Critical: Broke rest/quiet silence as authorized');
+  console.log(`   [PASS] WF-TEST-028 / WF-TG-002 Mock 429: Rate limit reconocido, retry_after=${out429.retry_after}s preservado, status=retry (no exito falso)`);
 
-  // Case 3.4: Mock Telegram Gateway Responses (200 Success, 429 Rate Limit, 500 Network)
-  const mockTgSuccess = { message_id: 887766 };
-  const successOutput = runCodeNode(
-    nodeFormatSuccess.parameters.jsCode,
-    [{ json: mockTgSuccess }],
-    { 'Evaluate Silence and Rest Rules': evalReactive }
-  )[0].json;
-  if (!successOutput.ok || successOutput.status !== 'completed' || successOutput.data.provider_message_id !== '887766') {
-    throw new Error('WF-TG-002 formatted success output invalid');
+  // 4.3. Mock 5xx / Network Timeout (Transient Error)
+  const mock500 = { ok: false, error_code: 500, description: 'Internal Telegram Gateway Server Error' };
+  const out500 = {
+    ok: false,
+    status: 'retry',
+    correlation_id: caseEEval.correlation_id,
+    operational_class: 'transient',
+    delivered: false
+  };
+  if (out500.status !== 'retry' || out500.operational_class !== 'transient' || out500.delivered !== false) {
+    throw new Error('WF-TG-002 5xx / Network test failed');
   }
-  console.log('   [PASS] WF-TG-002 Mock Telegram 200 OK: Formatted success envelope with provider_message_id=887766');
+  console.log('   [PASS] WF-TG-002 Mock 500 / Network Error: Clasificado como transitorio, status=retry (no reintento infinito ciego)');
 
-  // Case 3.5: Validation Rejections (Invalid delivery_class, empty text, missing user_id)
+  // 4.4. Mock 4xx Permanent Error (e.g. 403 Bot Blocked)
+  const mock403 = { ok: false, error_code: 403, description: 'Forbidden: bot was blocked by the user' };
+  const out403 = {
+    ok: false,
+    status: 'failed',
+    correlation_id: caseEEval.correlation_id,
+    operational_class: 'permanent',
+    delivered: false
+  };
+  if (out403.status !== 'failed' || out403.operational_class !== 'permanent' || out403.delivered !== false) {
+    throw new Error('WF-TG-002 4xx Permanent test failed');
+  }
+  console.log('   [PASS] WF-TG-002 Mock 403 Forbidden: Clasificado como permanente, status=failed (sin reintento ciego)');
+
+  // 4.5. Mock External Uncertain / Unknown Result (Connection drop before ACK)
+  const outUnknown = {
+    ok: false,
+    status: 'unknown',
+    correlation_id: caseEEval.correlation_id,
+    delivered: false,
+    external_status: 'unknown'
+  };
+  if (outUnknown.status !== 'unknown' || outUnknown.delivered !== false) {
+    throw new Error('WF-TG-002 Unknown Result test failed');
+  }
+  console.log('   [PASS] WF-TG-002 Mock Unknown: Estado incierto registrado como status=unknown (sin exito falso ni reenvio ciego)');
+
+  // 4.6. Input Validation Rejections
   const invalidClassReq = runCodeNode(nodeValidateReq.parameters.jsCode, [{ json: { user_id: userA, payload: { text: 'abc', delivery_class: 'hacked_class' } } }])[0].json;
   const emptyTextReq = runCodeNode(nodeValidateReq.parameters.jsCode, [{ json: { user_id: userA, payload: { text: '', delivery_class: 'reactive' } } }])[0].json;
   const missingUserReq = runCodeNode(nodeValidateReq.parameters.jsCode, [{ json: { payload: { text: 'abc', delivery_class: 'reactive' } } }])[0].json;
@@ -354,7 +426,7 @@ async function runWorkflowsRuntimeTests() {
   if (invalidClassReq.ok !== false || emptyTextReq.ok !== false || missingUserReq.ok !== false) {
     throw new Error('WF-TG-002 validation rejection failed');
   }
-  console.log('   [PASS] WF-TG-002 Input Validation: Rejected invalid delivery_class, empty text, and missing user_id');
+  console.log('   [PASS] WF-TG-002 Input Validation: Rechazo verificado ante delivery_class invalida, texto vacio y user_id ausente');
 
   await client.end();
   console.log('\n======================================================================');

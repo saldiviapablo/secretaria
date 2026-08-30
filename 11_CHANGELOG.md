@@ -1079,11 +1079,46 @@ como constitución documental del paquete definitivo para Antigravity/Codex.
    - `WF-ING-001`: Ejecutado runtime en n8n contra Supabase DEV local verificando registro atómico de idempotencia (`is_duplicate=false` en primer intento, `is_duplicate=true` en replay con ID existente y 1 sola fila en BD). Registrado `F0-COMP-ING-IDEMPOTENCY-N8N`.
    - `WF-SYS-001`: Ejecutado runtime validando clasificación de errores (`transient`, `permanent`, `authorization`, `data integrity`, `unknown`), actualización de estado de ingesta en Supabase y redacción de secretos sintéticos.
    - `WF-TG-002`: Ejecutado runtime validando clases de entrega (`reactive`, `proactive_normal`, `proactive_critical`), reglas de silencio/quiet/rest, resolución de `chat_id` en servidor y manejo de respuestas mock de Telegram.
-4. **Verificación de Versión Real de Extensión Vector:**
-   - Verificado mediante consulta directa a `pg_extension.extversion` que la versión de PostgreSQL pgvector es `0.8.2`.
-5. **Sanitización de Evidencia y Protección de Producción:**
-   - Cero contraseñas en evidencia y reportes.
-   - Reconfirmado que el NAS, `EXISTING_OPERATIONAL_N8N`, Immich, Cloudflare y Supabase PROD no fueron modificados.
+---
+
+## CHG-2026-08-30-006 — Auditoría de Autorización RPC SECURITY DEFINER y Cobertura Exhaustiva de WF-TG-002
+
+**Tipo:** SECURITY / AUDIT / COMPLIANCE  
+**Estado:** F0 DONE revalidado y certificado con mitigación estricta de ataques cross-user sobre RPCs y verificación completa del contrato de mensajería  
+**Motivo:** Auditoría de seguridad sobre RPCs `SECURITY DEFINER` para impedir mutaciones cross-user desde sesiones `authenticated`, restricción de privilegios `EXECUTE` para roles de worker background y prueba exhaustiva de comportamientos de entrega, silencio crítico y errores en `WF-TG-002`.  
+**Solicitado por:** Antigravity / Prompt de Última Revalidación de Seguridad y WF-TG-002  
+**Documentos afectados:** `11_CHANGELOG.md`, `20260830000010_functions_and_triggers.sql`, `n8n/workflows/telegram/WF-TG-002_TELEGRAM_SEND_MESSAGE.json`, `tests/evidence/evidence_f0.json`, `tests/evidence/db_runtime_f0.txt`, `tests/evidence/n8n_workflow_runtime_f0.txt`  
+
+### Verificaciones y Correcciones Aplicadas:
+1. **Controles de Ownership en Funciones `SECURITY DEFINER`:**
+   - Implementada validación explícita de `auth.uid()` en todas las funciones `SECURITY DEFINER` expuestas a usuarios autenticados:
+     * `set_assistant_name`: Bloquea modificación de configuración de asistentes para usuarios distintos de `auth.uid()`.
+     * `transition_task_status`: Valida ownership de la tarea (`auth.uid() = v_task.user_id`) antes de mutar estados.
+     * `correct_fact`: Valida ownership del hecho (`auth.uid() = v_old_fact.user_id`) antes de superseder o insertar correcciones.
+     * `resolve_clarification`: Valida ownership de la aclaración pendiente (`auth.uid() = v_clar.user_id`).
+     * `register_ingestion`: Valida que el `user_id` de la ingesta coincida con `auth.uid()` cuando se invoca desde sesión autenticada.
+     * `record_notification_result`: Valida ownership del recordatorio y entrega.
+   - Ejecutado el control dinámico `F0-SEC-RPC-CROSS-USER` desde contexto autenticado de Usuario A intentando mutar objetos de Usuario B. Todos los intentos fueron rechazados por excepción de autorización y el estado de Usuario B permaneció 100% íntegro.
+2. **Principio de Mínimo Privilegio sobre Funciones de Background:**
+   - Revocado el permiso `EXECUTE` a `authenticated` sobre funciones exclusivas de workers (`claim_due_reminders`, `release_expired_reminder_leases`, `record_notification_result`).
+   - Mantenido `EXECUTE` únicamente para `service_role`.
+3. **Cobertura Completa de Entrega y Silencio en `WF-TG-002`:**
+   - **Gate de Silencio Crítico:**
+     * Caso A (`proactive_critical` + `critical_can_break_silence = false`): Suprimido (`critical_cannot_break_silence`).
+     * Caso B (`proactive_critical` + `critical_can_break_silence = true` + `is_critical = true`): Permitido atravesar silencio.
+     * Caso C (`proactive_critical` + `critical_can_break_silence = true` + `is_critical = false`): Rechazado bypass crítico (`non_critical_event_denied_bypass`).
+     * Caso D (`proactive_normal` en descanso/quiet hours): Suprimido (`rest_mode_active`).
+     * Caso E (`reactive` en descanso): Permitido responder inmediatamente con resolución server-side de `chat_id` (ignora cualquier `chat_id` arbitrario del cliente).
+   - **Manejo de Errores de Gateway:**
+     * `WF-TEST-028` (Rate Limit 429): Reconoce rate limit, preserva `retry_after = 35s`, status `retry` sin éxito falso.
+     * HTTP 500 / Timeout: Clasificado como transitorio (`transient`), status `retry`.
+     * HTTP 403 Forbidden (Bot bloqueado): Clasificado como permanente (`permanent`), status `failed`, sin reintentos ciegos.
+     * Resultado Incierto (Unknown): Conexión interrumpida antes de confirmación registrada como status `unknown` (sin éxito falso ni reenvío ciego).
+4. **Verificación de Entorno y Trazabilidad:**
+   - Ejecutado `npx supabase db reset` dos veces consecutivas con las 10 migraciones y 25 tablas.
+   - Reimportado `WF-TG-002` en n8n 2.33.3 DEV y ejecutado `n8n audit` (0 riesgos críticos).
+   - Reconfirmada la inmutabilidad de producción: NAS, `EXISTING_OPERATIONAL_N8N`, Immich, Cloudflare y Supabase PROD no fueron modificados.
+
 
 
 

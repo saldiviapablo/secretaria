@@ -368,6 +368,11 @@ AS $$
 DECLARE
     v_clean_name text;
 BEGIN
+    -- Ownership enforcement: prevent cross-user modification
+    IF auth.uid() IS NOT NULL AND auth.uid() <> p_user_id THEN
+        RAISE EXCEPTION 'Unauthorized: cannot change assistant name for another user';
+    END IF;
+
     v_clean_name := pg_catalog.btrim(COALESCE(p_new_name, ''));
     IF v_clean_name = '' THEN
         RAISE EXCEPTION 'Assistant name cannot be empty';
@@ -410,6 +415,11 @@ BEGIN
     SELECT * INTO v_task FROM public.tasks WHERE id = p_task_id;
     IF NOT FOUND THEN
         RAISE EXCEPTION 'Task % not found', p_task_id;
+    END IF;
+
+    -- Ownership enforcement: prevent cross-user task modification
+    IF auth.uid() IS NOT NULL AND auth.uid() <> v_task.user_id THEN
+        RAISE EXCEPTION 'Unauthorized: cannot modify tasks belonging to another user';
     END IF;
 
     IF p_target_status NOT IN ('pending', 'in_progress', 'waiting_confirmation', 'completed', 'postponed', 'cancelled') THEN
@@ -458,6 +468,11 @@ BEGIN
     SELECT * INTO v_old_fact FROM public.facts WHERE id = p_fact_id;
     IF NOT FOUND THEN
         RAISE EXCEPTION 'Fact % not found', p_fact_id;
+    END IF;
+
+    -- Ownership enforcement: prevent cross-user fact modification
+    IF auth.uid() IS NOT NULL AND auth.uid() <> v_old_fact.user_id THEN
+        RAISE EXCEPTION 'Unauthorized: cannot correct facts belonging to another user';
     END IF;
 
     -- 1. Supersede old fact
@@ -611,7 +626,18 @@ SET search_path = ''
 AS $$
 DECLARE
     v_delivery_id UUID;
+    v_rem_user_id UUID;
 BEGIN
+    -- Verify reminder exists and belongs to p_user_id
+    SELECT user_id INTO v_rem_user_id FROM public.reminders WHERE id = p_reminder_id;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Reminder % not found', p_reminder_id;
+    END IF;
+
+    IF p_user_id <> v_rem_user_id OR (auth.uid() IS NOT NULL AND auth.uid() <> v_rem_user_id) THEN
+        RAISE EXCEPTION 'Unauthorized: cross-user notification delivery blocked';
+    END IF;
+
     -- 1. Insert delivery record
     INSERT INTO public.notification_deliveries (
         user_id,
@@ -683,7 +709,19 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = ''
 AS $$
+DECLARE
+    v_clar public.pending_clarifications%ROWTYPE;
 BEGIN
+    SELECT * INTO v_clar FROM public.pending_clarifications WHERE id = p_clarification_id;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Clarification % not found', p_clarification_id;
+    END IF;
+
+    -- Ownership enforcement: prevent cross-user clarification resolution
+    IF auth.uid() IS NOT NULL AND auth.uid() <> v_clar.user_id THEN
+        RAISE EXCEPTION 'Unauthorized: cannot resolve clarification belonging to another user';
+    END IF;
+
     UPDATE public.pending_clarifications
     SET status = 'resolved',
         resolved_at = pg_catalog.now(),
@@ -691,10 +729,6 @@ BEGIN
         answer_ingestion_id = p_answer_ingestion_id,
         updated_at = pg_catalog.now()
     WHERE id = p_clarification_id;
-
-    IF NOT FOUND THEN
-        RAISE EXCEPTION 'Clarification % not found', p_clarification_id;
-    END IF;
 
     RETURN pg_catalog.jsonb_build_object(
         'ok', true,
@@ -750,25 +784,30 @@ RETURNS TABLE (
     matched_alias TEXT,
     similarity REAL
 )
-LANGUAGE sql
+LANGUAGE plpgsql
 STABLE
 SECURITY INVOKER
 SET search_path = ''
 AS $$
-    WITH query_norm AS (
-        SELECT private.normalize_search_text(p_query) AS q
-    ),
-    entity_matches AS (
+DECLARE
+    v_norm text;
+BEGIN
+    v_norm := private.normalize_search_text(p_query);
+    IF v_norm = '' THEN
+        RETURN;
+    END IF;
+
+    RETURN QUERY
+    WITH scored_entities AS (
         SELECT
             e.id AS entity_id,
             e.canonical_name,
             e.entity_type,
             e.canonical_name AS matched_alias,
-            public.similarity(e.normalized_name, qn.q) AS sim
-        FROM public.entities e, query_norm qn
+            public.similarity(e.normalized_name, v_norm) AS similarity
+        FROM public.entities e
         WHERE e.user_id = p_user_id
-          AND e.status = 'active'
-          AND public.similarity(e.normalized_name, qn.q) >= p_similarity_threshold
+          AND public.similarity(e.normalized_name, v_norm) >= p_similarity_threshold
 
         UNION ALL
 
@@ -777,24 +816,23 @@ AS $$
             e.canonical_name,
             e.entity_type,
             a.alias AS matched_alias,
-            public.similarity(a.normalized_alias, qn.q) AS sim
+            public.similarity(a.normalized_alias, v_norm) AS similarity
         FROM public.entity_aliases a
         JOIN public.entities e ON e.id = a.entity_id
-        CROSS JOIN query_norm qn
         WHERE a.user_id = p_user_id
           AND a.is_active = true
-          AND e.status = 'active'
-          AND public.similarity(a.normalized_alias, qn.q) >= p_similarity_threshold
+          AND public.similarity(a.normalized_alias, v_norm) >= p_similarity_threshold
     )
-    SELECT DISTINCT ON (entity_id)
-        entity_id,
-        canonical_name,
-        entity_type,
-        matched_alias,
-        sim AS similarity
-    FROM entity_matches
-    ORDER BY entity_id, sim DESC
+    SELECT DISTINCT ON (se.entity_id)
+        se.entity_id,
+        se.canonical_name,
+        se.entity_type,
+        se.matched_alias,
+        se.similarity
+    FROM scored_entities se
+    ORDER BY se.entity_id, se.similarity DESC
     LIMIT p_limit;
+END;
 $$;
 
 -- RPC 10: register_ingestion (atomic helper RPC)
@@ -824,6 +862,11 @@ DECLARE
     v_existing_status TEXT;
     v_new_id UUID;
 BEGIN
+    -- Ownership enforcement: prevent cross-user ingestion registration from client
+    IF auth.uid() IS NOT NULL AND auth.uid() <> p_user_id THEN
+        RAISE EXCEPTION 'Unauthorized: cannot register ingestion for another user';
+    END IF;
+
     -- Atomic INSERT with ON CONFLICT DO NOTHING
     INSERT INTO public.ingestions (
         user_id,
@@ -889,13 +932,20 @@ END;
 $$;
 
 -- Grant EXECUTE on RPC functions to authenticated & service_role
+-- User-facing RPCs:
 GRANT EXECUTE ON FUNCTION public.set_assistant_name TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.transition_task_status TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.correct_fact TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.claim_due_reminders TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.release_expired_reminder_leases TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.record_notification_result TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.resolve_clarification TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.search_memory_text TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.search_entities_fuzzy TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.register_ingestion TO authenticated, service_role;
+
+-- Worker/Cron background RPCs: strictly service_role only (Least Privilege)
+REVOKE EXECUTE ON FUNCTION public.claim_due_reminders FROM authenticated;
+REVOKE EXECUTE ON FUNCTION public.release_expired_reminder_leases FROM authenticated;
+REVOKE EXECUTE ON FUNCTION public.record_notification_result FROM authenticated;
+
+GRANT EXECUTE ON FUNCTION public.claim_due_reminders TO service_role;
+GRANT EXECUTE ON FUNCTION public.release_expired_reminder_leases TO service_role;
+GRANT EXECUTE ON FUNCTION public.record_notification_result TO service_role;

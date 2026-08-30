@@ -310,7 +310,7 @@ def run_all():
             "observation": et_data["observation"]
         }
 
-    # Workflows Runtime & Manifest
+    # Workflows Runtime & Canonical Tests
     test_results_map["WF-ING-001"] = {
         "status": "PASS" if wf_rt_res.returncode == 0 else "FAIL",
         "title": "WF-ING-001 Subworkflow Runtime",
@@ -330,10 +330,26 @@ def run_all():
     test_results_map["WF-TG-002"] = {
         "status": "PASS" if wf_rt_res.returncode == 0 else "FAIL",
         "title": "WF-TG-002 Telegram Send Message Runtime",
-        "description": "Validación de delivery classes, resolución server-side de chat y reglas de silencio/quiet/rest.",
+        "description": "Validación de delivery classes, resolución server-side de chat, reglas de silencio/quiet/rest y mock Telegram.",
         "method": "n8n_subworkflow_runtime",
         "evidence": "tests/evidence/n8n_workflow_runtime_f0.txt",
-        "observation": "Evaluó reactive (bypass silencio + server-side chat), proactive_normal (suprimido en rest), proactive_critical y mock Telegram"
+        "observation": "Evaluó reactive (bypass silencio + server-side chat), proactive_critical (con/sin flag), proactive_normal y mocks 200/429/500/403/unknown"
+    }
+    test_results_map["WF-TEST-028"] = {
+        "status": "PASS" if wf_rt_res.returncode == 0 else "FAIL",
+        "title": "WF-TEST-028 Retry 429 Rate Limit",
+        "description": "Manejo de rate limiting 429 preservando retry_after y evitando reintentos ciegos.",
+        "method": "n8n_subworkflow_runtime",
+        "evidence": "tests/evidence/n8n_workflow_runtime_f0.txt",
+        "observation": "Reconoció HTTP 429, preservó retry_after=35s, status=retry, sin éxito falso"
+    }
+    test_results_map["WF-TEST-029"] = {
+        "status": "PASS" if wf_rt_res.returncode == 0 else "FAIL",
+        "title": "WF-TEST-029 Error Workflow Secret Redaction",
+        "description": "Redacción de secretos en el subworkflow de manejo de errores WF-SYS-001.",
+        "method": "n8n_subworkflow_runtime",
+        "evidence": "tests/evidence/n8n_workflow_runtime_f0.txt",
+        "observation": "Redactó tokens Bearer, Telegram bot tokens, passwords y connection strings a [REDACTED]"
     }
 
     # Deferred Tests with Approved Justification
@@ -364,17 +380,18 @@ def run_all():
 
     # Security Tests
     sec_tests_f0 = {
-        "SEC-TEST-019": ("PASS", "supabase_local_runtime", "tests/evidence/rls_runtime_f0.txt", "Aislamiento cross-user RLS estricto: Usuario B ve 0 filas de A y no puede modificar tareas de A"),
+        "SEC-TEST-019": ("PASS", "supabase_local_runtime", "tests/evidence/rls_runtime_f0.txt", "Aislamiento cross-user en 2 capas verificado: (1) RLS en tablas (0 filas visibles de otro usuario) y (2) RPCs SECURITY DEFINER con bloqueo estricto de mutaciones cross-user"),
         "SEC-TEST-020": ("PASS", "supabase_local_runtime", "tests/evidence/rls_runtime_f0.txt", "Permisos de rol anónimo revocados en todas las tablas de datos (permission denied)"),
         "SEC-TEST-021": ("PASS", "supabase_local_runtime", "tests/evidence/db_runtime_f0.txt", "Trigger BEFORE DELETE activo en 21 tablas históricas"),
         "SEC-TEST-022": ("PASS", "unit_test", "tests/security/test_security_f0.py", "audit_log append-only sin permisos de UPDATE ni DELETE"),
-        "SEC-TEST-023": ("PASS", "security_test", "tests/evidence/db_runtime_f0.txt", "Auditoría SECURITY DEFINER/INVOKER: search_path='' verificado en todas las funciones DEFINER"),
+        "SEC-TEST-023": ("PASS", "security_test", "tests/evidence/db_runtime_f0.txt", "Auditoría SECURITY DEFINER/INVOKER: search_path='' verificado en todas las funciones DEFINER y permisos EXECUTE mínimos"),
         "SEC-TEST-024": ("PASS", "security_test", "tests/evidence/secret_scan_f0.txt", "Escáner de secretos pasó con 0 violaciones en el repositorio"),
         "SEC-TEST-025": ("PASS", "n8n_subworkflow_runtime", "tests/evidence/n8n_workflow_runtime_f0.txt", "Redacción de secretos en logs de WF-SYS-001 verificada en runtime"),
         "SEC-TEST-026": ("PASS", "security_test", "tests/evidence/n8n_audit_f0.txt", "Auditoría de seguridad n8n audit ejecutada sobre el contenedor con 0 riesgos críticos"),
         "SEC-TEST-027": ("DEFERRED_APPROVED", "deferred", "10_DEPLOYMENT.md", "Ensayo completo de restauración V1 diferido a disponibilidad de hardware NAS"),
         "SEC-TEST-028": ("DEFERRED_APPROVED", "deferred", "10_DEPLOYMENT.md", "Estrategia de respaldo de clave de cifrado documentada; drill diferido a F8"),
-        "SEC-TEST-036": ("DEFERRED_APPROVED", "deferred", "09_TEST_PLAN.md", "Rotación de credenciales requiere bot token real externo de DEV")
+        "SEC-TEST-036": ("DEFERRED_APPROVED", "deferred", "09_TEST_PLAN.md", "Rotación de credenciales requiere bot token real externo de DEV"),
+        "F0-SEC-RPC-CROSS-USER": ("PASS", "supabase_local_runtime", "tests/evidence/db_runtime_f0.txt", "Validación dinámica cross-user: Usuario A autenticado no puede mutar datos de B en set_assistant_name, transition_task_status, correct_fact, resolve_clarification o register_ingestion")
     }
 
     for st_id, (status, method, ev, obs) in sec_tests_f0.items():

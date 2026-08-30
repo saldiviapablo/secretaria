@@ -1,13 +1,13 @@
 {
-  "run_id": "f0-run-b0469c2f-83d7-47ed-a4ac-24c578411618",
+  "run_id": "f0-run-0af78ddc-e39e-4020-83d6-361c1484ad7a",
   "phase": "F0",
   "status": "F0_DONE_PASS",
   "environment": "DEV (Isolated Windows PC Laboratory)",
-  "started_at": "2026-08-30T20:23:53.627015+00:00",
-  "finished_at": "2026-08-30T20:23:54.260400+00:00",
+  "started_at": "2026-08-30T20:56:35.430331+00:00",
+  "finished_at": "2026-08-30T20:56:36.058836+00:00",
   "git": {
     "branch": "main",
-    "commit": "9aa14de46d2add770b8ca8286a8dd58d2bddca4a"
+    "commit": "f3f434d4249bbe4d751647c3485f608ea89e54a9"
   },
   "baseline_documental": "SVIA-DOCSET-V1-RC1",
   "versions": {
@@ -296,10 +296,26 @@
     "WF-TG-002": {
       "status": "PASS",
       "title": "WF-TG-002 Telegram Send Message Runtime",
-      "description": "Validaci\u00f3n de delivery classes, resoluci\u00f3n server-side de chat y reglas de silencio/quiet/rest.",
+      "description": "Validaci\u00f3n de delivery classes, resoluci\u00f3n server-side de chat, reglas de silencio/quiet/rest y mock Telegram.",
       "method": "n8n_subworkflow_runtime",
       "evidence": "tests/evidence/n8n_workflow_runtime_f0.txt",
-      "observation": "Evalu\u00f3 reactive (bypass silencio + server-side chat), proactive_normal (suprimido en rest), proactive_critical y mock Telegram"
+      "observation": "Evalu\u00f3 reactive (bypass silencio + server-side chat), proactive_critical (con/sin flag), proactive_normal y mocks 200/429/500/403/unknown"
+    },
+    "WF-TEST-028": {
+      "status": "PASS",
+      "title": "WF-TEST-028 Retry 429 Rate Limit",
+      "description": "Manejo de rate limiting 429 preservando retry_after y evitando reintentos ciegos.",
+      "method": "n8n_subworkflow_runtime",
+      "evidence": "tests/evidence/n8n_workflow_runtime_f0.txt",
+      "observation": "Reconoci\u00f3 HTTP 429, preserv\u00f3 retry_after=35s, status=retry, sin \u00e9xito falso"
+    },
+    "WF-TEST-029": {
+      "status": "PASS",
+      "title": "WF-TEST-029 Error Workflow Secret Redaction",
+      "description": "Redacci\u00f3n de secretos en el subworkflow de manejo de errores WF-SYS-001.",
+      "method": "n8n_subworkflow_runtime",
+      "evidence": "tests/evidence/n8n_workflow_runtime_f0.txt",
+      "observation": "Redact\u00f3 tokens Bearer, Telegram bot tokens, passwords y connection strings a [REDACTED]"
     },
     "WF-TEST-001": {
       "status": "DEFERRED_APPROVED",
@@ -329,7 +345,7 @@
       "status": "PASS",
       "method": "supabase_local_runtime",
       "evidence": "tests/evidence/rls_runtime_f0.txt",
-      "observation": "Aislamiento cross-user RLS estricto: Usuario B ve 0 filas de A y no puede modificar tareas de A"
+      "observation": "Aislamiento cross-user en 2 capas verificado: (1) RLS en tablas (0 filas visibles de otro usuario) y (2) RPCs SECURITY DEFINER con bloqueo estricto de mutaciones cross-user"
     },
     "SEC-TEST-020": {
       "status": "PASS",
@@ -353,7 +369,7 @@
       "status": "PASS",
       "method": "security_test",
       "evidence": "tests/evidence/db_runtime_f0.txt",
-      "observation": "Auditor\u00eda SECURITY DEFINER/INVOKER: search_path='' verificado en todas las funciones DEFINER"
+      "observation": "Auditor\u00eda SECURITY DEFINER/INVOKER: search_path='' verificado en todas las funciones DEFINER y permisos EXECUTE m\u00ednimos"
     },
     "SEC-TEST-024": {
       "status": "PASS",
@@ -390,6 +406,12 @@
       "method": "deferred",
       "evidence": "09_TEST_PLAN.md",
       "observation": "Rotaci\u00f3n de credenciales requiere bot token real externo de DEV"
+    },
+    "F0-SEC-RPC-CROSS-USER": {
+      "status": "PASS",
+      "method": "supabase_local_runtime",
+      "evidence": "tests/evidence/db_runtime_f0.txt",
+      "observation": "Validaci\u00f3n din\u00e1mica cross-user: Usuario A autenticado no puede mutar datos de B en set_assistant_name, transition_task_status, correct_fact, resolve_clarification o register_ingestion"
     },
     "OPS-TEST-001": {
       "status": "PASS",

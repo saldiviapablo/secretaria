@@ -1,5 +1,5 @@
 REAL SUPABASE LOCAL DATABASE RUNTIME EVIDENCE
-Timestamp: 2026-08-30T20:21:02Z
+Timestamp: 2026-08-30T20:55:06Z
 Target: postgresql://postgres:[REDACTED]@127.0.0.1:54322/postgres (Supabase Local PostgreSQL 17.6)
 Command: node tests/integration/test_supabase_live.js
 Baseline: SVIA-DOCSET-V1-RC1 (04_DATABASE_SCHEMA.md & 09_TEST_PLAN.md)
@@ -44,5 +44,14 @@ Baseline: SVIA-DOCSET-V1-RC1 (04_DATABASE_SCHEMA.md & 09_TEST_PLAN.md)
 4. IDEMPOTENCY DB COMPONENT:
 [PASS] F0-COMP-ING-IDEMPOTENCY-DB: register_ingestion replay retorno is_duplicate=true con ID existente sin duplicar fila
 
+5. PRIVILEGED RPC CROSS-USER SECURITY TESTS (F0-SEC-RPC-CROSS-USER):
+[PASS] F0-SEC-RPC-CROSS-USER [A. set_assistant_name]: Blocked cross-user mutation on User B
+[PASS] F0-SEC-RPC-CROSS-USER [B. transition_task_status]: Blocked cross-user transition on User B task
+[PASS] F0-SEC-RPC-CROSS-USER [C. correct_fact]: Blocked cross-user supersede on User B fact
+[PASS] F0-SEC-RPC-CROSS-USER [D. resolve_clarification]: Blocked cross-user resolution on User B clarification
+[PASS] F0-SEC-RPC-CROSS-USER [E. register_ingestion]: Blocked cross-user ingestion insertion for User B
+[PASS] F0-SEC-RPC-CROSS-USER: All state of User B verified intact and untampered
+
 Exit Code: 0
 Total Canonical DB Scenarios: 24 (100% PASS)
+Cross-User RPC Audit: 100% PASS (0 bypasses detected)
