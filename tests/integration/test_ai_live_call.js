@@ -63,8 +63,7 @@ ${testInput}
         strict: true,
         schema: schema
       }
-    },
-    temperature: 0.1
+    }
   });
 
   const responseBody = await new Promise((resolve, reject) => {
