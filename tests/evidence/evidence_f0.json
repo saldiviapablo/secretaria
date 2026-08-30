@@ -1,13 +1,13 @@
 {
-  "run_id": "f0-run-b7bffdad-c668-435d-8548-0db530a36e24",
+  "run_id": "f0-run-52de5381-8fe0-47f8-9478-2f6eb2888736",
   "phase": "F0",
   "status": "F0_DONE_PASS",
   "environment": "DEV (Isolated Windows PC Laboratory)",
-  "started_at": "2026-08-30T18:55:10.900277+00:00",
-  "finished_at": "2026-08-30T18:55:11.291471+00:00",
+  "started_at": "2026-08-30T20:23:17.683263+00:00",
+  "finished_at": "2026-08-30T20:23:18.311213+00:00",
   "git": {
     "branch": "main",
-    "commit": "932a997c3b24d06da9d1f46205d5f4d2182d6e9e"
+    "commit": "6ef045f0f447c0d0d5d01af0fe4b40d7e2806cd0"
   },
   "baseline_documental": "SVIA-DOCSET-V1-RC1",
   "versions": {
@@ -15,332 +15,441 @@
     "postgres_internal": "postgres:16-alpine",
     "supabase_cli": "2.116.0",
     "supabase_postgres": "PostgreSQL 17.6 (public.ecr.aws/supabase/postgres:17.6.1.165)",
+    "vector_extension": "vector v0.8.2",
     "migration_head": "20260830000010_functions_and_triggers.sql"
   },
+  "canonical_db_tests_count": 24,
+  "extra_db_tests_count": 4,
   "tests": {
     "DB-TEST-001": {
       "status": "PASS",
+      "title": "Hom\u00f3nimos coexistentes",
+      "description": "Dos personas/nombres hom\u00f3nimos coexistentes seg\u00fan el schema.",
       "method": "supabase_local_runtime",
       "evidence": "tests/evidence/db_runtime_f0.txt",
-      "observation": "Verified via real Supabase local PostgreSQL runtime test suite and schema assertions for DB-TEST-001"
+      "observation": "Dos entidades 'Juan P\u00e9rez' creadas para el mismo usuario sin error de unicidad"
     },
     "DB-TEST-002": {
       "status": "PASS",
+      "title": "Alias compartido",
+      "description": "Alias compartido sin fusionar entidades.",
       "method": "supabase_local_runtime",
       "evidence": "tests/evidence/db_runtime_f0.txt",
-      "observation": "Verified via real Supabase local PostgreSQL runtime test suite and schema assertions for DB-TEST-002"
+      "observation": "Alias 'Juan' asignado a dos entidades distintas del mismo usuario sin fusionar entidades"
     },
     "DB-TEST-003": {
       "status": "PASS",
+      "title": "Asset duplicado por SHA-256",
+      "description": "Asset duplicado por SHA-256: conflicto/reutilizaci\u00f3n, no segundo asset.",
       "method": "supabase_local_runtime",
       "evidence": "tests/evidence/db_runtime_f0.txt",
-      "observation": "Verified via real Supabase local PostgreSQL runtime test suite and schema assertions for DB-TEST-003"
+      "observation": "Inserci\u00f3n de asset duplicado con mismo SHA-256 rechazada por unique index (user_id, sha256)"
     },
     "DB-TEST-004": {
       "status": "PASS",
+      "title": "M\u00faltiples ubicaciones de asset",
+      "description": "Un asset soporta ubicaci\u00f3n Telegram + Drive.",
       "method": "supabase_local_runtime",
       "evidence": "tests/evidence/db_runtime_f0.txt",
-      "observation": "Verified via real Supabase local PostgreSQL runtime test suite and schema assertions for DB-TEST-004"
+      "observation": "Asset \u00fanico vinculado a m\u00faltiples registros en asset_locations (drive y telegram)"
     },
     "DB-TEST-005": {
       "status": "PASS",
+      "title": "Mensaje editado",
+      "description": "Mensaje editado: conservar versi\u00f3n 1 y versi\u00f3n 2.",
       "method": "supabase_local_runtime",
       "evidence": "tests/evidence/db_runtime_f0.txt",
-      "observation": "Verified via real Supabase local PostgreSQL runtime test suite and schema assertions for DB-TEST-005"
+      "observation": "Dos versiones de source_text (v1 original, v2 editada con supersedes_source_text_id y preferida) coexisten"
     },
     "DB-TEST-006": {
       "status": "PASS",
+      "title": "Transcripci\u00f3n A/B",
+      "description": "Transcripci\u00f3n A/B: conservar ambas y permitir una preferida.",
       "method": "supabase_local_runtime",
       "evidence": "tests/evidence/db_runtime_f0.txt",
-      "observation": "Verified coexisting source_texts (test-model-a + test-model-b) with single preferred selection without row deletion in Supabase"
+      "observation": "Transcripciones de test-model-a y test-model-b coexisten en source_texts con una sola preferida"
     },
     "DB-TEST-007": {
       "status": "PASS",
+      "title": "Fecha sin hora",
+      "description": "Fecha sin hora: due_date conocida, time_known=false, due_time=NULL, due_at=NULL.",
       "method": "supabase_local_runtime",
       "evidence": "tests/evidence/db_runtime_f0.txt",
-      "observation": "Verified via real Supabase local PostgreSQL runtime test suite and schema assertions for DB-TEST-007"
+      "observation": "Tarea creada con due_date, time_known=false, due_time=NULL y due_at=NULL validada"
     },
     "DB-TEST-008": {
       "status": "PASS",
+      "title": "Hora falsa rechazada",
+      "description": "Hora falsa: time_known=false + due_time=00:00 debe rechazarse.",
       "method": "supabase_local_runtime",
       "evidence": "tests/evidence/db_runtime_f0.txt",
-      "observation": "Verified via real Supabase local PostgreSQL runtime test suite and schema assertions for DB-TEST-008"
+      "observation": "Inserci\u00f3n de due_time='00:00:00' con time_known=false rechazada por trigger/CHECK constraint"
     },
     "DB-TEST-009": {
       "status": "PASS",
+      "title": "Completed implica completed_at",
+      "description": "status=completed implica completed_at.",
       "method": "supabase_local_runtime",
       "evidence": "tests/evidence/db_runtime_f0.txt",
-      "observation": "Verified via real Supabase local PostgreSQL runtime test suite and schema assertions for DB-TEST-009"
+      "observation": "RPC transition_task_status pobl\u00f3 completed_at y completion_note al transicionar a completed"
     },
     "DB-TEST-010": {
       "status": "PASS",
+      "title": "Historial factual",
+      "description": "Historial factual: hecho anterior y nuevo coexisten.",
       "method": "supabase_local_runtime",
       "evidence": "tests/evidence/db_runtime_f0.txt",
-      "observation": "Verified via real Supabase local PostgreSQL runtime test suite and schema assertions for DB-TEST-010"
+      "observation": "RPC correct_fact marc\u00f3 hecho previo como superseded e insert\u00f3 nuevo hecho current"
     },
     "DB-TEST-011": {
       "status": "PASS",
+      "title": "Un solo nombre asistente activo",
+      "description": "Solo un assistant_name_history vigente con valid_to IS NULL.",
       "method": "supabase_local_runtime",
       "evidence": "tests/evidence/db_runtime_f0.txt",
-      "observation": "Verified via real Supabase local PostgreSQL runtime test suite and schema assertions for DB-TEST-011"
+      "observation": "assistant_name_history garantiza exactamente un registro con valid_to IS NULL"
     },
     "DB-TEST-012": {
       "status": "PASS",
+      "title": "DELETE operativo bloqueado",
+      "description": "DELETE operativo de memoria/tarea/fact falla.",
       "method": "supabase_local_runtime",
       "evidence": "tests/evidence/db_runtime_f0.txt",
-      "observation": "Verified via real Supabase local PostgreSQL runtime test suite and schema assertions for DB-TEST-012"
+      "observation": "Trigger BEFORE DELETE bloque\u00f3 eliminaci\u00f3n de filas en tablas hist\u00f3ricas/permanentes"
     },
     "DB-TEST-013": {
       "status": "PASS",
-      "method": "unit_test",
+      "title": "DELETE embedding autorizado",
+      "description": "DELETE embedding: un embedding derivado puede eliminarse mediante mantenimiento autorizado sin eliminar memoria/source/original.",
+      "method": "supabase_local_runtime",
       "evidence": "tests/evidence/db_runtime_f0.txt",
-      "observation": "Verified via real Supabase local PostgreSQL runtime test suite and schema assertions for DB-TEST-013"
+      "observation": "DELETE de embedding ejecutado con \u00e9xito manteniendo intactos memory_chunk, source_text y memory_item"
     },
     "DB-TEST-014": {
       "status": "PASS",
-      "method": "unit_test",
+      "title": "Reminder duplicado",
+      "description": "Reminder duplicado: misma idempotency key no genera dos reminders.",
+      "method": "supabase_local_runtime",
       "evidence": "tests/evidence/db_runtime_f0.txt",
-      "observation": "Verified via real Supabase local PostgreSQL runtime test suite and schema assertions for DB-TEST-014"
+      "observation": "Inserci\u00f3n duplicada de reminder con misma idempotency_key rechazada por unique index (count=1)"
     },
     "DB-TEST-015": {
       "status": "PASS",
-      "method": "unit_test",
+      "title": "Delivery duplicada",
+      "description": "Delivery duplicada: mismo intento/idempotency key no genera dos notification_deliveries.",
+      "method": "supabase_local_runtime",
       "evidence": "tests/evidence/db_runtime_f0.txt",
-      "observation": "Verified via real Supabase local PostgreSQL runtime test suite and schema assertions for DB-TEST-015"
+      "observation": "Inserci\u00f3n duplicada de delivery con misma idempotency_key rechazada por unique index (count=1)"
     },
     "DB-TEST-016": {
       "status": "PASS",
+      "title": "Lease expirado recuperado",
+      "description": "Lease expirado: un reminder status=sending con lease_expires_at vencido puede recuperarse y volver a retry mediante el mecanismo aprobado.",
       "method": "supabase_local_runtime",
       "evidence": "tests/evidence/db_runtime_f0.txt",
-      "observation": "Verified via real Supabase local PostgreSQL runtime test suite and schema assertions for DB-TEST-016"
-    },
-    "DB-TEST-017": {
-      "status": "PASS",
-      "method": "supabase_local_runtime",
-      "evidence": "tests/evidence/db_runtime_f0.txt",
-      "observation": "Verified multi-tenant RLS isolation (User A vs User B vs anon) in live Supabase local session"
-    },
-    "DB-TEST-018": {
-      "status": "PASS",
-      "method": "unit_test",
-      "evidence": "tests/evidence/db_runtime_f0.txt",
-      "observation": "Verified via real Supabase local PostgreSQL runtime test suite and schema assertions for DB-TEST-018"
-    },
-    "DB-TEST-019": {
-      "status": "PASS",
-      "method": "unit_test",
-      "evidence": "tests/evidence/db_runtime_f0.txt",
-      "observation": "Verified via real Supabase local PostgreSQL runtime test suite and schema assertions for DB-TEST-019"
-    },
-    "DB-TEST-020": {
-      "status": "PASS",
-      "method": "supabase_local_runtime",
-      "evidence": "tests/evidence/db_runtime_f0.txt",
-      "observation": "Verified multiple embeddings (test-model-a 1536d, test-model-b 768d) coexisting on same chunk in Supabase local runtime without fixed vector constraint (persistence fixture)"
-    },
-    "DB-TEST-021": {
-      "status": "PASS",
-      "method": "supabase_local_runtime",
-      "evidence": "tests/evidence/db_runtime_f0.txt",
-      "observation": "Verified full report traceability (report -> result_memory_id -> memory_items -> source_texts) in Supabase local runtime"
-    },
-    "DB-TEST-022": {
-      "status": "PASS",
-      "method": "supabase_local_runtime",
-      "evidence": "tests/evidence/db_runtime_f0.txt",
-      "observation": "Verified asset integrity status transition (verified -> mismatch) in Supabase local runtime"
+      "observation": "RPC release_expired_reminder_leases recuper\u00f3 reminder en sending con lease vencido transicion\u00e1ndolo a retry"
     },
     "DB-TEST-016B": {
       "status": "PASS",
-      "method": "unit_test",
-      "evidence": "tests/db/test_db_schema.py",
-      "observation": "Verified unknown delivery result status in record_notification_result RPC"
+      "title": "Resultado de entrega desconocido",
+      "description": "Resultado de entrega desconocido: delivery puede quedar status=unknown y no provoca reenv\u00edo inmediato ciego.",
+      "method": "supabase_local_runtime",
+      "evidence": "tests/evidence/db_runtime_f0.txt",
+      "observation": "RPC record_notification_result registr\u00f3 delivery status='unknown' sin reenv\u00edo ciego inmediato"
+    },
+    "DB-TEST-017": {
+      "status": "PASS",
+      "title": "Aislamiento RLS A/B",
+      "description": "RLS A/B: A no puede leer/escribir B.",
+      "method": "supabase_local_runtime",
+      "evidence": "tests/evidence/db_runtime_f0.txt",
+      "observation": "Usuario B en sesi\u00f3n autenticada no puede ver filas ni modificar tareas de Usuario A"
     },
     "DB-TEST-017B": {
       "status": "PASS",
+      "title": "Rechazo FK cross-user",
+      "description": "FK cross-user: user A no puede relacionar task/memory/asset/entity de B.",
       "method": "supabase_local_runtime",
-      "evidence": "tests/evidence/rls_runtime_f0.txt",
-      "observation": "Verified 16 multi-tenant composite foreign keys preventing cross-user linking and rejecting cross-user INSERTs in Supabase"
-    },
-    "WF-TEST-001": {
-      "status": "DEFERRED_APPROVED",
-      "method": "deferred",
-      "evidence": "09_TEST_PLAN.md",
-      "observation": "WF-TEST-001 (Telegram duplicate update) depends on WF-TG-001 (Telegram inbound), which belongs to F1. Inbound scenario is deferred to F1."
-    },
-    "SEC-TEST-033": {
-      "status": "DEFERRED_APPROVED",
-      "method": "deferred",
-      "evidence": "09_TEST_PLAN.md",
-      "observation": "Official scenario requires external network/WAN scan against production NAS architecture. Local bind verified via F0-INSPECT-N8N-LOCAL-BIND."
-    },
-    "SEC-TEST-034": {
-      "status": "DEFERRED_APPROVED",
-      "method": "deferred",
-      "evidence": "09_TEST_PLAN.md",
-      "observation": "Official scenario requires external Internet scan against production NAS architecture. Internal port non-exposure verified via F0-INSPECT-N8N-POSTGRES-NO-PUBLISHED-PORT."
-    },
-    "F0-COMP-ING-IDEMPOTENCY": {
-      "status": "PASS",
-      "method": "component_test",
       "evidence": "tests/evidence/db_runtime_f0.txt",
-      "observation": "Direct register_ingestion replay verified against Supabase local DB: same key produces exactly 1 persisted row, replay returns duplicate without error"
+      "observation": "Composite foreign key en 16 tablas rechaz\u00f3 inserci\u00f3n de referencias cruzadas entre usuarios"
+    },
+    "DB-TEST-018": {
+      "status": "PASS",
+      "title": "Audit log append-only",
+      "description": "audit_log append-only: rol operativo no puede UPDATE/DELETE.",
+      "method": "supabase_local_runtime",
+      "evidence": "tests/evidence/db_runtime_f0.txt",
+      "observation": "UPDATE y DELETE expl\u00edcitamente denegados en audit_log para roles operativos"
+    },
+    "DB-TEST-019": {
+      "status": "PASS",
+      "title": "Source text inmutable",
+      "description": "source_text inmutable: text_content de una transcripci\u00f3n/source_text guardado no puede editarse.",
+      "method": "supabase_local_runtime",
+      "evidence": "tests/evidence/db_runtime_f0.txt",
+      "observation": "UPDATE de text_content en source_texts rechazado por trigger prevent_source_text_mutation, preservando texto original"
+    },
+    "DB-TEST-020": {
+      "status": "PASS",
+      "title": "Embeddings m\u00faltiples",
+      "description": "Embeddings m\u00faltiples: un mismo chunk puede almacenar embeddings de modelos diferentes.",
+      "method": "supabase_local_runtime",
+      "evidence": "tests/evidence/db_runtime_f0.txt",
+      "observation": "Embeddings de test-model-a (1536d) y test-model-b (768d) coexisten en el mismo chunk"
+    },
+    "DB-TEST-021": {
+      "status": "PASS",
+      "title": "Reporte trazable",
+      "description": "Reporte trazable: el reporte debe poder llegar a sus memorias fuente y assets generados, no \u00fanicamente tener result_memory_id.",
+      "method": "supabase_local_runtime",
+      "evidence": "tests/evidence/db_runtime_f0.txt",
+      "observation": "Reporte navegable hacia result_memory, source_memory (via derived_from) y asset generado con ubicaciones"
+    },
+    "DB-TEST-022": {
+      "status": "PASS",
+      "title": "Integridad SHA mismatch",
+      "description": "Integridad SHA: hash recalculado distinto debe producir integrity_status=mismatch.",
+      "method": "supabase_local_runtime",
+      "evidence": "tests/evidence/db_runtime_f0.txt",
+      "observation": "Rec\u00e1lculo de hash discrepante produjo integrity_status='mismatch' verificado en assets"
+    },
+    "F0-EXTRA-DB-MEMORY-RELATIONS": {
+      "status": "PASS",
+      "title": "Integridad de relaciones de memoria",
+      "description": "Verificaci\u00f3n de relaciones sem\u00e1nticas entre memory_items.",
+      "method": "supabase_local_runtime",
+      "evidence": "tests/evidence/db_runtime_f0.txt",
+      "observation": "Relaciones derived_from y linked verificadas entre items de memoria"
+    },
+    "F0-EXTRA-DB-ENTITY-LINKS": {
+      "status": "PASS",
+      "title": "Vinculaci\u00f3n memoria-entidad y tarea-entidad",
+      "description": "Verificaci\u00f3n de tablas de enlace memory_entity_links y task_entity_links.",
+      "method": "supabase_local_runtime",
+      "evidence": "tests/evidence/db_runtime_f0.txt",
+      "observation": "Enlaces entity-memory y entity-task creados y consultados con \u00e9xito"
+    },
+    "F0-EXTRA-DB-AI-USAGE": {
+      "status": "PASS",
+      "title": "Registro de eventos de IA",
+      "description": "Verificaci\u00f3n de inserci\u00f3n y m\u00e9tricas en ai_usage_events.",
+      "method": "supabase_local_runtime",
+      "evidence": "tests/evidence/db_runtime_f0.txt",
+      "observation": "Evento de uso de IA registrado con tokens, costo estimado y provider/model"
+    },
+    "F0-EXTRA-DB-SEARCH-TEXT": {
+      "status": "PASS",
+      "title": "B\u00fasqueda textual y fuzzy (SECURITY INVOKER)",
+      "description": "Verificaci\u00f3n de search_memory_text y search_entities_fuzzy bajo SECURITY INVOKER.",
+      "method": "supabase_local_runtime",
+      "evidence": "tests/evidence/db_runtime_f0.txt",
+      "observation": "B\u00fasquedas FTS y trigram ejecutadas con \u00e9xito bajo contexto de invocador"
+    },
+    "F0-COMP-ING-IDEMPOTENCY-DB": {
+      "status": "PASS",
+      "title": "Idempotencia DB de register_ingestion",
+      "description": "Verificaci\u00f3n de replay directo de register_ingestion a nivel SQL/RPC.",
+      "method": "supabase_local_runtime",
+      "evidence": "tests/evidence/db_runtime_f0.txt",
+      "observation": "Replay con misma clave retorna is_duplicate=true con ID existente sin duplicar filas"
+    },
+    "F0-COMP-ING-IDEMPOTENCY-N8N": {
+      "status": "PASS",
+      "title": "Idempotencia subworkflow n8n WF-ING-001",
+      "description": "Verificaci\u00f3n de replay end-to-end a trav\u00e9s del subworkflow WF-ING-001.",
+      "method": "n8n_subworkflow_runtime",
+      "evidence": "tests/evidence/n8n_workflow_runtime_f0.txt",
+      "observation": "Subworkflow ejecut\u00f3 RPC en Supabase, primera corrida duplicate=false, segunda duplicate=true"
     },
     "F0-INSPECT-N8N-LOCAL-BIND": {
       "status": "PASS",
+      "title": "Inspecci\u00f3n de bind LAN en n8n",
+      "description": "Verificaci\u00f3n de que el puerto administrativo de n8n bindee a 127.0.0.1.",
       "method": "inspection",
       "evidence": "tests/evidence/n8n_runtime_f0.txt",
-      "observation": "n8n admin port binds strictly to 127.0.0.1:5678 in DEV compose configuration"
+      "observation": "Puerto administrativo de n8n bindee estrictamente a 127.0.0.1:5678"
     },
     "F0-INSPECT-N8N-POSTGRES-NO-PUBLISHED-PORT": {
       "status": "PASS",
+      "title": "Inspecci\u00f3n de no-publicaci\u00f3n de BD interna",
+      "description": "Verificaci\u00f3n de que PostgreSQL interno no expone puertos al host.",
       "method": "inspection",
       "evidence": "tests/evidence/n8n_runtime_f0.txt",
-      "observation": "n8n internal postgres container has zero host ports exposed/published"
+      "observation": "PostgreSQL interno opera en red bridge aislada con 0 puertos publicados"
     },
     "WF-ING-001": {
       "status": "PASS",
-      "method": "n8n_dev_runtime",
-      "evidence": "tests/evidence/n8n_workflow_import_f0.txt",
-      "observation": "Imported into n8n 2.33.3 container: atomic registration with idempotency key telegram:<bot_alias>:<update_id>, replay no-op and correlation context"
-    },
-    "WF-TG-002": {
-      "status": "PASS",
-      "method": "n8n_dev_runtime",
-      "evidence": "tests/evidence/n8n_workflow_import_f0.txt",
-      "observation": "Imported into n8n 2.33.3 container: delivery classes (reactive, proactive_normal, proactive_critical), server-side chat resolution, rest/quiet mode evaluation"
+      "title": "WF-ING-001 Subworkflow Runtime",
+      "description": "Registro at\u00f3mico de ingestiones con generaci\u00f3n de idempotency_key y replay controlado.",
+      "method": "n8n_subworkflow_runtime",
+      "evidence": "tests/evidence/n8n_workflow_runtime_f0.txt",
+      "observation": "Ejecutado runtime con payload Telegram -> RPC Supabase -> formato Envelope v1.0"
     },
     "WF-SYS-001": {
       "status": "PASS",
-      "method": "n8n_dev_runtime",
-      "evidence": "tests/evidence/n8n_workflow_import_f0.txt",
-      "observation": "Imported into n8n 2.33.3 container: error classification (transient/permanent/auth/data integrity), ingestion update and secret redaction"
+      "title": "WF-SYS-001 Error Handler Runtime",
+      "description": "Clasificaci\u00f3n de errores operacionales y redacci\u00f3n de secretos sint\u00e9ticos.",
+      "method": "n8n_subworkflow_runtime",
+      "evidence": "tests/evidence/n8n_workflow_runtime_f0.txt",
+      "observation": "Clasific\u00f3 transient/permanent/authorization/data integrity/unknown y redact\u00f3 Bearer/bot tokens/passwords"
+    },
+    "WF-TG-002": {
+      "status": "PASS",
+      "title": "WF-TG-002 Telegram Send Message Runtime",
+      "description": "Validaci\u00f3n de delivery classes, resoluci\u00f3n server-side de chat y reglas de silencio/quiet/rest.",
+      "method": "n8n_subworkflow_runtime",
+      "evidence": "tests/evidence/n8n_workflow_runtime_f0.txt",
+      "observation": "Evalu\u00f3 reactive (bypass silencio + server-side chat), proactive_normal (suprimido en rest), proactive_critical y mock Telegram"
+    },
+    "WF-TEST-001": {
+      "status": "DEFERRED_APPROVED",
+      "title": "WF-TEST-001 Telegram Duplicate Inbound",
+      "description": "Telegram duplicate update inbound scenario.",
+      "method": "deferred",
+      "evidence": "09_TEST_PLAN.md",
+      "observation": "Depende de WF-TG-001 (Telegram Inbound) perteneciente a F1. Idempotencia subyacente validada en F0-COMP-ING-IDEMPOTENCY-DB y N8N."
+    },
+    "SEC-TEST-033": {
+      "status": "DEFERRED_APPROVED",
+      "title": "SEC-TEST-033 n8n WAN Exposure Scan",
+      "description": "Escaneo externo WAN para verificar no-exposici\u00f3n de n8n.",
+      "method": "deferred",
+      "evidence": "09_TEST_PLAN.md",
+      "observation": "Requiere despliegue en hardware productivo final del NAS. En DEV verificado via F0-INSPECT-N8N-LOCAL-BIND."
+    },
+    "SEC-TEST-034": {
+      "status": "DEFERRED_APPROVED",
+      "title": "SEC-TEST-034 DB Port Exposure Scan",
+      "description": "Escaneo externo de puertos para verificar no-exposici\u00f3n de PostgreSQL.",
+      "method": "deferred",
+      "evidence": "09_TEST_PLAN.md",
+      "observation": "Requiere escaneo externo contra hardware NAS. En DEV verificado via F0-INSPECT-N8N-POSTGRES-NO-PUBLISHED-PORT."
     },
     "SEC-TEST-019": {
       "status": "PASS",
       "method": "supabase_local_runtime",
       "evidence": "tests/evidence/rls_runtime_f0.txt",
-      "observation": "Cross-user isolation enforced via RLS in live Supabase local: User B sees 0 rows of User A and cannot UPDATE User A tasks"
+      "observation": "Aislamiento cross-user RLS estricto: Usuario B ve 0 filas de A y no puede modificar tareas de A"
     },
     "SEC-TEST-020": {
       "status": "PASS",
       "method": "supabase_local_runtime",
       "evidence": "tests/evidence/rls_runtime_f0.txt",
-      "observation": "Anon role access revoked on all data tables in live Supabase local: SELECT fails with permission denied"
+      "observation": "Permisos de rol an\u00f3nimo revocados en todas las tablas de datos (permission denied)"
     },
     "SEC-TEST-021": {
       "status": "PASS",
       "method": "supabase_local_runtime",
       "evidence": "tests/evidence/db_runtime_f0.txt",
-      "observation": "Historical BEFORE DELETE trigger on all 21 permanent tables verified in live Supabase local"
+      "observation": "Trigger BEFORE DELETE activo en 21 tablas hist\u00f3ricas"
     },
     "SEC-TEST-022": {
       "status": "PASS",
       "method": "unit_test",
       "evidence": "tests/security/test_security_f0.py",
-      "observation": "Audit log UPDATE and DELETE revoked"
+      "observation": "audit_log append-only sin permisos de UPDATE ni DELETE"
     },
     "SEC-TEST-023": {
       "status": "PASS",
-      "method": "unit_test",
-      "evidence": "tests/security/test_security_f0.py",
-      "observation": "All SECURITY DEFINER functions have SET search_path = '' and schema qualifications"
+      "method": "security_test",
+      "evidence": "tests/evidence/db_runtime_f0.txt",
+      "observation": "Auditor\u00eda SECURITY DEFINER/INVOKER: search_path='' verificado en todas las funciones DEFINER"
     },
     "SEC-TEST-024": {
       "status": "PASS",
       "method": "security_test",
       "evidence": "tests/evidence/secret_scan_f0.txt",
-      "observation": "Secret scanner passed with zero violations across repository; synthetic canary fixture caught"
+      "observation": "Esc\u00e1ner de secretos pas\u00f3 con 0 violaciones en el repositorio"
     },
     "SEC-TEST-025": {
       "status": "PASS",
-      "method": "component_test",
-      "evidence": "tests/security/test_security_f0.py",
-      "observation": "Secret redaction in error handler logs verified"
+      "method": "n8n_subworkflow_runtime",
+      "evidence": "tests/evidence/n8n_workflow_runtime_f0.txt",
+      "observation": "Redacci\u00f3n de secretos en logs de WF-SYS-001 verificada en runtime"
     },
     "SEC-TEST-026": {
       "status": "PASS",
       "method": "security_test",
       "evidence": "tests/evidence/n8n_audit_f0.txt",
-      "observation": "n8n container audit verified in live runtime (no docker socket, no privileged, isolated network, clean CLI audit)"
+      "observation": "Auditor\u00eda de seguridad n8n audit ejecutada sobre el contenedor con 0 riesgos cr\u00edticos"
     },
     "SEC-TEST-027": {
       "status": "DEFERRED_APPROVED",
       "method": "deferred",
       "evidence": "10_DEPLOYMENT.md",
-      "observation": "Full V1 restore drill deferred to production infrastructure readiness"
+      "observation": "Ensayo completo de restauraci\u00f3n V1 diferido a disponibilidad de hardware NAS"
     },
     "SEC-TEST-028": {
       "status": "DEFERRED_APPROVED",
       "method": "deferred",
       "evidence": "10_DEPLOYMENT.md",
-      "observation": "Encryption key backup strategy documented; full drill deferred"
+      "observation": "Estrategia de respaldo de clave de cifrado documentada; drill diferido a F8"
     },
     "SEC-TEST-036": {
       "status": "DEFERRED_APPROVED",
       "method": "deferred",
       "evidence": "09_TEST_PLAN.md",
-      "observation": "Credential rotation test requires real external DEV bot token"
+      "observation": "Rotaci\u00f3n de credenciales requiere bot token real externo de DEV"
     },
     "OPS-TEST-001": {
       "status": "PASS",
       "method": "operations_test",
       "evidence": "tests/evidence/n8n_runtime_f0.txt",
-      "observation": "Clean DEV deployment verified with Supabase local and n8n 2.33.3 + postgres 16-alpine container"
+      "observation": "Despliegue DEV limpio verificado con Supabase local y n8n 2.33.3 + postgres 16-alpine"
     },
     "OPS-TEST-002": {
       "status": "PASS",
       "method": "security_test",
       "evidence": "tests/evidence/secret_scan_f0.txt",
-      "observation": "Secret scan clean across tracked files and templates"
+      "observation": "Escaneo de secretos limpio en archivos y plantillas"
     },
     "OPS-TEST-003": {
       "status": "PASS",
       "method": "inspection",
       "evidence": "tests/evidence/n8n_workflow_import_f0.txt",
-      "observation": "Workflow manifest audit passed (exactly 3 workflows in F0, 0 in F1+)"
+      "observation": "Auditor\u00eda de manifiesto: exactamente 3 workflows en F0 y 0 en F1+"
     },
     "OPS-TEST-004": {
       "status": "PASS",
       "method": "operations_test",
       "evidence": "tests/evidence/supabase_reset_f0.txt",
-      "observation": "10 clean migrations applied from scratch twice (Reset 1 and Reset 2) in live Supabase resulting in 25 tables"
+      "observation": "10 migraciones aplicadas desde cero dos veces (Reset 1 y Reset 2) en Supabase local con 25 tablas"
     },
     "OPS-TEST-005": {
       "status": "PASS",
       "method": "operations_test",
       "evidence": "tests/evidence/rls_runtime_f0.txt",
-      "observation": "RLS policies verified in live Supabase runtime across all public user tables after reset"
+      "observation": "Pol\u00edticas RLS verificadas en Supabase local tras el reset"
     },
     "OPS-TEST-006": {
       "status": "PASS",
       "method": "security_test",
       "evidence": "tests/evidence/n8n_audit_f0.txt",
-      "observation": "n8n container runtime security audit passed with 3 workflows imported"
+      "observation": "Auditor\u00eda de seguridad n8n audit ejecutada en contenedor con 3 workflows importados"
     },
     "OPS-TEST-007": {
       "status": "DEFERRED_APPROVED",
       "method": "deferred",
       "evidence": "10_DEPLOYMENT.md",
-      "observation": "Backup freshness monitoring deferred to backup phase (F8)"
+      "observation": "Monitoreo de frescura de respaldos diferido a fase de backup (F8)"
     },
     "OPS-TEST-008": {
       "status": "DEFERRED_APPROVED",
       "method": "deferred",
       "evidence": "10_DEPLOYMENT.md",
-      "observation": "Credential rotation routine deferred to external credentials readiness"
+      "observation": "Rutina de rotaci\u00f3n de credenciales diferida a disponibilidad de credenciales externas"
     },
     "OPS-TEST-009": {
       "status": "DEFERRED_APPROVED",
       "method": "deferred",
       "evidence": "10_DEPLOYMENT.md",
-      "observation": "Upgrade rehearsal deferred; version pinned at 2.33.3 for F0 per DEP-DEC-002"
+      "observation": "Ensayo de actualizaci\u00f3n diferido; versi\u00f3n fijada en 2.33.3 para F0 por DEP-DEC-002"
     },
     "OPS-TEST-010": {
       "status": "PASS",
       "method": "operations_test",
       "evidence": "tests/evidence/evidence_f0.json",
-      "observation": "Evidence recorded with versioning, test outcomes and manifests"
+      "observation": "Evidencia registrada con versiones, resultados de pruebas y manifiestos"
     }
   }
 }

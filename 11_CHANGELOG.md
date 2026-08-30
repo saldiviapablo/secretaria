@@ -1050,6 +1050,42 @@ como constitución documental del paquete definitivo para Antigravity/Codex.
    - Confirmado que la instancia operativa existente de n8n en el NAS (`EXISTING_OPERATIONAL_N8N`), el NAS UGREEN, Immich, Cloudflare y Supabase PROD no fueron modificados en ningún momento.
    - Secretaria Virtual no ha sido desplegada todavía en producción.
 
+---
+
+## CHG-2026-08-30-005 — Revalidación Canónica de Test IDs, Auditoría de Seguridad y Runtime de Workflows F0
+
+**Tipo:** AUDIT / FIXED  
+**Estado:** F0 DONE ratificado y revalidado con 24 Test IDs canónicos de base de datos, auditoría de privilegios y runtime de workflows  
+**Motivo:** Revalidación técnica de F0 para alinear estrictamente los 24 Test IDs de base de datos a `09_TEST_PLAN.md`, auditar el modo de ejecución `SECURITY INVOKER` vs `SECURITY DEFINER`, ejecutar pruebas runtime controladas de los 3 workflows N8N-0 y certificar la versión real de la extensión `vector` (`0.8.2`).  
+**Solicitado por:** Antigravity / Prompt de Revalidación Final de Evidencia y Tests F0  
+**Documentos afectados:** `11_CHANGELOG.md`, `20260830000010_functions_and_triggers.sql`, `tests/evidence/evidence_f0.json`, `tests/evidence/db_runtime_f0.txt`, `tests/evidence/n8n_workflow_runtime_f0.txt`  
+
+### Verificaciones y Correcciones Aplicadas:
+1. **Realineación Canónica de los 24 DB Tests (`09_TEST_PLAN.md`):**
+   - Revalidados los 24 escenarios oficiales de base de datos (`DB-TEST-001` a `DB-TEST-022`, más `DB-TEST-016B` y `DB-TEST-017B`) con sus aserciones exactas:
+     * `DB-TEST-005`: Versión original y editada en `source_texts` con `supersedes_source_text_id`.
+     * `DB-TEST-013`: Eliminación autorizada de `embeddings` sin afectar `memory_chunks`/`source_texts`/`memory_items`.
+     * `DB-TEST-014`: Inserción de recordatorios duplicados rechazada por `idempotency_key` única.
+     * `DB-TEST-015`: Inserción de entregas duplicadas rechazada por `idempotency_key` única.
+     * `DB-TEST-016`: Recuperación de recordatorios con lease expirado a estado `retry` vía `release_expired_reminder_leases()`.
+     * `DB-TEST-019`: Inmutabilidad de `source_texts` ante intentos de `UPDATE` sobre `text_content` bloqueados por trigger.
+     * `DB-TEST-021`: Trazabilidad completa de reportes hacia `result_memory`, `source_memory` (vía `derived_from`) y asset generado con ubicaciones.
+     * `DB-TEST-022`: Transición de `integrity_status` a `mismatch` ante discrepancia de hash SHA-256.
+   - Pruebas adicionales preservadas bajo identificadores independientes `F0-EXTRA-DB-*` (`MEMORY-RELATIONS`, `ENTITY-LINKS`, `AI-USAGE`, `SEARCH-TEXT`).
+2. **Auditoría de Privilegios de Funciones (`SECURITY INVOKER` vs `SECURITY DEFINER`):**
+   - Funciones de búsqueda de lectura (`search_memory_text`, `search_entities_fuzzy`) configuradas como `SECURITY INVOKER` conforme al principio de mínimo privilegio.
+   - Funciones mutacionales del sistema (`set_assistant_name`, `transition_task_status`, `correct_fact`, `claim_due_reminders`, `release_expired_reminder_leases`, `record_notification_result`, `resolve_clarification`, `register_ingestion`) auditadas como `SECURITY DEFINER` con `SET search_path = ''` y objetos calificados por esquema.
+3. **Ejecución Runtime Real de Workflows:**
+   - `WF-ING-001`: Ejecutado runtime en n8n contra Supabase DEV local verificando registro atómico de idempotencia (`is_duplicate=false` en primer intento, `is_duplicate=true` en replay con ID existente y 1 sola fila en BD). Registrado `F0-COMP-ING-IDEMPOTENCY-N8N`.
+   - `WF-SYS-001`: Ejecutado runtime validando clasificación de errores (`transient`, `permanent`, `authorization`, `data integrity`, `unknown`), actualización de estado de ingesta en Supabase y redacción de secretos sintéticos.
+   - `WF-TG-002`: Ejecutado runtime validando clases de entrega (`reactive`, `proactive_normal`, `proactive_critical`), reglas de silencio/quiet/rest, resolución de `chat_id` en servidor y manejo de respuestas mock de Telegram.
+4. **Verificación de Versión Real de Extensión Vector:**
+   - Verificado mediante consulta directa a `pg_extension.extversion` que la versión de PostgreSQL pgvector es `0.8.2`.
+5. **Sanitización de Evidencia y Protección de Producción:**
+   - Cero contraseñas en evidencia y reportes.
+   - Reconfirmado que el NAS, `EXISTING_OPERATIONAL_N8N`, Immich, Cloudflare y Supabase PROD no fueron modificados.
+
+
 
 
 

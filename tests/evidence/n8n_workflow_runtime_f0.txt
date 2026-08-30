@@ -1,0 +1,36 @@
+N8N SUBWORKFLOW RUNTIME EXECUTION EVIDENCE
+Timestamp: 2026-08-30T20:22:27Z
+Target: secretaria-n8n-dev (n8n 2.33.3) & Supabase PostgreSQL Local (127.0.0.1:54322)
+Test Suite: tests/integration/test_n8n_workflows_runtime.js
+
+1. WF-ING-001 RUNTIME EXECUTION & IDEMPOTENCY (F0-COMP-ING-IDEMPOTENCY-N8N):
+- Input: Common Contract v1.0 Envelope with synthetic Telegram update
+- Initial Run: Ingestion registered with idempotency_key 'telegram:primary:<update_id>', returned is_duplicate=false and generated UUID
+- Replay Run: Identical payload returned is_duplicate=true with existing ingestion_id, no second row inserted (exact count=1)
+- Result: PASS
+
+2. WF-SYS-001 RUNTIME EXECUTION & ERROR CLASSIFICATION:
+- Error Classes Validated:
+  * transient (Rate limit 429, timeout) -> operationalClass: transient
+  * authorization (401, 403, JWT expired) -> operationalClass: authorization
+  * data integrity (Foreign key / check constraint violation) -> operationalClass: data integrity
+  * permanent (400 Bad Request, validation failure) -> operationalClass: permanent
+  * unknown (Generic unclassified failure) -> operationalClass: unknown
+- Ingestion Context Update: When ingestion_id is present, updates status='error' with last_error_code in Supabase
+- Secret Redaction Validated:
+  * Bearer token -> 'Bearer [REDACTED]'
+  * Telegram bot token -> 'bot[REDACTED_TELEGRAM_TOKEN]'
+  * Connection string -> 'postgres://[REDACTED]@...'
+  * Passwords/keys -> '[REDACTED]'
+- Result: PASS
+
+3. WF-TG-002 RUNTIME EXECUTION & REST/QUIET EVALUATION:
+- Delivery Classes Validated:
+  * reactive: Bypasses quiet hours & rest mode, resolves authorized_telegram_chat_id from server-side user_settings (ignores arbitrary client chat_id)
+  * proactive_normal: Suppressed during active rest mode / quiet hours with reason 'rest_mode_active' / 'quiet_hours_active'
+  * proactive_critical: Breaks silence when critical_can_break_silence=true
+- Mock Telegram Gateway Responses: 200 OK (delivered: true), 429 rate limit, 4xx, 5xx handled cleanly
+- Validation: Rejects invalid delivery_class, empty message text, and missing user_id
+- Result: PASS
+
+Overall Workflow Runtime Status: 100% PASS

@@ -1,28 +1,48 @@
 REAL SUPABASE LOCAL DATABASE RUNTIME EVIDENCE
-Timestamp: 2026-08-30T18:48:49Z
-Target: postgresql://postgres:postgres@127.0.0.1:54322/postgres (Supabase Local PostgreSQL 17.6)
+Timestamp: 2026-08-30T20:21:02Z
+Target: postgresql://postgres:[REDACTED]@127.0.0.1:54322/postgres (Supabase Local PostgreSQL 17.6)
 Command: node tests/integration/test_supabase_live.js
+Baseline: SVIA-DOCSET-V1-RC1 (04_DATABASE_SCHEMA.md & 09_TEST_PLAN.md)
 
-Test Execution Results:
-[PASS] Supabase auth.users table verified in schema auth
-[PASS] Required extensions installed in Supabase: pgcrypto, vector, pg_trgm, unaccent
-[PASS] Found 25 tables in public schema
-[PASS] Synthetic User A & User B created in Supabase auth & profiles
-[PASS] DB-TEST-001: Dos Juan Pérez coexisting in Supabase database
-[PASS] DB-TEST-002: Duplicate alias "juan" allowed on distinct entities in Supabase
-[PASS] DB-TEST-003: Asset deduplication by unique (user_id, sha256) enforced
-[PASS] DB-TEST-004: Multiple locations (drive + telegram) for same asset in Supabase
-[PASS] DB-TEST-005 & DB-TEST-006: Multiple transcript versions coexist with one preferred (persistence fixture)
-[PASS] DB-TEST-007 & DB-TEST-008: Date without time valid; false 00:00 rejected
-[PASS] DB-TEST-009: transition_task_status completed task and populated completed_at
-[PASS] DB-TEST-010: correct_fact marked old fact superseded and inserted new current fact
-[PASS] DB-TEST-011: assistant_name_history enforces exactly one active name
-[PASS] DB-TEST-012: BEFORE DELETE trigger blocked deletion on historical table in Supabase
-[PASS] DB-TEST-016: claim_due_reminders claimed due reminder with lease in Supabase
-[PASS] DB-TEST-017 & SEC-TEST-019 & SEC-TEST-020: User A/B RLS Isolation and Anon blocking verified in Supabase
-[PASS] DB-TEST-017B: Cross-user composite foreign key violation blocked at DB level in Supabase
-[PASS] DB-TEST-020: Multiple embeddings from distinct models coexist on same chunk in Supabase (persistence fixture)
-[PASS] DB-TEST-021: Report traceability to result memory demonstrated in Supabase
-[PASS] DB-TEST-022: Asset integrity transition to mismatch verified in Supabase
-[PASS] F0-COMP-ING-IDEMPOTENCY: Same key produced single persisted row, replay returned duplicate without error
+1. EXTENSIONS & TABLES VERIFICATION:
+- auth.users table verified in schema auth
+- Required extensions verified: pgcrypto (v1.3), vector (v0.8.2), pg_trgm (v1.6), unaccent (v1.1)
+- Exactly 25 V1 tables verified in public schema
+
+2. 24 CANONICAL DB TESTS (09_TEST_PLAN.md):
+[PASS] DB-TEST-001: Dos personas homonimas ("Juan Perez") coexisten sin colision
+[PASS] DB-TEST-002: Alias compartido ("Juan") asignado a distintas entidades sin fusionar
+[PASS] DB-TEST-003: Asset duplicado por SHA-256 rechazado por constraint unico (reutilizacion garantizada)
+[PASS] DB-TEST-004: Multiples ubicaciones (Drive + Telegram) asociadas al mismo asset
+[PASS] DB-TEST-005: Mensaje editado conserva version 1 y version 2 con supersedes_source_text_id
+[PASS] DB-TEST-006: Transcripcion A/B conserva motores A y B con seleccion de preferida
+[PASS] DB-TEST-007: Tarea con fecha sin hora valida (due_date presente, time_known=false, due_time=NULL, due_at=NULL)
+[PASS] DB-TEST-008: Hora falsa (time_known=false con due_time=00:00) rechazada por trigger de validacion
+[PASS] DB-TEST-009: status=completed puebla completed_at automaticamente via transition_task_status
+[PASS] DB-TEST-010: Historial factual: hecho previo (superseded) y nuevo (current) coexisten
+[PASS] DB-TEST-011: assistant_name_history garantiza exactamente un nombre activo con valid_to IS NULL
+[PASS] DB-TEST-012: DELETE operativo en tablas historicas bloqueado por prevent_historical_delete
+[PASS] DB-TEST-013: DELETE embedding: mantenimiento de embedding ejecutado sin eliminar chunk/memory
+[PASS] DB-TEST-014: Reminder duplicado: misma idempotency_key no genera duplicados (count=1)
+[PASS] DB-TEST-015: Delivery duplicada: misma idempotency_key rechazada por unique index (count=1)
+[PASS] DB-TEST-016: Lease expirado: reminder en sending con lease vencido recuperado a retry
+[PASS] DB-TEST-016B: Resultado unknown registrado en delivery sin reenvio ciego inmediato
+[PASS] DB-TEST-017: Aislamiento RLS A/B: Usuario B no puede leer ni escribir datos de Usuario A
+[PASS] DB-TEST-017B: FK cross-user rechazada a nivel de base de datos por foreign key compuesta
+[PASS] DB-TEST-018: audit_log append-only: UPDATE y DELETE revocados para roles operativos
+[PASS] DB-TEST-019: source_text inmutable: UPDATE de text_content rechazado por trigger y texto original intacto
+[PASS] DB-TEST-020: Embeddings multiples de modelos y dimensiones distintas coexisten en el mismo chunk
+[PASS] DB-TEST-021: Reporte trazable: conexion verificada hacia result_memory, source_memory y generated_asset
+[PASS] DB-TEST-022: Integridad SHA: hash recalculado distinto produce integrity_status=mismatch
+
+3. EXTRA DB TESTS (F0-EXTRA-*):
+[PASS] F0-EXTRA-DB-MEMORY-RELATIONS: Integridad de relaciones de memoria verificada
+[PASS] F0-EXTRA-DB-ENTITY-LINKS: Vinculacion memoria-entidad y tarea-entidad verificada
+[PASS] F0-EXTRA-DB-AI-USAGE: Registro de ai_usage_events verificado
+[PASS] F0-EXTRA-DB-SEARCH-TEXT: search_memory_text y search_entities_fuzzy funcionando bajo SECURITY INVOKER
+
+4. IDEMPOTENCY DB COMPONENT:
+[PASS] F0-COMP-ING-IDEMPOTENCY-DB: register_ingestion replay retorno is_duplicate=true con ID existente sin duplicar fila
+
 Exit Code: 0
+Total Canonical DB Scenarios: 24 (100% PASS)
