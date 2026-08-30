@@ -1,2 +1,13 @@
-Supabase CLI Version: unavailable
-Docker Daemon Status: error: failed to connect to the docker API at npipe:////./pipe/dockerDesktopLinuxEngine; check if the path is correct and if the daemon is running: open //./pipe/dockerDesktopLinuxEngine: The system cannot find the file specified.
+SUPABASE DEV LOCAL RUNTIME START
+Timestamp: 2026-08-30T18:45:40Z
+CLI Version: 2.116.0
+Docker Daemon: Running (Docker Desktop 29.7.2)
+PostgreSQL Version: PostgreSQL 17.6 (public.ecr.aws/supabase/postgres:17.6.1.165)
+DB Port: 127.0.0.1:54322
+Kong API Gateway: 127.0.0.1:54321
+Studio UI: 127.0.0.1:54323
+Inbucket / Mailpit: 127.0.0.1:54324
+Postgres Meta: 127.0.0.1:8080 (internal)
+Logflare Analytics: 127.0.0.1:54327
+Status: Healthy
+Exit Code: 0

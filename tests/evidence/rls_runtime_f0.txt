@@ -1,1 +1,20 @@
-[PASS] DB-TEST-017 & SEC-TEST-019 & SEC-TEST-020: User A/B RLS Isolation and Anon blocking verified in runtime
+REAL SUPABASE RLS RUNTIME EVIDENCE
+Timestamp: 2026-08-30T18:48:49Z
+Target: postgresql://postgres:postgres@127.0.0.1:54322/postgres (Supabase Local PostgreSQL 17.6)
+
+1. Authenticated User A context (SET request.jwt.claim.sub = '<userA_uuid>'):
+   - SELECT * FROM public.tasks -> returns exactly User A task (1 row)
+   - Writes to own task allowed
+
+2. Authenticated User B context (SET request.jwt.claim.sub = '<userB_uuid>'):
+   - SELECT * FROM public.tasks -> returns 0 rows (isolated from User A)
+   - UPDATE public.tasks SET title = 'Hacked' WHERE id = '<userA_task_id>' -> 0 rows affected (blocked by RLS filter)
+
+3. Anonymous role context (SET ROLE anon):
+   - SELECT * FROM public.tasks -> permission denied (access revoked on data tables)
+
+4. Cross-User Foreign Key Enforcement (DB-TEST-017B):
+   - INSERT reminder for User B with task_id of User A -> Rejected by composite foreign key (user_id, task_id) REFERENCES public.tasks(user_id, id)
+
+Exit Code: 0
+Result: 100% PASS

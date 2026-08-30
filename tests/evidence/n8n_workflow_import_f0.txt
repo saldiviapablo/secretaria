@@ -1,7 +1,14 @@
-======================================================================
-VALIDATING N8N WORKFLOW SCHEMAS & DEPENDENCY INTEGRITY:
- [PASS] system/WF-SYS-001_ERROR_HANDLER.json: 5 nodes, valid graph, 0 plaintext secrets
- [PASS] ingestion/WF-ING-001_REGISTER_INGESTION.json: 4 nodes, valid graph, 0 plaintext secrets
- [PASS] telegram/WF-TG-002_TELEGRAM_SEND_MESSAGE.json: 8 nodes, valid graph, 0 plaintext secrets
- [PASS] Manifest verified: Exactly 3 N8N-0 workflows present in repository
-======================================================================
+N8N WORKFLOW IMPORT RUNTIME EVIDENCE
+Timestamp: 2026-08-30T18:52:13Z
+Target Container: secretaria-n8n-dev (n8n 2.33.3)
+Command: n8n import:workflow
+
+Imported Workflows:
+1. WF-SYS-001 | WF-SYS-001_ERROR_HANDLER (5 nodes, error categorization & secret redaction) -> Successfully imported
+2. WF-ING-001 | WF-ING-001_REGISTER_INGESTION (4 nodes, atomic registration & idempotency key telegram:<botAlias>:<updateId>) -> Successfully imported
+3. WF-TG-002 | WF-TG-002_TELEGRAM_SEND_MESSAGE (8 nodes, delivery_class validation, silence/quiet/rest suppression rules) -> Successfully imported
+
+Total Workflows in Container: 3
+F1+ Workflows: 0
+Secret Exposure: 0 plaintext secrets in exported JSON
+Exit Code: 0

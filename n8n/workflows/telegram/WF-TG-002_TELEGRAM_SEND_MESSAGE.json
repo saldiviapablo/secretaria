@@ -1,4 +1,5 @@
 {
+  "id": "WF-TG-002",
   "name": "WF-TG-002_TELEGRAM_SEND_MESSAGE",
   "nodes": [
     {

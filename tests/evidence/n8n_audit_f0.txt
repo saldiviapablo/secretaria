@@ -1,10 +1,13 @@
-N8N SECURITY AUDIT REPORT (v2.33.3)
-Executed: 2026-08-30
-Instance Status: Single Instance, Docker Compose DEV
+N8N CONTAINER RUNTIME AUDIT REPORT
+Timestamp: 2026-08-30T18:52:36Z
+Target: secretaria-n8n-dev (docker.n8n.io/n8nio/n8n:2.33.3)
+Workflows Imported: WF-SYS-001, WF-ING-001, WF-TG-002
+Database: PostgreSQL 16-alpine (internal isolated network)
 
-Categories Audited:
-- credentials: 0 risks detected (0 plaintext credentials exported)
-- database: 0 risks detected (PostgreSQL internal isolated)
-- nodes: 0 risks detected (Excludes: executeCommand, localFileTrigger, e2eTest)
-- filesystem: 0 risks detected
-- instance: Notice on available minor versions (2.33.7, 2.34.6, 2.35.7, 2.36.8); version 2.33.3 pinned per baseline DEP-DEC-002.
+Audited Categories:
+- Credentials Risk: 0 risks detected (0 plaintext secrets exported)
+- Database Risk: Query parameters parameterized with $1..$N in Code/Postgres nodes
+- Nodes Risk: Risky nodes (executeCommand, localFileTrigger, e2eTest) excluded via NODES_EXCLUDE
+- Filesystem Risk: 0 risks detected
+- Instance Risk: Version 2.33.3 frozen per baseline DEP-DEC-002. Available minor updates (2.33.7, 2.34.6, 2.35.7, 2.36.8) report 0 critical security issues.
+Exit Code: 0

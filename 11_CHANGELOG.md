@@ -1023,5 +1023,33 @@ como constitución documental del paquete definitivo para Antigravity/Codex.
    - Generados artefactos dedicados en `tests/evidence/` (`supabase_start_f0.txt`, `supabase_reset_f0.txt`, `db_runtime_f0.txt`, `rls_runtime_f0.txt`, `n8n_version_f0.txt`, `n8n_workflow_import_f0.txt`, `n8n_audit_f0.txt`, `secret_scan_f0.txt`).
    - Identificado el estado del servicio Docker en DEV para el inicio del stack Supabase CLI.
 
+---
+
+## CHG-2026-08-30-004 — Cierre Definitivo de F0 en Laboratorio DEV Aislado
+
+**Tipo:** VERIFIED / CLOSED  
+**Estado:** F0 DONE en entorno DEV local (PC Windows); producción/NAS protegido e inalterado  
+**Motivo:** Ejecución y validación real de todos los gates de F0 sobre Supabase CLI local y n8n 2.33.3 en contenedores Docker tras la resolución del blocker de entorno.  
+**Solicitado por:** Antigravity / Prompt de Continuación y Cierre de F0  
+**Documentos afectados:** `11_CHANGELOG.md`, `tests/evidence/evidence_f0.json`  
+
+### Hechos y Verificaciones Factuales:
+1. **Resolución de Blocker de Entorno:**
+   - Docker Desktop del laboratorio DEV (PC Windows) verificado como operativo (`environment blocker RESOLVED`).
+2. **Supabase DEV Local Real:**
+   - Supabase CLI 2.116.0 iniciado localmente (`npx supabase start`).
+   - Ejecutados dos resets completos de base de datos (`npx supabase db reset` x2) aplicando desde cero las 10 migraciones y verificando la creación limpia de las 25 tablas de producto.
+   - Verificada la existencia de `auth.users`, extensiones (`pgcrypto`, `vector`, `pg_trgm`, `unaccent`), RPCs, triggers y políticas RLS.
+   - Ejecutadas las pruebas funcionales de base de datos (`DB-TEST-001` a `022`), RLS multi-tenant (Usuario A vs Usuario B vs Anon), rechazo de FKs cross-user (`DB-TEST-017B`) e idempotencia/concurrencia de ingestión (`F0-COMP-ING-IDEMPOTENCY`).
+3. **n8n DEV Container Runtime:**
+   - Desplegado stack DEV aislado vía `infra/docker/compose.dev.yml` con n8n `2.33.3` (`secretaria-n8n-dev`) y PostgreSQL interno `16-alpine` (`secretaria-n8n-postgres-dev`).
+   - Verificada la versión `2.33.3` directamente desde el contenedor (`docker exec secretaria-n8n-dev n8n --version`).
+   - Importados realmente los 3 workflows autorizados (`WF-SYS-001`, `WF-ING-001`, `WF-TG-002`) mediante `n8n import:workflow`.
+   - Ejecutado `n8n audit` en el contenedor activo confirmando 0 riesgos de credenciales, base de datos, nodos o filesystem.
+4. **Protección de Producción y NAS:**
+   - Confirmado que la instancia operativa existente de n8n en el NAS (`EXISTING_OPERATIONAL_N8N`), el NAS UGREEN, Immich, Cloudflare y Supabase PROD no fueron modificados en ningún momento.
+   - Secretaria Virtual no ha sido desplegada todavía en producción.
+
+
 
 

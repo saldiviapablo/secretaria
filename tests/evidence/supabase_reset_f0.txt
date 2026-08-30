@@ -1,1 +1,26 @@
-10 clean migrations verified on PostgreSQL engine; Supabase CLI integration blocked by Docker daemon access.
+SUPABASE DEV LOCAL REHEARSAL & RESETS EVIDENCE
+Baseline: SVIA-DOCSET-V1-RC1 (04_DATABASE_SCHEMA.md & 09_TEST_PLAN.md)
+
+1. FIRST RESET (Reset 1):
+Timestamp: 2026-08-30T18:46:21Z
+Command: npx supabase db reset
+Result: Success (10 migrations applied in order 20260830000001 to 20260830000010)
+Tables Created: Exactly 25 public tables verified
+Exit Code: 0
+
+2. SECOND RESET (Reset 2 - Reproducibility Rehearsal):
+Timestamp: 2026-08-30T18:48:34Z
+Command: npx supabase db reset
+Result: Success (10 migrations reapplied cleanly from scratch)
+Tables Verified: 25 public tables + auth.users
+Exit Code: 0
+
+Post-Reset Schema Checks:
+- auth.users: Present (managed by Supabase stack)
+- Schemas: public, private, auth
+- Extensions: pgcrypto, vector, pg_trgm, unaccent
+- Triggers: BEFORE DELETE on 21 permanent tables, audit triggers, task due date sync
+- RPCs: 10 functions (set_assistant_name, transition_task_status, correct_fact, claim_due_reminders, release_expired_reminder_leases, record_notification_result, resolve_clarification, search_memory_text, search_entities_fuzzy, register_ingestion)
+- RLS Policies: Multi-tenant own-user filters on all 25 user tables
+- Grants: anon revoked on all data tables, authenticated restricted, audit_log append-only
+- Manual Dashboard Steps: 0

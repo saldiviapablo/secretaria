@@ -1,0 +1,12 @@
+N8N DEV CONTAINER RUNTIME
+Timestamp: 2026-08-30T18:50:46Z
+Container: secretaria-n8n-dev
+Image: docker.n8n.io/n8nio/n8n:2.33.3
+Version: 2.33.3
+Database Container: secretaria-n8n-postgres-dev (postgres:16-alpine)
+Network: docker_n8n_internal_network (private bridge)
+LAN Bind: 127.0.0.1:5678 (no external WAN publication)
+PostgreSQL Host Exposure: None (5432/tcp internal only)
+Security Flags: no-new-privileges:true, no Docker socket mounted, non-privileged
+Pruning: EXECUTIONS_DATA_PRUNE=true, EXECUTIONS_DATA_MAX_AGE=168, binary mode: filesystem
+Status: Up and Healthy
