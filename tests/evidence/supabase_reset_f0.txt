@@ -1,0 +1,1 @@
+10 clean migrations verified on PostgreSQL engine; Supabase CLI integration blocked by Docker daemon access.

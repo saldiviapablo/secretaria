@@ -1,0 +1,7 @@
+======================================================================
+VALIDATING N8N WORKFLOW SCHEMAS & DEPENDENCY INTEGRITY:
+ [PASS] system/WF-SYS-001_ERROR_HANDLER.json: 5 nodes, valid graph, 0 plaintext secrets
+ [PASS] ingestion/WF-ING-001_REGISTER_INGESTION.json: 4 nodes, valid graph, 0 plaintext secrets
+ [PASS] telegram/WF-TG-002_TELEGRAM_SEND_MESSAGE.json: 8 nodes, valid graph, 0 plaintext secrets
+ [PASS] Manifest verified: Exactly 3 N8N-0 workflows present in repository
+======================================================================

@@ -1,20 +1,22 @@
 {
-  "run_id": "f0-run-d2bd35ea-2890-4860-a844-4dfa71a80ae2",
+  "run_id": "f0-run-00167605-517c-478c-844f-dbd2543458fa",
   "phase": "F0",
   "status": "F0_REVALIDATED_PASS",
   "environment": "DEV",
-  "started_at": "2026-08-30T06:53:15.858519+00:00",
-  "finished_at": "2026-08-30T06:53:27.188286+00:00",
+  "started_at": "2026-08-30T07:07:46.918116+00:00",
+  "finished_at": "2026-08-30T07:07:58.497677+00:00",
   "git": {
     "branch": "main",
-    "commit": "6b67f00d8b27ab0538f4b272b1aab0f6ec5daecf"
+    "commit": "4abae4220ec21a022620ecf4046a01b5bddf5259"
   },
   "baseline_documental": "SVIA-DOCSET-V1-RC1",
   "versions": {
     "n8n": "2.33.3",
     "postgres_image": "postgres:16-alpine",
-    "postgres_runtime": "PostgreSQL 18.3 (PGlite WASM / PostgreSQL 16 compatible engine)",
-    "migration_head": "20260830000010_functions_and_triggers.sql"
+    "postgres_runtime": "PostgreSQL (PGlite Engine Harness / PostgreSQL 16 compatible)",
+    "migration_head": "20260830000010_functions_and_triggers.sql",
+    "supabase_cli": "unavailable",
+    "docker_status": "error: failed to connect to the docker API at npipe:////./pipe/dockerDesktopLinuxEngine; check if the path is correct and if the daemon is running: open //./pipe/dockerDesktopLinuxEngine: The system cannot find the file specified."
   },
   "tests": {
     "DB-TEST-001": {
@@ -51,7 +53,7 @@
       "status": "PASS",
       "method": "integration_test",
       "evidence": "tests/integration/test_db_runtime.js",
-      "observation": "Verified coexisting source_texts (Whisper + Gemini) with single preferred selection without row deletion"
+      "observation": "Verified coexisting source_texts (test-model-a + test-model-b) with single preferred selection without row deletion"
     },
     "DB-TEST-007": {
       "status": "PASS",
@@ -135,7 +137,7 @@
       "status": "PASS",
       "method": "integration_test",
       "evidence": "tests/integration/test_db_runtime.js",
-      "observation": "Verified multiple embeddings (OpenAI 1536d, Google 768d) coexisting on same chunk in PostgreSQL runtime without fixed vector constraint"
+      "observation": "Verified multiple embeddings (test-model-a 1536d, test-model-b 768d) coexisting on same chunk in PostgreSQL runtime without fixed vector constraint (persistence fixture)"
     },
     "DB-TEST-021": {
       "status": "PASS",
@@ -167,11 +169,35 @@
       "evidence": "09_TEST_PLAN.md",
       "observation": "WF-TEST-001 (Telegram duplicate update) depends on WF-TG-001 (Telegram inbound), which belongs to F1. Inbound scenario is deferred to F1."
     },
+    "SEC-TEST-033": {
+      "status": "DEFERRED_APPROVED",
+      "method": "deferred",
+      "evidence": "09_TEST_PLAN.md",
+      "observation": "Official scenario requires external network/WAN scan against production NAS architecture. Local bind verified via F0-INSPECT-N8N-LOCAL-BIND."
+    },
+    "SEC-TEST-034": {
+      "status": "DEFERRED_APPROVED",
+      "method": "deferred",
+      "evidence": "09_TEST_PLAN.md",
+      "observation": "Official scenario requires external Internet scan against production NAS architecture. Internal port non-exposure verified via F0-INSPECT-N8N-POSTGRES-NO-PUBLISHED-PORT."
+    },
     "F0-COMP-ING-IDEMPOTENCY": {
       "status": "PASS",
       "method": "component_test",
       "evidence": "tests/integration/test_db_runtime.js",
       "observation": "Direct register_ingestion replay verified against PostgreSQL: same key produces exactly 1 persisted row, replay returns duplicate without error"
+    },
+    "F0-INSPECT-N8N-LOCAL-BIND": {
+      "status": "PASS",
+      "method": "inspection",
+      "evidence": "infra/docker/compose.dev.yml",
+      "observation": "n8n admin port binds strictly to 127.0.0.1:5678 in DEV compose configuration"
+    },
+    "F0-INSPECT-N8N-POSTGRES-NO-PUBLISHED-PORT": {
+      "status": "PASS",
+      "method": "inspection",
+      "evidence": "infra/docker/compose.dev.yml",
+      "observation": "n8n internal postgres container has zero host ports exposed/published"
     },
     "WF-ING-001": {
       "status": "PASS",
@@ -250,18 +276,6 @@
       "method": "deferred",
       "evidence": "10_DEPLOYMENT.md",
       "observation": "Encryption key backup strategy documented; full drill deferred"
-    },
-    "SEC-TEST-033": {
-      "status": "PASS",
-      "method": "inspection",
-      "evidence": "tests/security/test_security_f0.py",
-      "observation": "DEV configuration binds n8n admin port to 127.0.0.1 (NAS WAN scan deferred)"
-    },
-    "SEC-TEST-034": {
-      "status": "PASS",
-      "method": "inspection",
-      "evidence": "tests/security/test_security_f0.py",
-      "observation": "DEV configuration has NO host port exposed for internal postgres (NAS WAN scan deferred)"
     },
     "SEC-TEST-036": {
       "status": "DEFERRED_APPROVED",

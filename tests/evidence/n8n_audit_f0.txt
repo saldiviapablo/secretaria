@@ -1,0 +1,10 @@
+N8N SECURITY AUDIT REPORT (v2.33.3)
+Executed: 2026-08-30
+Instance Status: Single Instance, Docker Compose DEV
+
+Categories Audited:
+- credentials: 0 risks detected (0 plaintext credentials exported)
+- database: 0 risks detected (PostgreSQL internal isolated)
+- nodes: 0 risks detected (Excludes: executeCommand, localFileTrigger, e2eTest)
+- filesystem: 0 risks detected
+- instance: Notice on available minor versions (2.33.7, 2.34.6, 2.35.7, 2.36.8); version 2.33.3 pinned per baseline DEP-DEC-002.

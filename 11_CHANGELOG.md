@@ -1002,4 +1002,26 @@ como constitución documental del paquete definitivo para Antigravity/Codex.
 6. **Evidencia Estructurada:**
    - Actualizado `tests/evidence/evidence_f0.json` distinguiendo métodos de prueba (inspección, unitario, componente, integración, seguridad y operaciones).
 
+---
+
+## CHG-2026-08-30-003 — Depuración de Migraciones Supabase y Reclasificación de Controles F0
+
+**Tipo:** FIXED / DOCS  
+**Estado:** Migraciones depuradas para compatibilidad con Supabase; ejecución local de Supabase CLI condicionada al servicio Docker  
+**Motivo:** Auditoría final de F0 para eliminar inicialización manual de objetos gestionados por Supabase (`auth`, roles predeterminados) en migraciones de producto, reclasificar formalmente `SEC-TEST-033/034` como `DEFERRED_APPROVED` (con controles de inspección DEV separados) y generar artefactos de evidencia dedicados.  
+**Solicitado por:** Antigravity / Prompt de Revalidación Final Supabase  
+**Documentos afectados:** `04_DATABASE_SCHEMA.md`, `08_SECURITY.md`, `09_TEST_PLAN.md`, `11_CHANGELOG.md`  
+
+### Alcance de las Correcciones:
+1. **Depuración de `20260830000001_extensions_and_schemas.sql`:**
+   - Eliminados `CREATE SCHEMA auth` y los `CREATE ROLE` manuales para preservar la compatibilidad estricta con Supabase local y Supabase producción (`supabase db push`). La infraestructura de Auth y roles queda bajo la gestión del stack Supabase.
+2. **Reclasificación de Tests Oficiales y Controles Internos:**
+   - `SEC-TEST-033` (n8n admin WAN exposure) y `SEC-TEST-034` (DB port exposure NAS) reclasificados formalmente como `DEFERRED_APPROVED` al requerir despliegue final en hardware NAS.
+   - Creados controles locales DEV independientes: `F0-INSPECT-N8N-LOCAL-BIND` (PASS en 127.0.0.1:5678) y `F0-INSPECT-N8N-POSTGRES-NO-PUBLISHED-PORT` (PASS sin puertos publicados de PostgreSQL).
+   - `WF-TEST-001` mantenido como `DEFERRED_APPROVED` (requiere `WF-TG-001` de F1) con el control de componente `F0-COMP-ING-IDEMPOTENCY` en PASS.
+3. **Evidencia y Runtime:**
+   - Generados artefactos dedicados en `tests/evidence/` (`supabase_start_f0.txt`, `supabase_reset_f0.txt`, `db_runtime_f0.txt`, `rls_runtime_f0.txt`, `n8n_version_f0.txt`, `n8n_workflow_import_f0.txt`, `n8n_audit_f0.txt`, `secret_scan_f0.txt`).
+   - Identificado el estado del servicio Docker en DEV para el inicio del stack Supabase CLI.
+
+
 

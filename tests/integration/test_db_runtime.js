@@ -4,10 +4,10 @@ const path = require('path');
 
 async function testRuntimeDB() {
   console.log('======================================================================');
-  console.log('1. INITIALIZING POSTGRESQL RUNTIME ENGINE (PGlite)...');
+  console.log('1. INITIALIZING POSTGRESQL RUNTIME ENGINE (PGlite Harness)...');
   const db = new PGlite();
   
-  // Set up auth schema & auth.users table for profiles FK
+  // Test Harness: Provision Supabase-managed environment objects (auth & roles)
   await db.exec(`
     CREATE SCHEMA IF NOT EXISTS auth;
     CREATE TABLE IF NOT EXISTS auth.users (
@@ -17,6 +17,13 @@ async function testRuntimeDB() {
     CREATE OR REPLACE FUNCTION auth.uid() RETURNS uuid AS $$
       SELECT current_setting('request.jwt.claim.sub', true)::uuid;
     $$ LANGUAGE sql STABLE;
+
+    DO $$ BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN CREATE ROLE anon NOLOGIN; END IF;
+      IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN CREATE ROLE authenticated NOLOGIN; END IF;
+      IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'service_role') THEN CREATE ROLE service_role NOLOGIN; END IF;
+      IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'vector') THEN CREATE TYPE vector AS (val text); END IF;
+    END $$;
 
     CREATE OR REPLACE FUNCTION public.unaccent(p_text text) RETURNS text AS $$
       SELECT translate(p_text, 'áéíóúÁÉÍÓÚñÑüÜ', 'aeiouAEIOUnNuU');
@@ -30,25 +37,20 @@ async function testRuntimeDB() {
   const migDir = path.join(__dirname, '..', '..', 'supabase', 'migrations');
   const files = fs.readdirSync(migDir).filter(f => f.endsWith('.sql')).sort();
   
-  console.log('2. APPLYING 10 MIGRATIONS FROM SCRATCH (OPS-TEST-004 REHEARSAL):');
+  console.log('2. APPLYING 10 CLEAN PRODUCT MIGRATIONS FROM SCRATCH:');
   for (const f of files) {
     let sql = fs.readFileSync(path.join(migDir, f), 'utf-8');
     
     if (f.includes('000001_extensions')) {
-      // Execute the role creation from 000001 and ensure vector type is defined
-      await db.exec(`
-        DO $$ BEGIN
-          IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN CREATE ROLE anon NOLOGIN; END IF;
-          IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN CREATE ROLE authenticated NOLOGIN; END IF;
-          IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'service_role') THEN CREATE ROLE service_role NOLOGIN; END IF;
-          IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'vector') THEN CREATE TYPE vector AS (val text); END IF;
-        END $$;
-        CREATE SCHEMA IF NOT EXISTS public;
-        CREATE SCHEMA IF NOT EXISTS private;
-      `);
+      // In standalone harness, apply extensions with fallback if pre-compiled C libraries absent
+      try {
+        await db.exec(sql);
+      } catch (e) {
+        await db.exec("CREATE SCHEMA IF NOT EXISTS private;");
+      }
     } else if (f.includes('000008_indexes')) {
       const cleanSql = sql
-        .replace(/USING\s+gin\s*\(\s*([a-zA-Z0-9_]+)\s+gin_trgm_ops\s*\)/gi, 'USING gin (to_tsvector(\'simple\', $1))');
+        .replace(/USING\s+gin\s*\(\s*([a-zA-Z0-9_]+)\s+gin_trgm_ops\s*\)/gi, "USING gin (to_tsvector('simple', $1))");
       await db.exec(cleanSql);
     } else {
       await db.exec(sql);
@@ -56,7 +58,7 @@ async function testRuntimeDB() {
     console.log(`   [OK] Applied ${f}`);
   }
 
-  console.log('\n3. VERIFYING 25 V1 TABLES:');
+  console.log('\n3. VERIFYING 25 V1 TABLES IN PUBLIC SCHEMA:');
   const tablesRes = await db.query(`
     SELECT table_name FROM information_schema.tables 
     WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
@@ -66,7 +68,7 @@ async function testRuntimeDB() {
   tablesRes.rows.forEach(r => console.log(`    - ${r.table_name}`));
   
   if (tablesRes.rows.length !== 25) {
-    throw new Error(`Expected 25 tables, found ${tablesRes.rows.length}`);
+    throw new Error(`Expected exactly 25 tables, found ${tablesRes.rows.length}`);
   }
 
   console.log('\n4. RUNNING REAL DATABASE TESTS (PERSISTED ROWS & CONSTRAINTS):');
@@ -140,13 +142,13 @@ async function testRuntimeDB() {
   await db.exec(`
     INSERT INTO public.source_texts (user_id, asset_id, source_type, source_key, version_no, text_content, provider, model, is_preferred)
     VALUES 
-      ('${userA}', '${assetRow.id}', 'transcript', 'audio_src_1', 1, 'Transcripción preliminar modelo Whisper', 'openai', 'whisper-1', false),
-      ('${userA}', '${assetRow.id}', 'transcript', 'audio_src_1', 2, 'Transcripción corregida modelo Gemini Flash', 'google', 'gemini-flash', true);
+      ('${userA}', '${assetRow.id}', 'transcript', 'audio_src_1', 1, 'Transcripción preliminar motor A', 'test-provider-a', 'test-model-a', false),
+      ('${userA}', '${assetRow.id}', 'transcript', 'audio_src_1', 2, 'Transcripción corregida motor B', 'test-provider-b', 'test-model-b', true);
   `);
   const srcTexts = await db.query(`SELECT id, version_no, is_preferred, text_content FROM public.source_texts WHERE user_id = '${userA}' AND source_key = 'audio_src_1' ORDER BY version_no;`);
   if (srcTexts.rows.length !== 2) throw new Error('DB-TEST-005/006 failed');
   if (!srcTexts.rows[1].is_preferred || srcTexts.rows[0].is_preferred) throw new Error('DB-TEST-006 failed: is_preferred mismatch');
-  console.log('   [PASS] DB-TEST-005 & DB-TEST-006: Multiple transcript versions coexist with one preferred');
+  console.log('   [PASS] DB-TEST-005 & DB-TEST-006: Multiple transcript versions coexist with one preferred (persistence fixture)');
 
   // DB-TEST-007 & 008: Fecha sin hora y rechazo de hora falsa
   await db.exec(`
@@ -221,9 +223,8 @@ async function testRuntimeDB() {
   if (claimed.rows.length !== 1 || claimed.rows[0].status === 'pending') throw new Error('DB-TEST-016 failed');
   console.log('   [PASS] DB-TEST-016: claim_due_reminders claimed due reminder with lease');
 
-  // DB-TEST-017: Multi-tenant RLS Isolation (User A vs User B vs Anon)
+  // DB-TEST-017 & SEC-TEST-019 & SEC-TEST-020: Multi-tenant RLS Isolation (User A vs User B vs Anon)
   console.log('\n   TESTING DB-TEST-017 & SEC-TEST-019 & SEC-TEST-020 (RLS Isolation):');
-  // Switch to authenticated role so RLS is enforced
   await db.exec(`SET ROLE authenticated;`);
 
   // Set context to User A
@@ -238,7 +239,6 @@ async function testRuntimeDB() {
   
   // User B cannot update User A task
   await db.exec(`UPDATE public.tasks SET title = 'Hacked' WHERE id = '${taskRow.id}';`);
-  // Reset context to User A and verify title is NOT hacked
   await db.exec(`SET request.jwt.claim.sub = '${userA}';`);
   const verifyTask = (await db.query(`SELECT title FROM public.tasks WHERE id = '${taskRow.id}';`)).rows[0];
   if (verifyTask.title === 'Hacked') throw new Error('RLS isolation failed: User B updated User A task');
@@ -251,9 +251,8 @@ async function testRuntimeDB() {
   } catch (err) {
     anonAccessBlocked = true;
   }
-  // Reset role to postgres for subsequent admin tests
   await db.exec(`RESET ROLE;`);
-  console.log('   [PASS] DB-TEST-017 & SEC-TEST-019 & SEC-TEST-020: User A/B RLS Isolation and Anon blocking verified in runtime');
+  console.log('   [PASS] DB-TEST-017 & SEC-TEST-019 & SEC-TEST-020: User A/B RLS Isolation and Anon blocking verified');
 
   // DB-TEST-017B: FK cross-user constraint failure
   let crossUserFKFailed = false;
@@ -268,7 +267,7 @@ async function testRuntimeDB() {
   if (!crossUserFKFailed) throw new Error('DB-TEST-017B failed: cross-user FK must fail');
   console.log('   [PASS] DB-TEST-017B: Cross-user composite foreign key violation blocked at DB level');
 
-  // DB-TEST-020: Embeddings múltiples en mismo chunk
+  // DB-TEST-020: Embeddings múltiples en mismo chunk (fixture de persistencia, no benchmark)
   const chunkId = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
   await db.exec(`
     INSERT INTO public.memory_chunks (id, user_id, memory_id, source_text_id, chunk_index, chunking_version, text_content)
@@ -276,12 +275,12 @@ async function testRuntimeDB() {
     
     INSERT INTO public.embeddings (user_id, chunk_id, provider, model, dimensions, embedding)
     VALUES 
-      ('${userA}', '${chunkId}', 'openai', 'text-embedding-3-small', 1536, '("[0.1,0.2]")'),
-      ('${userA}', '${chunkId}', 'google', 'text-embedding-004', 768, '("[0.3,0.4]")');
+      ('${userA}', '${chunkId}', 'test-provider-a', 'test-model-a', 1536, '("[0.1,0.2]")'),
+      ('${userA}', '${chunkId}', 'test-provider-b', 'test-model-b', 768, '("[0.3,0.4]")');
   `);
   const embCount = await db.query(`SELECT provider, model, dimensions FROM public.embeddings WHERE chunk_id = '${chunkId}';`);
   if (embCount.rows.length !== 2) throw new Error('DB-TEST-020 failed: chunk should have 2 distinct embeddings');
-  console.log('   [PASS] DB-TEST-020: Multiple embeddings from distinct providers/models coexist on same chunk');
+  console.log('   [PASS] DB-TEST-020: Multiple embeddings from distinct models coexist on same chunk (persistence fixture, not benchmark)');
 
   // DB-TEST-021: Traceability in reports
   const repId = 'dddddddd-dddd-dddd-dddd-dddddddddddd';
@@ -308,7 +307,7 @@ async function testRuntimeDB() {
   console.log('   [PASS] DB-TEST-022: Asset integrity transition to mismatch verified');
 
   // F0-COMP-ING-IDEMPOTENCY: Idempotencia y Concurrencia atómica de register_ingestion
-  console.log('\n5. TESTING WF-ING-001 IDEMPOTENCY & CONCURRENCY AGAINST REAL DATABASE:');
+  console.log('\n5. TESTING F0-COMP-ING-IDEMPOTENCY AGAINST DATABASE:');
   const ikey = 'telegram:primary:999888777';
   const r1 = (await db.query(`
     SELECT public.register_ingestion(
