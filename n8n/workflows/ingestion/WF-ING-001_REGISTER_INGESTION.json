@@ -1,0 +1,103 @@
+{
+  "name": "WF-ING-001_REGISTER_INGESTION",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "node-trigger-001",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Step 1: Validate Common Contract v1.0 Input Envelope\nconst input = $input.first().json;\n\nif (!input) {\n  throw new Error('Empty input envelope');\n}\n\nconst contractVersion = input.contract_version || '1.0';\nconst correlationId = input.correlation_id || $execution.id;\nconst userId = input.user_id;\nconst sourceChannel = input.source_channel || 'system';\nconst capturedAt = input.captured_at || new Date().toISOString();\nconst payload = input.payload || {};\n\nif (!userId) {\n  return [{\n    json: {\n      ok: false,\n      status: 'error',\n      correlation_id: correlationId,\n      error: {\n        category: 'validation',\n        code: 'MISSING_USER_ID',\n        message_safe: 'user_id is required in envelope'\n      }\n    }\n  }];\n}\n\n// Step 2: Determine Idempotency Key\nlet idempotencyKey = payload.idempotency_key;\n\nif (!idempotencyKey) {\n  if (sourceChannel === 'telegram') {\n    const botAlias = payload.bot_alias || 'primary';\n    const updateId = payload.update_id || payload.message_id;\n    if (!updateId) {\n      throw new Error('Telegram ingestion requires update_id or message_id');\n    }\n    idempotencyKey = `telegram:${botAlias}:${updateId}`;\n  } else if (sourceChannel === 'google_drive') {\n    const fileId = payload.file_id;\n    const ver = payload.version || payload.modified_time || 'v1';\n    if (!fileId) {\n      throw new Error('Drive ingestion requires file_id');\n    }\n    idempotencyKey = `drive:${fileId}:${ver}`;\n  } else if (sourceChannel === 'chatgpt_mcp') {\n    const reqId = payload.request_id || correlationId;\n    idempotencyKey = `mcp:${reqId}`;\n  } else if (sourceChannel === 'system') {\n    const op = payload.operation || 'generic';\n    const period = payload.logical_period || capturedAt.split('T')[0];\n    idempotencyKey = `system:${op}:${period}`;\n  } else {\n    idempotencyKey = `${sourceChannel}:${payload.source_event_key || correlationId}`;\n  }\n}\n\nreturn [{\n  json: {\n    contract_version: contractVersion,\n    correlation_id: correlationId,\n    user_id: userId,\n    source_channel: sourceChannel,\n    source_kind: payload.source_kind || 'text',\n    source_event_key: payload.source_event_key || null,\n    telegram_update_id: payload.update_id || null,\n    telegram_message_id: payload.message_id || null,\n    telegram_chat_id: payload.chat_id || null,\n    telegram_user_id: payload.from_id || null,\n    telegram_file_id: payload.file_id && sourceChannel === 'telegram' ? payload.file_id : null,\n    drive_file_id: payload.file_id && sourceChannel === 'google_drive' ? payload.file_id : null,\n    source_url: payload.source_url || null,\n    idempotency_key: idempotencyKey,\n    captured_at: capturedAt,\n    source_metadata: payload.source_metadata || {}\n  }\n}];"
+      },
+      "id": "node-build-params-002",
+      "name": "Validate and Build Ingestion Params",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [420, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT public.register_ingestion(\n  $1::uuid,\n  $2::text,\n  $3::text,\n  $4::text,\n  $5::timestamptz,\n  $6::text,\n  $7::bigint,\n  $8::bigint,\n  $9::bigint,\n  $10::bigint,\n  $11::text,\n  $12::text,\n  $13::text,\n  $14::jsonb\n) as result;",
+        "options": {
+          "queryReplacement": "={{ [$json.user_id, $json.source_channel, $json.source_kind, $json.idempotency_key, $json.captured_at, $json.source_event_key, $json.telegram_update_id, $json.telegram_message_id, $json.telegram_chat_id, $json.telegram_user_id, $json.telegram_file_id, $json.drive_file_id, $json.source_url, JSON.stringify($json.source_metadata)] }}"
+        }
+      },
+      "id": "node-supabase-rpc-003",
+      "name": "Register Ingestion RPC",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [640, 300],
+      "credentials": {
+        "postgres": {
+          "id": "supabase_dev_connection",
+          "name": "Supabase DEV Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json;\nconst prev = $('Validate and Build Ingestion Params').first().json;\nconst res = typeof raw.result === 'string' ? JSON.parse(raw.result) : (raw.result || raw);\n\nif (res.is_duplicate) {\n  return [{\n    json: {\n      ok: true,\n      status: 'duplicate',\n      correlation_id: prev.correlation_id,\n      data: {\n        ingestion_id: res.ingestion_id,\n        idempotency_key: prev.idempotency_key,\n        is_duplicate: true,\n        existing_status: res.existing_status\n      },\n      warnings: ['Duplicate technical event detected. Ingestion reused.']\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    ok: true,\n    status: 'completed',\n    correlation_id: prev.correlation_id,\n    data: {\n      ingestion_id: res.ingestion_id,\n      idempotency_key: prev.idempotency_key,\n      is_duplicate: false\n    },\n    warnings: []\n  }\n}];"
+      },
+      "id": "node-format-output-004",
+      "name": "Format Envelope Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [860, 300]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Validate and Build Ingestion Params",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate and Build Ingestion Params": {
+      "main": [
+        [
+          {
+            "node": "Register Ingestion RPC",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Register Ingestion RPC": {
+      "main": [
+        [
+          {
+            "node": "Format Envelope Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    {
+      "name": "ingestion"
+    },
+    {
+      "name": "core"
+    },
+    {
+      "name": "f0"
+    }
+  ]
+}

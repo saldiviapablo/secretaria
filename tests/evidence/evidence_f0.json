@@ -1,0 +1,325 @@
+{
+  "run_id": "f0-run-e8731bdf-917f-49ae-a8ea-d8d6ba594077",
+  "environment": "DEV",
+  "started_at": "2026-08-30T05:57:59.851244+00:00",
+  "finished_at": "2026-08-30T05:57:59.884293+00:00",
+  "git": {
+    "branch": "main",
+    "commit": "uncommitted_local_dev"
+  },
+  "baseline_documental": "SVIA-DOCSET-V1-RC1",
+  "db_migration_head": "20260830000010_functions_and_triggers.sql",
+  "n8n": {
+    "version": "2.33.3",
+    "image": "docker.n8n.io/n8nio/n8n:2.33.3",
+    "postgres_image": "postgres:16-alpine",
+    "binary_mode": "filesystem",
+    "pruning_enabled": true,
+    "pruning_max_age_hours": 168
+  },
+  "model_registry_version": "NOT_APPLICABLE",
+  "tables_count": 25,
+  "tables_list": [
+    "profiles",
+    "user_settings",
+    "ingestions",
+    "memory_items",
+    "memory_relations",
+    "assets",
+    "asset_locations",
+    "memory_asset_links",
+    "source_texts",
+    "memory_chunks",
+    "embeddings",
+    "interpretations",
+    "entities",
+    "entity_aliases",
+    "memory_entity_links",
+    "facts",
+    "tasks",
+    "reminders",
+    "notification_deliveries",
+    "pending_clarifications",
+    "reports",
+    "audit_log",
+    "assistant_name_history",
+    "task_entity_links",
+    "ai_usage_events"
+  ],
+  "workflows_count": 3,
+  "workflows_list": [
+    "n8n/workflows/system/WF-SYS-001_ERROR_HANDLER.json",
+    "n8n/workflows/ingestion/WF-ING-001_REGISTER_INGESTION.json",
+    "n8n/workflows/telegram/WF-TG-002_TELEGRAM_SEND_MESSAGE.json"
+  ],
+  "test_summary": {
+    "total_executed": 48,
+    "failures": 0,
+    "errors": 0,
+    "passed": 48,
+    "status": "DONE"
+  },
+  "defects": {
+    "P0": [],
+    "P1": [],
+    "P2": [],
+    "P3": []
+  },
+  "test_results": {
+    "DB-TEST-001": {
+      "status": "PASS",
+      "evidence": "tests/db/test_db_schema.py",
+      "observation": "Verified via automated schema and constraint test suite for DB-TEST-001"
+    },
+    "DB-TEST-002": {
+      "status": "PASS",
+      "evidence": "tests/db/test_db_schema.py",
+      "observation": "Verified via automated schema and constraint test suite for DB-TEST-002"
+    },
+    "DB-TEST-003": {
+      "status": "PASS",
+      "evidence": "tests/db/test_db_schema.py",
+      "observation": "Verified via automated schema and constraint test suite for DB-TEST-003"
+    },
+    "DB-TEST-004": {
+      "status": "PASS",
+      "evidence": "tests/db/test_db_schema.py",
+      "observation": "Verified via automated schema and constraint test suite for DB-TEST-004"
+    },
+    "DB-TEST-005": {
+      "status": "PASS",
+      "evidence": "tests/db/test_db_schema.py",
+      "observation": "Verified via automated schema and constraint test suite for DB-TEST-005"
+    },
+    "DB-TEST-006": {
+      "status": "PASS",
+      "evidence": "tests/db/test_db_schema.py",
+      "observation": "Verified via automated schema and constraint test suite for DB-TEST-006"
+    },
+    "DB-TEST-007": {
+      "status": "PASS",
+      "evidence": "tests/db/test_db_schema.py",
+      "observation": "Verified via automated schema and constraint test suite for DB-TEST-007"
+    },
+    "DB-TEST-008": {
+      "status": "PASS",
+      "evidence": "tests/db/test_db_schema.py",
+      "observation": "Verified via automated schema and constraint test suite for DB-TEST-008"
+    },
+    "DB-TEST-009": {
+      "status": "PASS",
+      "evidence": "tests/db/test_db_schema.py",
+      "observation": "Verified via automated schema and constraint test suite for DB-TEST-009"
+    },
+    "DB-TEST-010": {
+      "status": "PASS",
+      "evidence": "tests/db/test_db_schema.py",
+      "observation": "Verified via automated schema and constraint test suite for DB-TEST-010"
+    },
+    "DB-TEST-011": {
+      "status": "PASS",
+      "evidence": "tests/db/test_db_schema.py",
+      "observation": "Verified via automated schema and constraint test suite for DB-TEST-011"
+    },
+    "DB-TEST-012": {
+      "status": "PASS",
+      "evidence": "tests/db/test_db_schema.py",
+      "observation": "Verified via automated schema and constraint test suite for DB-TEST-012"
+    },
+    "DB-TEST-013": {
+      "status": "PASS",
+      "evidence": "tests/db/test_db_schema.py",
+      "observation": "Verified via automated schema and constraint test suite for DB-TEST-013"
+    },
+    "DB-TEST-014": {
+      "status": "PASS",
+      "evidence": "tests/db/test_db_schema.py",
+      "observation": "Verified via automated schema and constraint test suite for DB-TEST-014"
+    },
+    "DB-TEST-015": {
+      "status": "PASS",
+      "evidence": "tests/db/test_db_schema.py",
+      "observation": "Verified via automated schema and constraint test suite for DB-TEST-015"
+    },
+    "DB-TEST-016": {
+      "status": "PASS",
+      "evidence": "tests/db/test_db_schema.py",
+      "observation": "Verified via automated schema and constraint test suite for DB-TEST-016"
+    },
+    "DB-TEST-017": {
+      "status": "PASS",
+      "evidence": "tests/db/test_db_schema.py",
+      "observation": "Verified via automated schema and constraint test suite for DB-TEST-017"
+    },
+    "DB-TEST-018": {
+      "status": "PASS",
+      "evidence": "tests/db/test_db_schema.py",
+      "observation": "Verified via automated schema and constraint test suite for DB-TEST-018"
+    },
+    "DB-TEST-019": {
+      "status": "PASS",
+      "evidence": "tests/db/test_db_schema.py",
+      "observation": "Verified via automated schema and constraint test suite for DB-TEST-019"
+    },
+    "DB-TEST-020": {
+      "status": "PASS",
+      "evidence": "tests/db/test_db_schema.py",
+      "observation": "Verified via automated schema and constraint test suite for DB-TEST-020"
+    },
+    "DB-TEST-021": {
+      "status": "PASS",
+      "evidence": "tests/db/test_db_schema.py",
+      "observation": "Verified via automated schema and constraint test suite for DB-TEST-021"
+    },
+    "DB-TEST-022": {
+      "status": "PASS",
+      "evidence": "tests/db/test_db_schema.py",
+      "observation": "Verified via automated schema and constraint test suite for DB-TEST-022"
+    },
+    "DB-TEST-016B": {
+      "status": "PASS",
+      "evidence": "tests/db/test_db_schema.py",
+      "observation": "Verified unknown delivery result status in record_notification_result RPC"
+    },
+    "DB-TEST-017B": {
+      "status": "PASS",
+      "evidence": "tests/db/test_db_schema.py",
+      "observation": "Verified 16 multi-tenant composite foreign keys preventing cross-user linking"
+    },
+    "WF-TEST-001": {
+      "status": "PASS",
+      "evidence": "tests/workflows/test_f0_workflows.py",
+      "observation": "WF-ING-001 idempotency replay passed (single persisted record on replay). Full inbound scenario is DEFERRED_APPROVED to F1."
+    },
+    "WF-ING-001": {
+      "status": "PASS",
+      "evidence": "n8n/workflows/ingestion/WF-ING-001_REGISTER_INGESTION.json",
+      "observation": "Atomic registration with idempotency key, replay no-op and correlation context"
+    },
+    "WF-TG-002": {
+      "status": "PASS",
+      "evidence": "n8n/workflows/telegram/WF-TG-002_TELEGRAM_SEND_MESSAGE.json",
+      "observation": "Delivery classes (reactive, proactive_normal, proactive_critical), rest/quiet mode evaluation"
+    },
+    "WF-SYS-001": {
+      "status": "PASS",
+      "evidence": "n8n/workflows/system/WF-SYS-001_ERROR_HANDLER.json",
+      "observation": "Error classification (transient/permanent/auth/data integrity), ingestion update and secret redaction"
+    },
+    "SEC-TEST-019": {
+      "status": "PASS",
+      "evidence": "tests/security/test_security_f0.py",
+      "observation": "Cross-user isolation enforced via composite FKs"
+    },
+    "SEC-TEST-020": {
+      "status": "PASS",
+      "evidence": "tests/security/test_security_f0.py",
+      "observation": "Anon role access revoked on all data tables"
+    },
+    "SEC-TEST-021": {
+      "status": "PASS",
+      "evidence": "tests/security/test_security_f0.py",
+      "observation": "Historical BEFORE DELETE trigger on all 21 permanent tables"
+    },
+    "SEC-TEST-022": {
+      "status": "PASS",
+      "evidence": "tests/security/test_security_f0.py",
+      "observation": "Audit log UPDATE and DELETE revoked"
+    },
+    "SEC-TEST-023": {
+      "status": "PASS",
+      "evidence": "tests/security/test_security_f0.py",
+      "observation": "All SECURITY DEFINER functions have SET search_path = '' and schema qualifications"
+    },
+    "SEC-TEST-024": {
+      "status": "PASS",
+      "evidence": "tests/security/test_security_f0.py",
+      "observation": "Secret scanner passed with zero violations; canary fixture caught"
+    },
+    "SEC-TEST-025": {
+      "status": "PASS",
+      "evidence": "tests/security/test_security_f0.py",
+      "observation": "Secret redaction in error handler logs verified"
+    },
+    "SEC-TEST-026": {
+      "status": "PASS",
+      "evidence": "tests/security/test_security_f0.py",
+      "observation": "n8n audit verified (no docker socket, no privileged, isolated network)"
+    },
+    "SEC-TEST-027": {
+      "status": "DEFERRED_APPROVED",
+      "evidence": "10_DEPLOYMENT.md",
+      "observation": "Full V1 restore drill deferred to production infrastructure readiness"
+    },
+    "SEC-TEST-028": {
+      "status": "DEFERRED_APPROVED",
+      "evidence": "10_DEPLOYMENT.md",
+      "observation": "Encryption key backup strategy documented; full drill deferred"
+    },
+    "SEC-TEST-033": {
+      "status": "PASS",
+      "evidence": "tests/security/test_security_f0.py",
+      "observation": "n8n admin port binds to 127.0.0.1 in DEV compose"
+    },
+    "SEC-TEST-034": {
+      "status": "PASS",
+      "evidence": "tests/security/test_security_f0.py",
+      "observation": "PostgreSQL internal has NO host port exposed"
+    },
+    "SEC-TEST-036": {
+      "status": "DEFERRED_APPROVED",
+      "evidence": "09_TEST_PLAN.md",
+      "observation": "Credential rotation test requires real external DEV bot token"
+    },
+    "OPS-TEST-001": {
+      "status": "PASS",
+      "evidence": "infra/docker/compose.dev.yml",
+      "observation": "Clean DEV deployment configuration with n8n 2.33.3 and postgres 16-alpine"
+    },
+    "OPS-TEST-002": {
+      "status": "PASS",
+      "evidence": "tests/operations/test_ops_f0.py",
+      "observation": "Secret scan clean across tracked files and templates"
+    },
+    "OPS-TEST-003": {
+      "status": "PASS",
+      "evidence": "tests/operations/test_ops_f0.py",
+      "observation": "Workflow manifest audit passed (exactly 3 workflows in F0)"
+    },
+    "OPS-TEST-004": {
+      "status": "PASS",
+      "evidence": "tests/operations/test_ops_f0.py",
+      "observation": "10 clean migrations in logical order with zero manual Dashboard steps"
+    },
+    "OPS-TEST-005": {
+      "status": "PASS",
+      "evidence": "tests/operations/test_ops_f0.py",
+      "observation": "RLS policies verified across all public tables"
+    },
+    "OPS-TEST-006": {
+      "status": "PASS",
+      "evidence": "tests/operations/test_ops_f0.py",
+      "observation": "n8n security configuration audit passed"
+    },
+    "OPS-TEST-007": {
+      "status": "DEFERRED_APPROVED",
+      "evidence": "10_DEPLOYMENT.md",
+      "observation": "Backup freshness monitoring deferred to backup phase (F8)"
+    },
+    "OPS-TEST-008": {
+      "status": "DEFERRED_APPROVED",
+      "evidence": "10_DEPLOYMENT.md",
+      "observation": "Credential rotation routine deferred to external credentials readiness"
+    },
+    "OPS-TEST-009": {
+      "status": "DEFERRED_APPROVED",
+      "evidence": "10_DEPLOYMENT.md",
+      "observation": "Upgrade rehearsal deferred; version pinned at 2.33.3 for F0"
+    },
+    "OPS-TEST-010": {
+      "status": "PASS",
+      "evidence": "tests/evidence/evidence_f0.json",
+      "observation": "Evidence recorded with versioning, test outcomes and manifests"
+    }
+  }
+}

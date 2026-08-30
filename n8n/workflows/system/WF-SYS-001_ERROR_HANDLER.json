@@ -1,0 +1,138 @@
+{
+  "name": "WF-SYS-001_ERROR_HANDLER",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "node-error-trigger-001",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Step 1: Extract execution and error details\nconst input = $input.first().json;\n\nconst execution = input.execution || {};\nconst workflow = input.workflow || {};\nconst rawError = execution.error || input.error || {};\n\n// Helper to sanitize secrets from text\nfunction sanitizeText(str) {\n  if (!str) return '';\n  let s = String(str);\n  // Redact Bearer / Basic tokens\n  s = s.replace(/Bearer\\s+[A-Za-z0-9_\\-\\.]+/gi, 'Bearer [REDACTED]');\n  s = s.replace(/bot[0-9]+:[A-Za-z0-9_\\-]+/gi, 'bot[REDACTED_TELEGRAM_TOKEN]');\n  s = s.replace(/(password|secret|key|token|encryption_key)=[^&\\s]+/gi, '$1=[REDACTED]');\n  s = s.replace(/postgres:\\/\\/[^@]+@/gi, 'postgres://[REDACTED]@');\n  return s;\n}\n\nconst errorMessageRaw = rawError.message || rawError.description || 'Unknown execution failure';\nconst safeMessage = sanitizeText(errorMessageRaw);\nconst safeStack = sanitizeText(rawError.stack || '');\n\n// Step 2: Classify operational error\nlet operationalClass = 'unknown';\nlet originalCategory = rawError.category || null;\n\nconst msgLower = safeMessage.toLowerCase();\nif (msgLower.includes('429') || msgLower.includes('rate limit') || msgLower.includes('econnreset') || msgLower.includes('etimedout') || msgLower.includes('timeout') || msgLower.includes('503') || msgLower.includes('502') || msgLower.includes('504')) {\n  operationalClass = 'transient';\n  if (!originalCategory) originalCategory = 'rate_limit';\n} else if (msgLower.includes('401') || msgLower.includes('403') || msgLower.includes('unauthorized') || msgLower.includes('forbidden') || msgLower.includes('jwt')) {\n  operationalClass = 'authorization';\n  if (!originalCategory) originalCategory = 'authorization';\n} else if (msgLower.includes('foreign key') || msgLower.includes('violates') || msgLower.includes('duplicate key') || msgLower.includes('check constraint') || msgLower.includes('integrity')) {\n  operationalClass = 'data integrity';\n  if (!originalCategory) originalCategory = 'data_integrity';\n} else if (msgLower.includes('400') || msgLower.includes('404') || msgLower.includes('not found') || msgLower.includes('validation') || msgLower.includes('invalid')) {\n  operationalClass = 'permanent';\n  if (!originalCategory) originalCategory = 'validation';\n}\n\n// Step 3: Determine if Ingestion ID is present in execution context\nlet ingestionId = null;\nlet userId = null;\nlet correlationId = null;\n\nif (execution.data && execution.data.resultData) {\n  const runData = execution.data.resultData.runData || {};\n  for (const nodeName of Object.keys(runData)) {\n    const nodeRuns = runData[nodeName];\n    if (Array.isArray(nodeRuns)) {\n      for (const run of nodeRuns) {\n        const items = run.data?.main?.[0] || [];\n        for (const item of items) {\n          if (item.json?.ingestion_id) ingestionId = item.json.ingestion_id;\n          if (item.json?.user_id) userId = item.json.user_id;\n          if (item.json?.correlation_id) correlationId = item.json.correlation_id;\n        }\n      }\n    }\n  }\n}\n\nreturn [{\n  json: {\n    workflow_id: workflow.id,\n    workflow_name: workflow.name,\n    execution_id: execution.id,\n    operational_class: operationalClass,\n    original_category: originalCategory,\n    error_code: rawError.code || operationalClass.toUpperCase().replace(/\\s+/g, '_'),\n    error_message_safe: safeMessage,\n    error_stack_safe: safeStack,\n    ingestion_id: ingestionId,\n    user_id: userId,\n    correlation_id: correlationId,\n    occurred_at: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "node-classify-error-002",
+      "name": "Classify and Sanitize Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [420, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.ingestion_id }}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "node-check-ingestion-003",
+      "name": "Has Ingestion ID?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [640, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE public.ingestions\nSET status = 'error',\n    last_error_code = $1::text,\n    last_error_message = $2::text,\n    retry_count = retry_count + 1,\n    updated_at = now()\nWHERE id = $3::uuid;",
+        "options": {
+          "queryReplacement": "={{ [$json.error_code, $json.error_message_safe, $json.ingestion_id] }}"
+        }
+      },
+      "id": "node-update-ingestion-004",
+      "name": "Update Ingestion Error State",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [860, 200],
+      "credentials": {
+        "postgres": {
+          "id": "supabase_dev_connection",
+          "name": "Supabase DEV Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\n\nreturn [{\n  json: {\n    ok: true,\n    status: 'error_handled',\n    operational_class: input.operational_class,\n    original_category: input.original_category,\n    ingestion_updated: !!input.ingestion_id,\n    safe_log: {\n      workflow: input.workflow_name,\n      execution_id: input.execution_id,\n      error_code: input.error_code,\n      message: input.error_message_safe,\n      occurred_at: input.occurred_at\n    }\n  }\n}];"
+      },
+      "id": "node-final-log-005",
+      "name": "Format Handled Log Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1080, 300]
+    }
+  ],
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Classify and Sanitize Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify and Sanitize Error": {
+      "main": [
+        [
+          {
+            "node": "Has Ingestion ID?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Ingestion ID?": {
+      "main": [
+        [
+          {
+            "node": "Update Ingestion Error State",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Handled Log Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Ingestion Error State": {
+      "main": [
+        [
+          {
+            "node": "Format Handled Log Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    {
+      "name": "system"
+    },
+    {
+      "name": "error_handler"
+    },
+    {
+      "name": "f0"
+    }
+  ]
+}

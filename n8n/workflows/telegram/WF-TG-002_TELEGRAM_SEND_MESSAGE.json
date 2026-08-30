@@ -1,0 +1,202 @@
+{
+  "name": "WF-TG-002_TELEGRAM_SEND_MESSAGE",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "node-trigger-001",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Step 1: Validate input envelope and parameters\nconst input = $input.first().json;\n\nif (!input) {\n  throw new Error('Empty envelope');\n}\n\nconst correlationId = input.correlation_id || $execution.id;\nconst userId = input.user_id;\nconst payload = input.payload || {};\nconst text = payload.text || input.text;\nconst deliveryClass = payload.delivery_class || input.delivery_class || 'reactive';\nconst parseMode = payload.parse_mode || input.parse_mode || 'HTML';\nconst replyToMessageId = payload.reply_to_message_id || input.reply_to_message_id || null;\n\nif (!userId) {\n  return [{\n    json: {\n      ok: false,\n      status: 'error',\n      correlation_id: correlationId,\n      error: {\n        category: 'validation',\n        code: 'MISSING_USER_ID',\n        message_safe: 'user_id is required'\n      }\n    }\n  }];\n}\n\nif (!text || text.trim() === '') {\n  return [{\n    json: {\n      ok: false,\n      status: 'error',\n      correlation_id: correlationId,\n      error: {\n        category: 'validation',\n        code: 'EMPTY_TEXT',\n        message_safe: 'Message text cannot be empty'\n      }\n    }\n  }];\n}\n\nconst validClasses = ['reactive', 'proactive_normal', 'proactive_critical'];\nif (!validClasses.includes(deliveryClass)) {\n  return [{\n    json: {\n      ok: false,\n      status: 'error',\n      correlation_id: correlationId,\n      error: {\n        category: 'validation',\n        code: 'INVALID_DELIVERY_CLASS',\n        message_safe: `delivery_class must be one of: ${validClasses.join(', ')}`\n      }\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    correlation_id: correlationId,\n    user_id: userId,\n    text: text,\n    delivery_class: deliveryClass,\n    parse_mode: parseMode,\n    reply_to_message_id: replyToMessageId,\n    idempotency_context: payload.idempotency_context || null\n  }\n}];"
+      },
+      "id": "node-validate-input-002",
+      "name": "Validate Delivery Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [420, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT authorized_telegram_chat_id, quiet_hours_enabled, quiet_start_time, quiet_end_time, rest_mode_enabled, rest_until, critical_can_break_silence FROM public.user_settings WHERE user_id = $1::uuid;",
+        "options": {
+          "queryReplacement": "={{ [$json.user_id] }}"
+        }
+      },
+      "id": "node-get-settings-003",
+      "name": "Fetch User Telegram Settings",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [640, 300],
+      "credentials": {
+        "postgres": {
+          "id": "supabase_dev_connection",
+          "name": "Supabase DEV Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const settings = $input.first().json;\nconst req = $('Validate Delivery Request').first().json;\n\nif (!settings || !settings.authorized_telegram_chat_id) {\n  return [{\n    json: {\n      ok: false,\n      status: 'error',\n      correlation_id: req.correlation_id,\n      error: {\n        category: 'authorization',\n        code: 'NO_AUTHORIZED_TELEGRAM_CHAT',\n        message_safe: 'No authorized Telegram chat configured for user'\n      }\n    }\n  }];\n}\n\nconst now = new Date();\nconst deliveryClass = req.delivery_class;\nlet canSend = true;\nlet suppressionReason = null;\n\nif (deliveryClass === 'proactive_normal') {\n  // Check rest mode\n  if (settings.rest_mode_enabled) {\n    if (!settings.rest_until || new Date(settings.rest_until) > now) {\n      canSend = false;\n      suppressionReason = 'rest_mode_active';\n    }\n  }\n  // Check quiet hours\n  if (canSend && settings.quiet_hours_enabled && settings.quiet_start_time && settings.quiet_end_time) {\n    const currentTime = now.toTimeString().split(' ')[0];\n    const start = settings.quiet_start_time;\n    const end = settings.quiet_end_time;\n    if (start < end) {\n      if (currentTime >= start && currentTime <= end) {\n        canSend = false;\n        suppressionReason = 'quiet_hours_active';\n      }\n    } else {\n      // Overnight range e.g. 22:00 to 07:00\n      if (currentTime >= start || currentTime <= end) {\n        canSend = false;\n        suppressionReason = 'quiet_hours_active';\n      }\n    }\n  }\n} else if (deliveryClass === 'proactive_critical') {\n  if (!settings.critical_can_break_silence) {\n    if (settings.rest_mode_enabled || settings.quiet_hours_enabled) {\n      canSend = false;\n      suppressionReason = 'critical_cannot_break_silence';\n    }\n  }\n}\n\nreturn [{\n  json: {\n    ...req,\n    chat_id: settings.authorized_telegram_chat_id,\n    can_send: canSend,\n    suppression_reason: suppressionReason\n  }\n}];"
+      },
+      "id": "node-eval-silence-004",
+      "name": "Evaluate Silence and Rest Rules",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [860, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.can_send }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "node-if-cansend-005",
+      "name": "Can Send Message?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1080, 300]
+    },
+    {
+      "parameters": {
+        "operation": "sendMessage",
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "parse_mode": "={{ $json.parse_mode }}",
+          "reply_to_message_id": "={{ $json.reply_to_message_id || undefined }}"
+        }
+      },
+      "id": "node-telegram-send-006",
+      "name": "Telegram API Send",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1300, 200],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram_dev_bot_credential",
+          "name": "Telegram DEV Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const tgRes = $input.first().json;\nconst req = $('Evaluate Silence and Rest Rules').first().json;\n\nreturn [{\n  json: {\n    ok: true,\n    status: 'completed',\n    correlation_id: req.correlation_id,\n    data: {\n      delivered: true,\n      provider_message_id: tgRes.message_id ? String(tgRes.message_id) : null,\n      chat_id: req.chat_id,\n      sent_at: new Date().toISOString()\n    },\n    warnings: []\n  }\n}];"
+      },
+      "id": "node-format-success-007",
+      "name": "Format Success Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1520, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const req = $input.first().json;\n\nreturn [{\n  json: {\n    ok: true,\n    status: 'suppressed',\n    correlation_id: req.correlation_id,\n    data: {\n      delivered: false,\n      suppressed: true,\n      reason: req.suppression_reason\n    },\n    warnings: [`Message delivery suppressed due to ${req.suppression_reason}`]\n  }\n}];"
+      },
+      "id": "node-format-suppressed-008",
+      "name": "Format Suppressed Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1300, 400]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Validate Delivery Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Delivery Request": {
+      "main": [
+        [
+          {
+            "node": "Fetch User Telegram Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch User Telegram Settings": {
+      "main": [
+        [
+          {
+            "node": "Evaluate Silence and Rest Rules",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evaluate Silence and Rest Rules": {
+      "main": [
+        [
+          {
+            "node": "Can Send Message?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Can Send Message?": {
+      "main": [
+        [
+          {
+            "node": "Telegram API Send",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Suppressed Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram API Send": {
+      "main": [
+        [
+          {
+            "node": "Format Success Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    {
+      "name": "telegram"
+    },
+    {
+      "name": "messaging"
+    },
+    {
+      "name": "f0"
+    }
+  ]
+}
