@@ -6,7 +6,7 @@ Testing WF-ING-001, WF-SYS-001, and WF-TG-002 against Supabase Local
 [SETUP] Synthetic user & settings created for workflow execution
 
 --- 1. TESTING WF-ING-001 RUNTIME EXECUTION & IDEMPOTENCY ---
-   [PASS] WF-ING-001 Initial Run: Ingestion registered (id: d776d8aa-67f1-4167-a78a-44c1f695ec00, duplicate: false)
+   [PASS] WF-ING-001 Initial Run: Ingestion registered (id: 8cfbec33-25d6-419a-9b4a-bd16687163eb, duplicate: false)
    [PASS] WF-ING-001 Replay Run (F0-COMP-ING-IDEMPOTENCY-N8N): returned is_duplicate=true with existing ID, exactly 1 row in DB
 
 --- 2. TESTING WF-SYS-001 RUNTIME EXECUTION & ERROR HANDLING ---
@@ -22,7 +22,7 @@ Testing WF-ING-001, WF-SYS-001, and WF-TG-002 against Supabase Local
    [PASS] WF-TG-002 Caso B: proactive_critical con flag=true y evento critico fue PERMITIDO atravesar silencio
    [PASS] WF-TG-002 Caso C: proactive_critical con evento no-critico RECHAZO el bypass critico
    [PASS] WF-TG-002 Caso D: proactive_normal durante silencio fue SUPRIMIDO
-   [PASS] WF-TG-002 Caso E: reactive PERMITIDO y destino resuelto estrictamente en servidor (chat_id=5031287, ignorando 99999999)
+   [PASS] WF-TG-002 Caso E: reactive PERMITIDO y destino resuelto estrictamente en servidor (chat_id=8721906, ignorando 99999999)
 
 --- 4. TESTING WF-TG-002 MOCK GATEWAY RESPONSES ---
    [PASS] WF-TG-002 Mock 200 OK: Formateado como status=completed con provider_message_id=887766
