@@ -1,0 +1,7 @@
+======================================================================
+RUNNING LIVE EXTERNAL AI PROVIDER TEST:
+Provider: OpenAI | Primary Model: gpt-5.6-luna (Router: config/ai_models.json)
+======================================================================
+
+[PRECONDITION_CHECK] OPENAI_API_KEY is not configured in DEV environment.
+Status: BLOCKED_EXTERNAL_PRECONDITION (Missing logical credential: OPENAI_API_KEY)

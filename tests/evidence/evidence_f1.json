@@ -1,9 +1,9 @@
 {
-  "run_id": "f1-run-72a4b4c4-84c7-401f-8f5d-a8f57ef13f49",
+  "run_id": "f1-run-9fd254a1-5b02-43ff-a384-a01d6fc318de",
   "phase": "F1",
   "baseline": "SVIA-DOCSET-V1-RC1",
-  "started_at": "2026-08-30T21:27:56.687604+00:00",
-  "finished_at": "2026-08-30T21:28:01.381837+00:00",
+  "started_at": "2026-08-30T21:50:53.065165+00:00",
+  "finished_at": "2026-08-30T21:50:57.635634+00:00",
   "environment": {
     "os": "Windows (DEV Isolated Lab)",
     "database": {
@@ -27,7 +27,7 @@
       "security_audit_completed": true
     },
     "git": {
-      "commit": "eb73e76f945f3090cb0c56cbb113530ef94e131a",
+      "commit": "b25dfe8612ab2dcc4901119cf2217174dd620e4f",
       "branch": "main",
       "clean_worktree": true
     },
@@ -38,6 +38,23 @@
       "cloudflare_tunnel": "UNTOUCHED",
       "supabase_prod": "UNTOUCHED"
     }
+  },
+  "model_registry": {
+    "file": "config/ai_models.json",
+    "status": "VALID",
+    "routing": {
+      "text_routine": "gpt-5.6-luna (openai)",
+      "text_complex": "gpt-5.6-terra (openai)",
+      "sol": "gpt-5.6-sol (exceptional, no default)",
+      "transcription_primary": null,
+      "embedding_primary": null
+    }
+  },
+  "live_ai_provider_test": {
+    "status": "BLOCKED_EXTERNAL_PRECONDITION",
+    "provider": "openai",
+    "primary_model": "gpt-5.6-luna",
+    "missing_credential": "OPENAI_API_KEY"
   },
   "test_results": {
     "python_unit_tests": {
@@ -96,11 +113,18 @@
         "status": "PASS",
         "evidence": "tests/integration/test_f1_e2e.js (E2E-F)"
       },
-      "WF-TEST-034": {
-        "title": "Telemetr\u00eda de Consumo de IA",
-        "desc": "Registro de eventos de inferencia y costo en ai_usage_events.",
+      "F1-COMP-AI-USAGE-PERSISTENCE": {
+        "title": "Persistencia de eventos de uso de IA",
+        "desc": "Registro at\u00f3mico de eventos de inferencia y costo en public.ai_usage_events.",
         "status": "PASS",
         "evidence": "tests/integration/test_f1_e2e.js (Section 9)"
+      },
+      "WF-TEST-034": {
+        "title": "Monitor de costos de IA (AI cost monitor)",
+        "desc": "Monitor acumulativo de costos de IA diferido a la fase que implemente WF-SYS-004.",
+        "status": "DEFERRED_APPROVED",
+        "deferral_reason": "WF-SYS-004_AI_COST_MONITOR belongs to F8 (Hardening / watchdogs)",
+        "evidence": "tests/integration/test_f1_e2e.js (Persistence validated via F1-COMP-AI-USAGE-PERSISTENCE)"
       },
       "SEC-TEST-001": {
         "title": "Validaci\u00f3n de Webhook Secret",
@@ -137,7 +161,9 @@
     }
   },
   "phase_dependencies": {
-    "reminders_deferred_f2": "DEFERRED_PHASE_DEPENDENCY_F2 (Reminders created with valid time metadata, planning and dispatching handled in F2)"
+    "f2_recordatorios_dependency": "DEFERRED_PHASE_DEPENDENCY_F2 (F2 = Recordatorios: planning, leasing and dispatching of reminders)",
+    "f3_audio_drive_dependency": "DEFERRED_PHASE_DEPENDENCY_F3 (F3 = Audio + Drive: audio ingestion, transcription benchmark, Drive storage)",
+    "f8_ai_cost_monitor_dependency": "DEFERRED_PHASE_DEPENDENCY_F8 (F8 = Hardening / watchdogs: WF-SYS-004_AI_COST_MONITOR)"
   },
-  "final_verdict": "F1 DONE"
+  "final_verdict": "F1 BLOCKED_EXTERNAL_PRECONDITION"
 }

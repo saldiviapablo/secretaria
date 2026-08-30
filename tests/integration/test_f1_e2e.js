@@ -411,12 +411,13 @@ async function runF1E2ESuite() {
   console.log(`   [PASS] WF-TASK-004: ${queryRes.length} tareas recuperadas determinísticamente y formateadas para respuesta Telegram`);
 
   // -------------------------------------------------------------------------
-  // 9. WF-TEST-034: AI Usage Telemetry
+  // 9. F1-COMP-AI-USAGE-PERSISTENCE & WF-TEST-034 Classification
   // -------------------------------------------------------------------------
-  console.log('\n9. RUNNING WF-TEST-034 (AI Usage Telemetry):');
+  console.log('\n9. RUNNING F1-COMP-AI-USAGE-PERSISTENCE & WF-TEST-034:');
   const usageEvents = (await client.query(`SELECT count(*) FROM public.ai_usage_events WHERE user_id = '${userA}';`)).rows[0].count;
-  if (Number(usageEvents) < 1) throw new Error('WF-TEST-034 No AI usage events found');
-  console.log(`   [PASS] WF-TEST-034: Telemetría de uso y costo de IA registrada en ai_usage_events (count=${usageEvents})`);
+  if (Number(usageEvents) < 1) throw new Error('F1-COMP-AI-USAGE-PERSISTENCE: No AI usage events found');
+  console.log(`   [PASS] F1-COMP-AI-USAGE-PERSISTENCE: Telemetría de uso y costo de IA registrada en ai_usage_events (count=${usageEvents})`);
+  console.log(`   [DEFERRED_APPROVED] WF-TEST-034: Monitor acumulativo de costos diferido formalmente a F8 (WF-SYS-004_AI_COST_MONITOR)`);
 
   await client.end();
   console.log('\n======================================================================');

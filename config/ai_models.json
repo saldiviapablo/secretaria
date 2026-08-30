@@ -1,0 +1,58 @@
+{
+  "version": "1.0",
+  "baseline": "SVIA-DOCSET-V1-RC1",
+  "last_updated": "2026-08-30",
+  "routing": {
+    "text_routine": {
+      "provider": "openai",
+      "model": "gpt-5.6-luna",
+      "purpose": "Extracción estructurada rutinaria, clasificación, detección de intent, respuestas cortas y operaciones de alto volumen",
+      "role": "primary_generative_routine"
+    },
+    "text_complex": {
+      "provider": "openai",
+      "model": "gpt-5.6-terra",
+      "purpose": "Interpretación compleja, múltiples entidades, correcciones históricas y síntesis multi-fuente",
+      "role": "primary_escalation"
+    },
+    "text_frontier_exceptional": {
+      "provider": "openai",
+      "model": "gpt-5.6-sol",
+      "purpose": "Escalamiento excepcional, razonamiento multi-documento de alta complejidad (no default)",
+      "role": "exceptional_only",
+      "is_default": false
+    },
+    "text_fallback_economic": {
+      "provider": "gemini",
+      "model": "gemini-3.5-flash-lite",
+      "purpose": "Fallback económico de texto y parsing ligero",
+      "role": "fallback_economic"
+    },
+    "transcription_primary": null,
+    "transcription_candidates": [
+      {
+        "provider": "openai",
+        "model": "gpt-transcribe",
+        "role": "candidate_a"
+      },
+      {
+        "provider": "gemini",
+        "model": "gemini-3.7-flash",
+        "role": "candidate_b"
+      }
+    ],
+    "embedding_primary": null,
+    "embedding_candidates": [
+      {
+        "provider": "openai",
+        "model": "text-embedding-3-large",
+        "target_dimension": 1536,
+        "role": "candidate_a"
+      }
+    ]
+  },
+  "benchmarks_pending": {
+    "transcription_benchmark": "PENDING_F3",
+    "embedding_benchmark": "PENDING_F4"
+  }
+}

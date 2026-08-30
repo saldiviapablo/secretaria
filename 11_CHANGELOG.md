@@ -1164,6 +1164,38 @@ como constitución documental del paquete definitivo para Antigravity/Codex.
 5. **Aislamiento de Producción:**
    - Confirmado que el NAS UGREEN (`EXISTING_OPERATIONAL_N8N`), Immich, Cloudflare y Supabase PROD no fueron tocados ni modificados.
 
+---
+
+## CHG-2026-08-30-008 — Auditoría de Evidencia F1: Model Registry, Clasificación de Telemetría y Precondición Externa de IA
+
+**Tipo:** AUDIT / DOCUMENTATION / TESTS  
+**Estado:** F1 BLOCKED_EXTERNAL_PRECONDITION (100% de componentes locales completados; pendiente provisión externa de `OPENAI_API_KEY` para prueba live con proveedor)  
+**Motivo:** Auditoría y corrección final de la evidencia F1 para formalizar la creación de `config/ai_models.json`, reclasificar la telemetría acumulativa de costos como dependiente de F8 (`WF-SYS-004`), corregir la nomenclatura de fases subsiguientes (`F2 = Recordatorios`, `F3 = Audio + Drive`) y limpiar enlaces y artefactos.  
+**Solicitado por:** Antigravity / Prompt de Corrección Final de Evidencia F1  
+**Documentos afectados:** `11_CHANGELOG.md`, `config/ai_models.json`, `tests/integration/test_ai_live_call.js`, `tests/integration/test_f1_e2e.js`, `tests/run_all_tests.py`, `tests/evidence/evidence_f1.json`  
+
+### Verificaciones y Correcciones Aplicadas:
+1. **Model Registry (`config/ai_models.json`):**
+   - Creado y validado el registro de modelos formal según `06_AI_MODELS_AND_PROMPTS.md`:
+     * `text_routine`: `gpt-5.6-luna` (OpenAI).
+     * `text_complex`: `gpt-5.6-terra` (OpenAI).
+     * `sol`: `gpt-5.6-sol` (Excepcional / no default).
+     * `transcription_primary`: `null` (Benchmark pendiente en F3).
+     * `embedding_primary`: `null` (Benchmark pendiente en F4).
+2. **Auditoría de Inferencia IA Live vs Precondición Externa:**
+   - Creado script de prueba live `tests/integration/test_ai_live_call.js`.
+   - Se verificó que en el entorno DEV aislado actual no se encuentra configurada la variable `OPENAI_API_KEY`.
+   - Conforme a la regla de no falsificar `DONE`, el estado formal de cierre queda clasificado como `F1 BLOCKED_EXTERNAL_PRECONDITION` indicando con precisión la credencial lógica faltante (`OPENAI_API_KEY`).
+3. **Reclasificación Canónica de `WF-TEST-034`:**
+   - `F1-COMP-AI-USAGE-PERSISTENCE` clasificado como **`PASS`** (la inserción atómica de eventos en `public.ai_usage_events` fue demostrada en tests de integración en base de datos real).
+   - `WF-TEST-034` (Monitor acumulativo de costos) clasificado como **`DEFERRED_APPROVED`** debido a que `WF-SYS-004_AI_COST_MONITOR` pertenece a `F8 — Hardening / watchdogs`.
+4. **Corrección de Nomenclatura de Fases:**
+   - Corregidas las referencias documentales: `F2 = Recordatorios`, `F3 = Audio + Drive`.
+5. **Limpieza Documental:**
+   - Eliminados enlaces absolutos y esquemas `file:///` de artefactos de evidencia, adoptando rutas relativas (`tests/evidence/evidence_f1.json`).
+   - Secret scan verificado (0 secretos detectados).
+
+
 
 
 

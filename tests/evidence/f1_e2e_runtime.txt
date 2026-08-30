@@ -6,13 +6,13 @@ Target: Real Supabase DEV PostgreSQL at 127.0.0.1:54322
 [SETUP] Synthetic User A & Settings initialized in Supabase DEV
 
 1. RUNNING E2E-A / WF-TEST-002 (Canonical Task Creation):
-   [PASS] E2E-A / WF-TEST-002: Tarea Ãºnica persistida (c646b9af-8fa5-4f47-91f9-00aa2efffcb8) con vencimiento Mon Aug 31 2026 00:00:00 GMT-0300 (hora estÃ¡ndar de Argentina) 15:00:00 y entidad vinculada
+   [PASS] E2E-A / WF-TEST-002: Tarea Ãºnica persistida (06c11a51-6f63-4575-b35c-b248fd4279c3) con vencimiento Mon Aug 31 2026 00:00:00 GMT-0300 (hora estÃ¡ndar de Argentina) 15:00:00 y entidad vinculada
 
 2. RUNNING E2E-B / WF-TEST-004 (Task without Time - DATE-* Rule):
    [PASS] E2E-B / WF-TEST-004: Tarea creada con due_date=Wed Sep 02 2026 00:00:00 GMT-0300 (hora estÃ¡ndar de Argentina), time_known=false, due_time=NULL, due_at=NULL (sin 00:00 inventado)
 
 3. RUNNING E2E-C / WF-TEST-003 (Ambiguous Person & Clarification):
-   [PASS] E2E-C Step 1: Clarification creada pendiente (d4377486-e7b4-47ea-9eeb-0e7693d7ca99) sin mutaciÃ³n errÃ³nea de tarea
+   [PASS] E2E-C Step 1: Clarification creada pendiente (22d8a0f2-89de-4719-b657-cc3682acd2a7) sin mutaciÃ³n errÃ³nea de tarea
    [PASS] E2E-C / WF-TEST-003 Step 2: Clarification resuelta con Ã©xito -> Juan PÃ©rez asignado inequÃ­vocamente
 
 4. RUNNING E2E-D (Interleaved Query with Active Clarification):
@@ -32,8 +32,9 @@ Target: Real Supabase DEV PostgreSQL at 127.0.0.1:54322
 8. RUNNING WF-TASK-004 (Deterministic Query Tasks):
    [PASS] WF-TASK-004: 2 tareas recuperadas determinÃ­sticamente y formateadas para respuesta Telegram
 
-9. RUNNING WF-TEST-034 (AI Usage Telemetry):
-   [PASS] WF-TEST-034: TelemetrÃ­a de uso y costo de IA registrada en ai_usage_events (count=1)
+9. RUNNING F1-COMP-AI-USAGE-PERSISTENCE & WF-TEST-034:
+   [PASS] F1-COMP-AI-USAGE-PERSISTENCE: TelemetrÃ­a de uso y costo de IA registrada en ai_usage_events (count=1)
+   [DEFERRED_APPROVED] WF-TEST-034: Monitor acumulativo de costos diferido formalmente a F8 (WF-SYS-004_AI_COST_MONITOR)
 
 ======================================================================
 ALL F1 E2E & CANONICAL TESTS PASSED WITH 100% SUCCESS
