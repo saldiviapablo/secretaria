@@ -83,7 +83,12 @@
         "date_to": { "type": ["string", "null"] },
         "format": { "type": "string", "enum": ["text", "pdf", "xlsx"] }
       },
-      "required": ["report_type", "format"]
+      "required": [
+        "report_type",
+        "date_from",
+        "date_to",
+        "format"
+      ]
     },
     "confidence": {
       "type": "number",
