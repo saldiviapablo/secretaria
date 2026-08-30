@@ -1221,10 +1221,29 @@ como constitución documental del paquete definitivo para Antigravity/Codex.
 6. **Estado Final:**
    - `F1 DONE`. Fase F2 (`Recordatorios`) queda como siguiente fase secuencial.
 
+---
 
+## CHG-2026-08-30-010 — Excepción Temporal de Repositorio Público en GitHub y Auditoría Pre-Push F1
 
+**Tipo:** SECURITY / DEPLOYMENT / EXCEPTION  
+**Estado:** PUBLIC_REPOSITORY_READY  
+**Motivo:** Excepción temporal autorizada explícitamente por el usuario para mantener el repositorio GitHub `https://github.com/saldiviapablo/secretaria` en modo público durante la fase de desarrollo, preservando la política canónica de repositorio privado para producción.  
+**Solicitado por:** Antigravity / Prompt de Publicación Segura en GitHub  
+**Documentos afectados:** `11_CHANGELOG.md`, `.gitignore`, `.env.example`  
 
-
-
-
+### Términos de la Excepción Temporal y Auditoría:
+1. **Exposición Pública Temporal Autorizada:**
+   - El repositorio GitHub `https://github.com/saldiviapablo/secretaria` se publica temporalmente como público durante el ciclo de desarrollo por solicitud expresa del usuario.
+   - La política arquitectónica permanente de `08_SECURITY.md` se mantiene inalterada (repositorio privado para despliegue final).
+2. **Auditoría Exhaustiva de Secretos:**
+   - Escaneo integral del working tree, archivos tracked y los 22 commits del historial Git antes del primer push:
+     * 0 API keys (`OPENAI_API_KEY`, `GEMINI_API_KEY`), 0 tokens de Telegram (`TELEGRAM_BOT_TOKEN`), 0 service role keys, 0 JWTs, 0 contraseñas y 0 private keys expuestas.
+     * Toda la evidencia en `tests/evidence/` verificada 100% sanitizada y redactada.
+   - Archivo `.env.example` creado exclusivamente con placeholders genéricos.
+   - Archivo `.gitignore` ampliado para garantizar la exclusión estricta de `.env*`, `secrets/`, datos locales, volúmenes de runtime y carpetas temporales de Supabase.
+3. **Condición de Salida Obligatoria para Producción:**
+   - El repositorio debe retornar a estado **privado** antes de la ejecución del gate de producción (`F8` / `PROD`).
+   - Previo al despliegue productivo, se llevará a cabo una auditoría completa del historial y la rotación obligatoria de cualquier credencial si hubiese indicio de exposición.
+4. **Infraestructura Productiva Preservada:**
+   - NAS UGREEN (`EXISTING_OPERATIONAL_N8N`), Immich, Cloudflare y Supabase PROD permanecen totalmente inalterados y fuera de alcance.
 
