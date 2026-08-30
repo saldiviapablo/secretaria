@@ -1,0 +1,1 @@
+n8n version in DEV container: 2.33.3

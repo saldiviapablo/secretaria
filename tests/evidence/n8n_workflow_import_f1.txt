@@ -1,0 +1,17 @@
+======================================================================
+VALIDATING N8N WORKFLOW SCHEMAS & DEPENDENCY INTEGRITY (PHASE: F1):
+ [PASS] system/WF-SYS-001_ERROR_HANDLER.json: 5 nodes, valid graph, 0 plaintext secrets
+ [PASS] ingestion/WF-ING-001_REGISTER_INGESTION.json: 4 nodes, valid graph, 0 plaintext secrets
+ [PASS] telegram/WF-TG-002_TELEGRAM_SEND_MESSAGE.json: 8 nodes, valid graph, 0 plaintext secrets
+ [PASS] telegram/WF-TG-001_TELEGRAM_INBOUND.json: 7 nodes, valid graph, 0 plaintext secrets
+ [PASS] telegram/WF-TG-004_ONBOARDING_AND_CONFIG.json: 5 nodes, valid graph, 0 plaintext secrets
+ [PASS] ingestion/WF-ING-002_PROCESS_TEXT.json: 5 nodes, valid graph, 0 plaintext secrets
+ [PASS] ai/WF-AI-002_INTERPRET_STRUCTURED.json: 4 nodes, valid graph, 0 plaintext secrets
+ [PASS] memory/WF-MEM-001_PERSIST_MEMORY.json: 3 nodes, valid graph, 0 plaintext secrets
+ [PASS] memory/WF-MEM-006_APPLY_INTERPRETATION.json: 3 nodes, valid graph, 0 plaintext secrets
+ [PASS] task/WF-TASK-001_APPLY_TASK_ACTIONS.json: 3 nodes, valid graph, 0 plaintext secrets
+ [PASS] task/WF-TASK-002_MUTATE_TASK.json: 3 nodes, valid graph, 0 plaintext secrets
+ [PASS] task/WF-TASK-003_CLARIFICATION_MANAGER.json: 3 nodes, valid graph, 0 plaintext secrets
+ [PASS] task/WF-TASK-004_QUERY_TASKS.json: 3 nodes, valid graph, 0 plaintext secrets
+ [PASS] Manifest verified: Exactly 13 workflows (3 F0 + 10 F1) present in repository
+======================================================================

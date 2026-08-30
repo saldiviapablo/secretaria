@@ -1,0 +1,219 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "InterpretationV1",
+  "description": "Structured Output schema for Secretaria Virtual IA interpretation (v1.0)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "intent",
+    "requires_clarification",
+    "clarification_questions",
+    "entities",
+    "facts",
+    "tasks",
+    "settings_changes",
+    "report_request",
+    "confidence"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "enum": ["1.0"]
+    },
+    "intent": {
+      "type": "string",
+      "enum": [
+        "note",
+        "create_task",
+        "update_task",
+        "complete_task",
+        "postpone_task",
+        "cancel_task",
+        "query_tasks",
+        "query_memory",
+        "evidence_request",
+        "correction",
+        "report_request",
+        "settings_update",
+        "rest_mode",
+        "conversation",
+        "unknown"
+      ]
+    },
+    "requires_clarification": {
+      "type": "boolean"
+    },
+    "clarification_questions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "entities": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/entity_mention"
+      }
+    },
+    "facts": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/fact_candidate"
+      }
+    },
+    "tasks": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/task_candidate"
+      }
+    },
+    "settings_changes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/settings_change"
+      }
+    },
+    "report_request": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "properties": {
+        "report_type": { "type": "string" },
+        "date_from": { "type": ["string", "null"] },
+        "date_to": { "type": ["string", "null"] },
+        "format": { "type": "string", "enum": ["text", "pdf", "xlsx"] }
+      },
+      "required": ["report_type", "format"]
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    }
+  },
+  "$defs": {
+    "entity_mention": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mention",
+        "entity_type",
+        "role",
+        "canonical_name_candidate",
+        "confidence"
+      ],
+      "properties": {
+        "mention": { "type": "string" },
+        "entity_type": {
+          "type": "string",
+          "enum": ["person", "project", "organization", "location", "topic", "other"]
+        },
+        "role": {
+          "type": "string",
+          "enum": ["task_person", "assignee", "mentioned", "subject", "counterpart", "owner", "other"]
+        },
+        "canonical_name_candidate": { "type": ["string", "null"] },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "task_candidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "operation",
+        "title",
+        "description",
+        "raw_date_expression",
+        "resolved_date_candidate",
+        "time_known",
+        "time_candidate",
+        "priority",
+        "priority_source",
+        "person_mentions",
+        "project_mentions",
+        "status_candidate",
+        "requires_clarification",
+        "confidence"
+      ],
+      "properties": {
+        "operation": {
+          "type": "string",
+          "enum": ["create", "update", "start", "complete", "postpone", "cancel", "query"]
+        },
+        "title": { "type": "string" },
+        "description": { "type": ["string", "null"] },
+        "raw_date_expression": { "type": ["string", "null"] },
+        "resolved_date_candidate": { "type": ["string", "null"] },
+        "time_known": { "type": "boolean" },
+        "time_candidate": { "type": ["string", "null"] },
+        "priority": {
+          "type": "string",
+          "enum": ["urgent", "high", "normal", "low"]
+        },
+        "priority_source": {
+          "type": "string",
+          "enum": ["user", "ai", "default"]
+        },
+        "person_mentions": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "project_mentions": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "status_candidate": {
+          "type": "string",
+          "enum": ["pending", "in_progress", "waiting_confirmation", "completed", "postponed", "cancelled"]
+        },
+        "requires_clarification": { "type": "boolean" },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "fact_candidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "subject_mention",
+        "predicate",
+        "object_entity_mention",
+        "object_text",
+        "polarity",
+        "valid_from_raw",
+        "valid_to_raw",
+        "correction_of",
+        "confidence"
+      ],
+      "properties": {
+        "subject_mention": { "type": "string" },
+        "predicate": { "type": "string" },
+        "object_entity_mention": { "type": ["string", "null"] },
+        "object_text": { "type": ["string", "null"] },
+        "polarity": {
+          "type": "string",
+          "enum": ["positive", "negative", "uncertain"]
+        },
+        "valid_from_raw": { "type": ["string", "null"] },
+        "valid_to_raw": { "type": ["string", "null"] },
+        "correction_of": { "type": ["string", "null"] },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "settings_change": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["setting_key", "setting_value", "action"],
+      "properties": {
+        "setting_key": {
+          "type": "string",
+          "enum": ["assistant_name", "quiet_hours", "rest_mode", "timezone", "locale"]
+        },
+        "setting_value": { "type": "string" },
+        "action": {
+          "type": "string",
+          "enum": ["set", "enable", "disable", "toggle"]
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "name": "WF-MEM-001_PERSIST_MEMORY",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "// Step 1: Format Memory Item Payload\nconst input = $input.first().json;\n\nconst userId = input.user_id;\nconst ingestionId = input.ingestion_id;\nconst title = input.title || 'Nueva Memoria';\nconst summary = input.summary || input.text || '';\nconst memoryType = input.memory_type || 'note';\nconst confidence = input.confidence || 0.95;\n\nreturn [{\n  json: {\n    ...input,\n    user_id: userId,\n    ingestion_id: ingestionId,\n    title: title,\n    summary: summary,\n    memory_type: memoryType,\n    confidence: confidence\n  }\n}];"
+      },
+      "id": "node-prep-memory-001",
+      "name": "Prepare Memory Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO public.memory_items (user_id, memory_type, title, summary, confidence, source_ingestion_id) VALUES ($1::uuid, $2, $3, $4, $5, $6::uuid) RETURNING id;",
+        "options": {
+          "queryReplacement": "={{ [$json.user_id, $json.memory_type, $json.title, $json.summary, $json.confidence, $json.ingestion_id] }}"
+        }
+      },
+      "id": "node-insert-memory-002",
+      "name": "Insert Memory Item",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [420, 300],
+      "credentials": {
+        "postgres": {
+          "id": "supabase_dev_connection",
+          "name": "Supabase DEV Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const req = $('Prepare Memory Payload').first().json;\nconst memId = $input.first().json.id;\n\nreturn [{\n  json: {\n    ok: true,\n    status: 'completed',\n    correlation_id: req.correlation_id,\n    data: {\n      memory_id: memId,\n      memory_type: req.memory_type,\n      title: req.title\n    }\n  }\n}];"
+      },
+      "id": "node-format-mem-out-003",
+      "name": "Format Memory Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [640, 300]
+    }
+  ],
+  "connections": {
+    "Prepare Memory Payload": {
+      "main": [
+        [
+          {
+            "node": "Insert Memory Item",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Memory Item": {
+      "main": [
+        [
+          {
+            "node": "Format Memory Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "WF-SYS-001"
+  },
+  "id": "WF-MEM-001"
+}

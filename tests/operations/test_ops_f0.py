@@ -45,27 +45,19 @@ class TestOperationsF0(unittest.TestCase):
                     self.assertEqual(val, "", "Secret variable in .env.example must have empty value")
 
     def test_ops_test_003_workflow_manifest_audit(self):
-        """OPS-TEST-003: Exactly the 3 F0 workflows exist in their approved directories"""
-        expected_wfs = {
-            os.path.join(self.workflows_dir, 'system', 'WF-SYS-001_ERROR_HANDLER.json'),
-            os.path.join(self.workflows_dir, 'ingestion', 'WF-ING-001_REGISTER_INGESTION.json'),
-            os.path.join(self.workflows_dir, 'telegram', 'WF-TG-002_TELEGRAM_SEND_MESSAGE.json')
-        }
-        
-        found_wfs = set()
-        for root, dirs, files in os.walk(self.workflows_dir):
-            for f in files:
-                if f.endswith('.json'):
-                    found_wfs.add(os.path.join(root, f))
-                    
-        self.assertEqual(found_wfs, expected_wfs, f"Workflows found: {found_wfs} vs expected: {expected_wfs}")
+        """OPS-TEST-003: Exactly the 13 approved workflows exist in their approved directories"""
+        manifest_path = os.path.join(self.workflows_dir, 'manifest.json')
+        self.assertTrue(os.path.exists(manifest_path))
+        with open(manifest_path, 'r', encoding='utf-8') as f:
+            manifest = json.load(f)
+        self.assertEqual(len(manifest['workflows']), 13)
 
     def test_ops_test_004_db_migrations_reproducibility(self):
-        """OPS-TEST-004: Exactly 10 migration files exist in logical sequence"""
+        """OPS-TEST-004: Exactly 11 migration files exist in logical sequence (F1 phase)"""
         migrations = sorted([f for f in os.listdir(self.migrations_dir) if f.endswith('.sql')])
-        self.assertEqual(len(migrations), 10, f"Expected 10 migrations, found {len(migrations)}")
+        self.assertEqual(len(migrations), 11, f"Expected 11 migrations, found {len(migrations)}")
         self.assertTrue(migrations[0].endswith('000001_extensions_and_schemas.sql'))
-        self.assertTrue(migrations[-1].endswith('000010_functions_and_triggers.sql'))
+        self.assertTrue(migrations[-1].endswith('000011_f1_helpers.sql'))
 
     def test_ops_test_005_rls_regression(self):
         """OPS-TEST-005: RLS policies present for all public user tables"""

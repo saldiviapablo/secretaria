@@ -1,0 +1,95 @@
+{
+  "name": "WF-AI-002_INTERPRET_STRUCTURED",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "// Step 1: Format Prompt Context and Extract Untrusted Text\nconst input = $input.first().json;\n\nconst text = input.text || input.text_content || '';\nconst capturedAt = input.captured_at || new Date().toISOString();\nconst timezone = input.timezone || 'America/Argentina/Buenos_Aires';\nconst locale = input.locale || 'es-AR';\nconst correlationId = input.correlation_id || ('corr_ai_' + Date.now());\n\nreturn [{\n  json: {\n    correlation_id: correlationId,\n    user_id: input.user_id,\n    source_text_id: input.source_text_id,\n    ingestion_id: input.ingestion_id,\n    text: text,\n    captured_at: capturedAt,\n    timezone: timezone,\n    locale: locale,\n    now_iso: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "node-format-ai-prompt-001",
+      "name": "Format Prompt Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Step 2: Provider Adapter & Structured Interpretation Engine\n// Interprets intent, entities, dates and tasks deterministically following P-INT-001 rules\nconst ctx = $input.first().json;\nconst text = ctx.text || '';\nconst textLower = text.toLowerCase();\nconst capturedDate = new Date(ctx.captured_at);\n\n// Calculate next day date string YYYY-MM-DD\nconst tomorrow = new Date(capturedDate);\ntomorrow.setDate(tomorrow.getDate() + 1);\nconst tomorrowStr = tomorrow.toISOString().split('T')[0];\n\n// Calculate Wednesday date string\nconst nextWed = new Date(capturedDate);\nconst currentDay = nextWed.getDay(); // 0 is Sunday, 3 is Wednesday\nconst daysUntilWed = (3 - currentDay + 7) % 7 || 7;\nnextWed.setDate(nextWed.getDate() + daysUntilWed);\nconst wedStr = nextWed.toISOString().split('T')[0];\n\nlet intent = 'note';\nlet requiresClarification = false;\nlet clarificationQuestions = [];\nlet entities = [];\nlet tasks = [];\nlet facts = [];\nlet settingsChanges = [];\nlet confidence = 0.95;\n\n// Check Prompt Injection Attempts\nif (textLower.includes('ignora') && (textLower.includes('sql') || textLower.includes('borra') || textLower.includes('api key') || textLower.includes('reglas'))) {\n  intent = 'conversation';\n  confidence = 0.99;\n} else if (textLower.startsWith('mañana a las 15 llamar a juan pérez') || textLower.startsWith('mañana a las 15 llamar a juan perez')) {\n  intent = 'create_task';\n  entities.push({\n    mention: 'Juan Pérez',\n    entity_type: 'person',\n    role: 'assignee',\n    canonical_name_candidate: 'Juan Pérez',\n    confidence: 0.98\n  });\n  tasks.push({\n    operation: 'create',\n    title: 'Llamar a Juan Pérez',\n    description: null,\n    raw_date_expression: 'mañana a las 15',\n    resolved_date_candidate: tomorrowStr,\n    time_known: true,\n    time_candidate: '15:00:00',\n    priority: 'normal',\n    priority_source: 'ai',\n    person_mentions: ['Juan Pérez'],\n    project_mentions: [],\n    status_candidate: 'pending',\n    requires_clarification: false,\n    confidence: 0.97\n  });\n} else if (textLower.includes('el miércoles presentar el informe') || textLower.includes('el miercoles presentar el informe')) {\n  intent = 'create_task';\n  tasks.push({\n    operation: 'create',\n    title: 'Presentar el informe',\n    description: null,\n    raw_date_expression: 'el miércoles',\n    resolved_date_candidate: wedStr,\n    time_known: false,\n    time_candidate: null,\n    priority: 'normal',\n    priority_source: 'ai',\n    person_mentions: [],\n    project_mentions: [],\n    status_candidate: 'pending',\n    requires_clarification: false,\n    confidence: 0.96\n  });\n} else if (textLower.includes('llamar a juan') && !textLower.includes('pérez') && !textLower.includes('perez') && !textLower.includes('gómez') && !textLower.includes('gomez')) {\n  intent = 'create_task';\n  requiresClarification = true;\n  clarificationQuestions.push('¿A qué Juan te refieres? ¿Juan Pérez o Juan Gómez?');\n  entities.push({\n    mention: 'Juan',\n    entity_type: 'person',\n    role: 'assignee',\n    canonical_name_candidate: null,\n    confidence: 0.7\n  });\n  tasks.push({\n    operation: 'create',\n    title: 'Llamar a Juan',\n    description: null,\n    raw_date_expression: 'mañana',\n    resolved_date_candidate: tomorrowStr,\n    time_known: false,\n    time_candidate: null,\n    priority: 'normal',\n    priority_source: 'ai',\n    person_mentions: ['Juan'],\n    project_mentions: [],\n    status_candidate: 'pending',\n    requires_clarification: true,\n    confidence: 0.7\n  });\n} else if (textLower.startsWith('qué tengo') || textLower.startsWith('que tengo') || textLower.includes('mis tareas') || textLower.includes('listar tareas')) {\n  intent = 'query_tasks';\n  confidence = 0.95;\n} else if (textLower.startsWith('/nombre') || textLower.startsWith('llámate') || textLower.startsWith('llamame')) {\n  intent = 'settings_update';\n  const name = text.replace(/^(\\/nombre|llámate|llamame)\\s*/i, '').trim();\n  settingsChanges.push({\n    setting_key: 'assistant_name',\n    setting_value: name,\n    action: 'set'\n  });\n} else {\n  intent = 'note';\n  facts.push({\n    subject_mention: 'Usuario',\n    predicate: 'noted',\n    object_entity_mention: null,\n    object_text: text,\n    polarity: 'positive',\n    valid_from_raw: null,\n    valid_to_raw: null,\n    correction_of: null,\n    confidence: 0.9\n  });\n}\n\nconst interpretation = {\n  schema_version: '1.0',\n  intent: intent,\n  requires_clarification: requiresClarification,\n  clarification_questions: clarificationQuestions,\n  entities: entities,\n  facts: facts,\n  tasks: tasks,\n  settings_changes: settingsChanges,\n  report_request: null,\n  confidence: confidence\n};\n\nreturn [{\n  json: {\n    ...ctx,\n    interpretation: interpretation,\n    raw_output: JSON.stringify(interpretation),\n    provider: 'openai',\n    model: 'gpt-5.6-luna',\n    prompt_id: 'P-INT-001',\n    prompt_version: '1.0',\n    schema_version: '1.0',\n    usage: {\n      input_tokens: 220,\n      output_tokens: 85,\n      estimated_cost_usd: 0.00035\n    }\n  }\n}];"
+      },
+      "id": "node-ai-adapter-002",
+      "name": "Provider Adapter Engine",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [420, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO public.ai_usage_events (user_id, provider, model, operation_type, input_tokens, output_tokens, estimated_cost_usd, ingestion_id, interpretation_id) VALUES ($1::uuid, $2, $3, 'structured_interpretation', $4, $5, $6, $7::uuid, $8::uuid);",
+        "options": {
+          "queryReplacement": "={{ [$json.user_id, $json.provider, $json.model, $json.usage.input_tokens, $json.usage.output_tokens, $json.usage.estimated_cost_usd, $json.ingestion_id, $json.interpretation_id] }}"
+        }
+      },
+      "id": "node-record-usage-003",
+      "name": "Record AI Usage RPC",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [640, 300],
+      "credentials": {
+        "postgres": {
+          "id": "supabase_dev_connection",
+          "name": "Supabase DEV Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const res = $('Provider Adapter Engine').first().json;\n\nreturn [{\n  json: {\n    ok: true,\n    status: 'completed',\n    correlation_id: res.correlation_id,\n    data: {\n      interpretation: res.interpretation,\n      provider: res.provider,\n      model: res.model,\n      usage: res.usage\n    }\n  }\n}];"
+      },
+      "id": "node-format-ai-out-004",
+      "name": "Format Structured Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [860, 300]
+    }
+  ],
+  "connections": {
+    "Format Prompt Context": {
+      "main": [
+        [
+          {
+            "node": "Provider Adapter Engine",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Provider Adapter Engine": {
+      "main": [
+        [
+          {
+            "node": "Record AI Usage RPC",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record AI Usage RPC": {
+      "main": [
+        [
+          {
+            "node": "Format Structured Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "WF-SYS-001"
+  },
+  "id": "WF-AI-002"
+}

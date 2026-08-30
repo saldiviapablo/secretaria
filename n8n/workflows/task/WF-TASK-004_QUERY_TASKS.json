@@ -1,0 +1,74 @@
+{
+  "name": "WF-TASK-004_QUERY_TASKS",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "// Step 1: Parse Query Filters\nconst input = $input.first().json;\n\nconst userId = input.user_id;\nconst filters = input.filters || input;\nconst status = filters.status || null;\nconst priority = filters.priority || null;\nconst dateFrom = filters.date_from || null;\nconst dateTo = filters.date_to || null;\nconst limit = filters.limit || 20;\n\nreturn [{\n  json: {\n    ...input,\n    user_id: userId,\n    filter_status: status,\n    filter_priority: priority,\n    filter_date_from: dateFrom,\n    filter_date_to: dateTo,\n    filter_limit: limit\n  }\n}];"
+      },
+      "id": "node-parse-query-001",
+      "name": "Parse Query Filters",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM public.query_tasks_filtered($1::uuid, $2, $3, $4::date, $5::date, $6::integer);",
+        "options": {
+          "queryReplacement": "={{ [$json.user_id, $json.filter_status, $json.filter_priority, $json.filter_date_from, $json.filter_date_to, $json.filter_limit] }}"
+        }
+      },
+      "id": "node-exec-query-rpc-002",
+      "name": "Execute Query Tasks RPC",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [420, 300],
+      "credentials": {
+        "postgres": {
+          "id": "supabase_dev_connection",
+          "name": "Supabase DEV Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const req = $('Parse Query Filters').first().json;\nconst rows = $input.all().map(item => item.json);\n\nlet responseText = '';\nif (!rows || rows.length === 0) {\n  responseText = 'No encontré tareas pendientes con esos criterios.';\n} else {\n  const taskLines = rows.map((t, idx) => {\n    const dateStr = t.due_date ? ` (Vence: ${t.due_date}${t.time_known && t.due_time ? ' ' + t.due_time : ''})` : '';\n    const prioStr = t.priority && t.priority !== 'normal' ? ` [${t.priority}]` : '';\n    return `${idx + 1}. ${t.title}${prioStr}${dateStr}`;\n  });\n  responseText = `📋 Tus tareas:\\n` + taskLines.join('\\n');\n}\n\nreturn [{\n  json: {\n    ok: true,\n    status: 'completed',\n    correlation_id: req.correlation_id,\n    data: {\n      tasks: rows,\n      count: rows.length,\n      formatted_response: responseText\n    }\n  }\n}];"
+      },
+      "id": "node-format-query-out-003",
+      "name": "Format Query Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [640, 300]
+    }
+  ],
+  "connections": {
+    "Parse Query Filters": {
+      "main": [
+        [
+          {
+            "node": "Execute Query Tasks RPC",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute Query Tasks RPC": {
+      "main": [
+        [
+          {
+            "node": "Format Query Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "WF-SYS-001"
+  },
+  "id": "WF-TASK-004"
+}

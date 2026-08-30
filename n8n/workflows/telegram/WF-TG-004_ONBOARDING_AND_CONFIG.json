@@ -1,0 +1,126 @@
+{
+  "name": "WF-TG-004_ONBOARDING_AND_CONFIG",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "// Step 1: Parse Command or Config Intent\nconst input = $input.first().json;\n\nconst userId = input.user_id;\nconst text = (input.text || '').trim();\nconst assistantName = input.assistant_name;\n\nlet action = 'welcome';\nif (!assistantName || text.startsWith('/nombre') || input.setting_key === 'assistant_name') {\n  action = 'set_name';\n} else if (text.startsWith('/descanso') || input.setting_key === 'rest_mode') {\n  action = 'toggle_rest';\n} else if (text.startsWith('/configuracion')) {\n  action = 'show_config';\n}\n\nreturn [{\n  json: {\n    ...input,\n    config_action: action\n  }\n}];"
+      },
+      "id": "node-parse-config-001",
+      "name": "Parse Config Intent",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT assistant_name, quiet_hours_enabled, quiet_start_time, quiet_end_time, rest_mode_enabled, rest_until FROM public.user_settings WHERE user_id = $1::uuid;",
+        "options": {
+          "queryReplacement": "={{ [$json.user_id] }}"
+        }
+      },
+      "id": "node-get-settings-002",
+      "name": "Get User Settings",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [420, 300],
+      "credentials": {
+        "postgres": {
+          "id": "supabase_dev_connection",
+          "name": "Supabase DEV Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const req = $('Parse Config Intent').first().json;\nconst settings = $input.first().json;\n\nlet responseText = '';\nlet rpcNameUpdate = null;\n\nif (req.config_action === 'set_name') {\n  const parts = req.text.split(' ');\n  if (parts.length > 1) {\n    const newName = parts.slice(1).join(' ').trim();\n    rpcNameUpdate = newName;\n    responseText = `¡Listo! A partir de ahora me llamo ${newName}.`;\n  } else if (!settings.assistant_name) {\n    responseText = '¡Hola! Soy tu secretaria virtual. ¿Cómo querés que me llame?';\n  } else {\n    responseText = `Actualmente me llamo ${settings.assistant_name}. Si querés cambiar mi nombre podés escribir /nombre [NuevoNombre].`;\n  }\n} else if (req.config_action === 'show_config') {\n  responseText = `⚙️ Configuración actual:\\n• Nombre: ${settings.assistant_name || 'Sin asignar'}\\n• Horario de silencio: ${settings.quiet_hours_enabled ? `${settings.quiet_start_time} - ${settings.quiet_end_time}` : 'Desactivado'}\\n• Modo descanso: ${settings.rest_mode_enabled ? 'Activo' : 'Inactivo'}`;\n} else {\n  responseText = `¡Hola! Soy ${settings.assistant_name || 'tu secretaria virtual'}. ¿En qué puedo ayudarte hoy?`;\n}\n\nreturn [{\n  json: {\n    ...req,\n    new_name_candidate: rpcNameUpdate,\n    response_text: responseText\n  }\n}];"
+      },
+      "id": "node-handle-config-003",
+      "name": "Handle Config Action",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [640, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT CASE WHEN $2::text IS NOT NULL THEN public.set_assistant_name($1::uuid, $2::text, 'user') ELSE NULL END as updated_name;",
+        "options": {
+          "queryReplacement": "={{ [$json.user_id, $json.new_name_candidate] }}"
+        }
+      },
+      "id": "node-update-name-rpc-004",
+      "name": "Set Assistant Name RPC",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [860, 300],
+      "credentials": {
+        "postgres": {
+          "id": "supabase_dev_connection",
+          "name": "Supabase DEV Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const cfg = $('Handle Config Action').first().json;\n\nreturn [{\n  json: {\n    ok: true,\n    status: 'completed',\n    correlation_id: cfg.correlation_id,\n    data: {\n      message_sent: true,\n      response_text: cfg.response_text,\n      assistant_name: cfg.new_name_candidate || cfg.assistant_name\n    }\n  }\n}];"
+      },
+      "id": "node-format-config-out-005",
+      "name": "Format Config Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1080, 300]
+    }
+  ],
+  "connections": {
+    "Parse Config Intent": {
+      "main": [
+        [
+          {
+            "node": "Get User Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get User Settings": {
+      "main": [
+        [
+          {
+            "node": "Handle Config Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Handle Config Action": {
+      "main": [
+        [
+          {
+            "node": "Set Assistant Name RPC",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Assistant Name RPC": {
+      "main": [
+        [
+          {
+            "node": "Format Config Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "WF-SYS-001"
+  },
+  "id": "WF-TG-004"
+}

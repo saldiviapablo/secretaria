@@ -1,0 +1,84 @@
+======================================================================
+STARTING REAL SUPABASE LOCAL RUNTIME TESTS (24 CANONICAL DB TESTS):
+Target: Supabase PostgreSQL Local at 127.0.0.1:54322
+======================================================================
+
+1. VERIFYING SUPABASE AUTH & EXTENSIONS:
+   [PASS] Supabase auth.users table verified in schema auth
+   [PASS] Required extensions installed in Supabase: pgcrypto (v1.3), vector (v0.8.2), pg_trgm (v1.6), unaccent (v1.1)
+
+2. VERIFYING 25 V1 TABLES IN PUBLIC SCHEMA:
+   Found 25 tables in public schema:
+    - ai_usage_events
+    - asset_locations
+    - assets
+    - assistant_name_history
+    - audit_log
+    - embeddings
+    - entities
+    - entity_aliases
+    - facts
+    - ingestions
+    - interpretations
+    - memory_asset_links
+    - memory_chunks
+    - memory_entity_links
+    - memory_items
+    - memory_relations
+    - notification_deliveries
+    - pending_clarifications
+    - profiles
+    - reminders
+    - reports
+    - source_texts
+    - task_entity_links
+    - tasks
+    - user_settings
+
+3. RUNNING 24 CANONICAL DB TESTS (09_TEST_PLAN.md):
+   [SETUP] Synthetic User A & User B created in Supabase auth & profiles
+   [PASS] DB-TEST-001: Dos personas homonimas ("Juan Perez") coexisten sin colision
+   [PASS] DB-TEST-002: Alias compartido ("Juan") asignado a distintas entidades sin fusionar
+   [PASS] DB-TEST-003: Asset duplicado por SHA-256 rechazado por constraint unico (reutilizacion garantizada)
+   [PASS] DB-TEST-004: Multiples ubicaciones (Drive + Telegram) asociadas al mismo asset
+   [PASS] DB-TEST-005: Mensaje editado conserva version 1 y version 2 con supersedes_source_text_id
+   [PASS] DB-TEST-006: Transcripcion A/B conserva motores A y B con seleccion de preferida
+   [PASS] DB-TEST-007: Tarea con fecha sin hora valida (due_date presente, time_known=false, due_time=NULL, due_at=NULL)
+   [PASS] DB-TEST-008: Hora falsa (time_known=false con due_time=00:00) rechazada por trigger de validacion
+   [PASS] DB-TEST-009: status=completed puebla completed_at automaticamente via transition_task_status
+   [PASS] DB-TEST-010: Historial factual: hecho previo (superseded) y nuevo (current) coexisten
+   [PASS] DB-TEST-011: assistant_name_history garantiza exactamente un nombre activo con valid_to IS NULL
+   [PASS] DB-TEST-012: DELETE operativo en tablas historicas bloqueado por prevent_historical_delete
+   [PASS] DB-TEST-013: DELETE embedding: mantenimiento de embedding ejecutado sin eliminar chunk/memory
+   [PASS] DB-TEST-014: Reminder duplicado: misma idempotency_key no genera duplicados (count=1)
+   [PASS] DB-TEST-015: Delivery duplicada: misma idempotency_key rechazada por unique index (count=1)
+   [PASS] DB-TEST-016: Lease expirado: reminder en sending con lease vencido recuperado a retry
+   [PASS] DB-TEST-016B: Resultado unknown registrado en delivery sin reenvio ciego inmediato
+   [PASS] DB-TEST-017: Aislamiento RLS A/B: Usuario B no puede leer ni escribir datos de Usuario A
+   [PASS] DB-TEST-017B: FK cross-user rechazada a nivel de base de datos por foreign key compuesta
+   [PASS] DB-TEST-018: audit_log append-only: UPDATE y DELETE revocados para roles operativos
+   [PASS] DB-TEST-019: source_text inmutable: UPDATE de text_content rechazado por trigger y texto original intacto
+   [PASS] DB-TEST-020: Embeddings multiples de modelos y dimensiones distintas coexisten en el mismo chunk
+   [PASS] DB-TEST-021: Reporte trazable: conexion verificada hacia result_memory, source_memory y generated_asset
+   [PASS] DB-TEST-022: Integridad SHA: hash recalculado distinto produce integrity_status=mismatch
+
+4. RUNNING EXTRA DB TESTS (F0-EXTRA-*):
+   [PASS] F0-EXTRA-DB-MEMORY-RELATIONS: Integridad de relaciones de memoria verificada
+   [PASS] F0-EXTRA-DB-ENTITY-LINKS: Vinculacion memoria-entidad y tarea-entidad verificada
+   [PASS] F0-EXTRA-DB-AI-USAGE: Registro de ai_usage_events verificado
+   [PASS] F0-EXTRA-DB-SEARCH-TEXT: search_memory_text y search_entities_fuzzy funcionando bajo SECURITY INVOKER
+
+5. RUNNING F0-COMP-ING-IDEMPOTENCY-DB:
+   [PASS] F0-COMP-ING-IDEMPOTENCY-DB: register_ingestion replay retorno is_duplicate=true con ID existente sin duplicar fila
+
+6. RUNNING F0-SEC-RPC-CROSS-USER (SECURITY DEFINER PRIVILEGE TESTS):
+   [PASS] F0-SEC-RPC-CROSS-USER [A. set_assistant_name]: Blocked cross-user mutation on User B
+   [PASS] F0-SEC-RPC-CROSS-USER [B. transition_task_status]: Blocked cross-user transition on User B task
+   [PASS] F0-SEC-RPC-CROSS-USER [C. correct_fact]: Blocked cross-user supersede on User B fact
+   [PASS] F0-SEC-RPC-CROSS-USER [D. resolve_clarification]: Blocked cross-user resolution on User B clarification
+   [PASS] F0-SEC-RPC-CROSS-USER [E. register_ingestion]: Blocked cross-user ingestion insertion for User B
+   [PASS] F0-SEC-RPC-CROSS-USER: All state of User B verified intact and untampered
+
+======================================================================
+ALL 24 CANONICAL DB TESTS + EXTRA TESTS PASSED WITH 100% SUCCESS
+======================================================================

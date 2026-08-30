@@ -30,18 +30,28 @@ class TestF0Workflows(unittest.TestCase):
                 self.assertIn('connections', data)
                 self.assertGreater(len(data['nodes']), 0)
 
-    def test_no_f1_workflows_present(self):
-        """Verify no workflows from F1 or later phases exist in n8n/workflows/"""
+    def test_no_f2_workflows_present(self):
+        """Verify no workflows from F2 or later phases exist in n8n/workflows/"""
         all_wf_files = []
         for root, _, files in os.walk(self.workflows_dir):
             for file in files:
-                if file.endswith('.json'):
-                    all_wf_files.append(os.path.relpath(os.path.join(root, file), self.workflows_dir))
+                if file.endswith('.json') and file != 'manifest.json':
+                    all_wf_files.append(os.path.relpath(os.path.join(root, file), self.workflows_dir).replace('\\', '/'))
         
         allowed_workflows = {
-            os.path.join('system', 'WF-SYS-001_ERROR_HANDLER.json'),
-            os.path.join('ingestion', 'WF-ING-001_REGISTER_INGESTION.json'),
-            os.path.join('telegram', 'WF-TG-002_TELEGRAM_SEND_MESSAGE.json')
+            'system/WF-SYS-001_ERROR_HANDLER.json',
+            'ingestion/WF-ING-001_REGISTER_INGESTION.json',
+            'telegram/WF-TG-002_TELEGRAM_SEND_MESSAGE.json',
+            'telegram/WF-TG-001_TELEGRAM_INBOUND.json',
+            'telegram/WF-TG-004_ONBOARDING_AND_CONFIG.json',
+            'ingestion/WF-ING-002_PROCESS_TEXT.json',
+            'ai/WF-AI-002_INTERPRET_STRUCTURED.json',
+            'memory/WF-MEM-001_PERSIST_MEMORY.json',
+            'memory/WF-MEM-006_APPLY_INTERPRETATION.json',
+            'task/WF-TASK-001_APPLY_TASK_ACTIONS.json',
+            'task/WF-TASK-002_MUTATE_TASK.json',
+            'task/WF-TASK-003_CLARIFICATION_MANAGER.json',
+            'task/WF-TASK-004_QUERY_TASKS.json'
         }
         self.assertEqual(set(all_wf_files), allowed_workflows, f"Unexpected workflow files found: {set(all_wf_files) - allowed_workflows}")
 

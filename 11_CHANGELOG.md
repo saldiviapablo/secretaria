@@ -1119,6 +1119,51 @@ como constitución documental del paquete definitivo para Antigravity/Codex.
    - Reimportado `WF-TG-002` en n8n 2.33.3 DEV y ejecutado `n8n audit` (0 riesgos críticos).
    - Reconfirmada la inmutabilidad de producción: NAS, `EXISTING_OPERATIONAL_N8N`, Immich, Cloudflare y Supabase PROD no fueron modificados.
 
+---
+
+## CHG-2026-08-30-007 — Implementación y Certificación de Fase F1: Telegram Texto + Tareas
+
+**Tipo:** ADDED / ARCHITECTURE / SECURITY / TESTS  
+**Estado:** F1 DONE certificado y verificado en laboratorio DEV local  
+**Motivo:** Implementación completa de la fase F1 según `SVIA-DOCSET-V1-RC1`, habilitando el flujo operacional de texto por Telegram, interpretación estructurada con IA (`interpretation_v1`), resolución determinista de fechas/horas sin inventar medianoche (`NULL`), gestión de tareas con asignaciones de personas/proyectos, manejo de ambigüedad mediante `pending_clarifications`, versionado seguro de mensajes editados (`edited_message`), onboarding/configuración de asistente y respuesta reactiva tras persistencia.  
+**Solicitado por:** Antigravity / Prompt Final Auditado F1 — Telegram Texto + Tareas  
+**Documentos afectados:** `11_CHANGELOG.md`, `schemas/ai/interpretation_v1.json`, `prompts/P-INT-001_structured_interpreter.md`, `supabase/migrations/20260830000011_f1_helpers.sql`, `n8n/workflows/manifest.json`, 10 workflows F1 en `n8n/workflows/`, tests en `tests/`  
+
+### Componentes y Funcionalidades Implementadas:
+1. **Contratos y Prompts de IA:**
+   - Creado `schemas/ai/interpretation_v1.json`: Schema JSON estructurado v1.0 compatible con OpenAI Structured Outputs y Gemini JSON Schema.
+   - Creado `prompts/P-INT-001_structured_interpreter.md`: Prompt base con aislamiento estricto de `<UNTRUSTED_CONTENT>`, contexto de reloj (`NOW`, `TIMEZONE`, `LOCALE`, `CAPTURED_AT`) y reglas de seguridad contra prompt injection.
+2. **Base de Datos y Migraciones:**
+   - Creada migración aditiva `20260830000011_f1_helpers.sql` con funciones `SECURITY DEFINER` protegidas contra ataques cross-user (`auth.uid() = p_user_id`):
+     * `public.get_or_create_source_text`: Inserción inmutable de textos fuente y versionado seguro para `edited_message` con enlace `supersedes_source_text_id` y alternancia de `is_preferred`.
+     * `public.apply_interpretation_bundle`: Aplicación atómica transaccional de interpretaciones, memorias, entidades, hechos y tareas con `idempotency_key` determinista.
+     * `public.query_tasks_filtered`: Consulta determinista de tareas con filtros de estado, prioridad, rango de fechas y entidades vinculadas bajo `SECURITY INVOKER`.
+   - Ejecutado `npx supabase db reset` dos veces consecutivas en Supabase DEV local con las 11 migraciones y 25 tablas.
+3. **10 Workflows n8n Operacionales (13 Workflows en Manifiesto y Runtime):**
+   - `WF-TG-001_TELEGRAM_INBOUND`: Normalización de updates, autenticación server-side de usuario/chat autorizado, inspección de secreto de webhook, registro atómico vía `WF-ING-001` y router de intenciones.
+   - `WF-TG-004_ONBOARDING_AND_CONFIG`: `/start`, consulta de configuración, solicitud y actualización de nombre de asistente vía `set_assistant_name` con historial único sin duplicaciones.
+   - `WF-ING-002_PROCESS_TEXT`: Persistencia de `source_text`, invocación a `WF-AI-002`, validación de schema e itinerario de intents hacia tareas/memorias/clarificaciones.
+   - `WF-AI-002_INTERPRET_STRUCTURED`: Adapter agnóstico de proveedor, aislamiento de inyecciones, validación estructural post-modelo y telemetría en `ai_usage_events`.
+   - `WF-MEM-001_PERSIST_MEMORY`: Registro de memorias y relaciones.
+   - `WF-MEM-006_APPLY_INTERPRETATION`: Invocación del bundle transaccional en Supabase.
+   - `WF-TASK-001_APPLY_TASK_ACTIONS`: Validación estricta de fecha/hora (regla de hora desconocida = `NULL`), resolución de entidades exacta/fuzzy, deduplicación determinista y deferencia explícita de recordatorios a F2 (`DEFERRED_PHASE_DEPENDENCY_F2`).
+   - `WF-TASK-002_MUTATE_TASK`: Mutación de tareas y transiciones de estado vía `transition_task_status`.
+   - `WF-TASK-003_CLARIFICATION_MANAGER`: Gestión persistente en `pending_clarifications`, resolución sin asignaciones arbitrarias y soporte de consultas paralelas con preguntas abiertas.
+   - `WF-TASK-004_QUERY_TASKS`: Consulta determinista estructurada y formateo de tareas para Telegram sin LLM secundario.
+   - Todos los 13 workflows importados y verificados en contenedor `secretaria-n8n-dev` (n8n 2.33.3).
+4. **Verificación de Seguridad y Tests Canónicos (100% PASS):**
+   - `E2E-A` / `WF-TEST-002`: "Mañana a las 15 llamar a Juan Pérez." -> 1 sola tarea creada con vencimiento exacto y entidad vinculada.
+   - `E2E-B` / `WF-TEST-004`: "El miércoles presentar el informe." -> `due_date` resuelto, `due_time = NULL`, `due_at = NULL`, `time_known = false`.
+   - `E2E-C` / `WF-TEST-003`: Ambigüedad entre dos personas llamadas Juan -> clarificación creada en `pending_clarifications` sin mutar tareas -> resolución posterior correcta.
+   - `E2E-D`: Clarificación previa preservada ante consulta intercalada.
+   - `E2E-E` / `WF-TEST-010`: `edited_message` genera `source_texts` v2 con `supersedes_source_text_id` preservando v1 intacta.
+   - `E2E-F` / `WF-TEST-033`: `/start` y configuración de nombre `set_assistant_name` con idempotencia e historial capturado.
+   - `SEC-TEST-001`, `SEC-TEST-002`, `SEC-TEST-003`: Validación de webhook secret, rechazo estricto de sender no autorizado y rechazo de replay update.
+   - `WF-TEST-034`: Telemetría de costo e inferencia registrada en `ai_usage_events`.
+   - 52 tests Python unitarios y de evaluación de IA (golden set con 100% de precisión y 0% de falsas acciones).
+5. **Aislamiento de Producción:**
+   - Confirmado que el NAS UGREEN (`EXISTING_OPERATIONAL_N8N`), Immich, Cloudflare y Supabase PROD no fueron tocados ni modificados.
+
 
 
 

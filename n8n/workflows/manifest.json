@@ -1,0 +1,126 @@
+{
+  "manifest_version": "1.0",
+  "project": "Secretaria Virtual con IA",
+  "baseline": "SVIA-DOCSET-V1-RC1",
+  "phase": "F1",
+  "total_workflows_implemented": 13,
+  "workflows": [
+    {
+      "workflow_id": "WF-SYS-001",
+      "name": "WF-SYS-001_ERROR_HANDLER",
+      "file": "system/WF-SYS-001_ERROR_HANDLER.json",
+      "type": "error_handler",
+      "phase": "F0",
+      "status": "implemented",
+      "contract_version": "1.0"
+    },
+    {
+      "workflow_id": "WF-ING-001",
+      "name": "WF-ING-001_REGISTER_INGESTION",
+      "file": "ingestion/WF-ING-001_REGISTER_INGESTION.json",
+      "type": "subworkflow",
+      "phase": "F0",
+      "status": "implemented",
+      "contract_version": "1.0"
+    },
+    {
+      "workflow_id": "WF-TG-002",
+      "name": "WF-TG-002_TELEGRAM_SEND_MESSAGE",
+      "file": "telegram/WF-TG-002_TELEGRAM_SEND_MESSAGE.json",
+      "type": "subworkflow",
+      "phase": "F0",
+      "status": "implemented",
+      "contract_version": "1.0"
+    },
+    {
+      "workflow_id": "WF-TG-001",
+      "name": "WF-TG-001_TELEGRAM_INBOUND",
+      "file": "telegram/WF-TG-001_TELEGRAM_INBOUND.json",
+      "type": "entry",
+      "phase": "F1",
+      "status": "implemented",
+      "contract_version": "1.0"
+    },
+    {
+      "workflow_id": "WF-TG-004",
+      "name": "WF-TG-004_ONBOARDING_AND_CONFIG",
+      "file": "telegram/WF-TG-004_ONBOARDING_AND_CONFIG.json",
+      "type": "subworkflow",
+      "phase": "F1",
+      "status": "implemented",
+      "contract_version": "1.0"
+    },
+    {
+      "workflow_id": "WF-ING-002",
+      "name": "WF-ING-002_PROCESS_TEXT",
+      "file": "ingestion/WF-ING-002_PROCESS_TEXT.json",
+      "type": "subworkflow",
+      "phase": "F1",
+      "status": "implemented",
+      "contract_version": "1.0"
+    },
+    {
+      "workflow_id": "WF-AI-002",
+      "name": "WF-AI-002_INTERPRET_STRUCTURED",
+      "file": "ai/WF-AI-002_INTERPRET_STRUCTURED.json",
+      "type": "subworkflow",
+      "phase": "F1",
+      "status": "implemented",
+      "contract_version": "1.0"
+    },
+    {
+      "workflow_id": "WF-MEM-001",
+      "name": "WF-MEM-001_PERSIST_MEMORY",
+      "file": "memory/WF-MEM-001_PERSIST_MEMORY.json",
+      "type": "subworkflow",
+      "phase": "F1",
+      "status": "implemented",
+      "contract_version": "1.0"
+    },
+    {
+      "workflow_id": "WF-MEM-006",
+      "name": "WF-MEM-006_APPLY_INTERPRETATION",
+      "file": "memory/WF-MEM-006_APPLY_INTERPRETATION.json",
+      "type": "subworkflow",
+      "phase": "F1",
+      "status": "implemented",
+      "contract_version": "1.0"
+    },
+    {
+      "workflow_id": "WF-TASK-001",
+      "name": "WF-TASK-001_APPLY_TASK_ACTIONS",
+      "file": "task/WF-TASK-001_APPLY_TASK_ACTIONS.json",
+      "type": "subworkflow",
+      "phase": "F1",
+      "status": "implemented",
+      "contract_version": "1.0"
+    },
+    {
+      "workflow_id": "WF-TASK-002",
+      "name": "WF-TASK-002_MUTATE_TASK",
+      "file": "task/WF-TASK-002_MUTATE_TASK.json",
+      "type": "subworkflow",
+      "phase": "F1",
+      "status": "implemented",
+      "contract_version": "1.0"
+    },
+    {
+      "workflow_id": "WF-TASK-003",
+      "name": "WF-TASK-003_CLARIFICATION_MANAGER",
+      "file": "task/WF-TASK-003_CLARIFICATION_MANAGER.json",
+      "type": "subworkflow",
+      "phase": "F1",
+      "status": "implemented",
+      "contract_version": "1.0"
+    },
+    {
+      "workflow_id": "WF-TASK-004",
+      "name": "WF-TASK-004_QUERY_TASKS",
+      "file": "task/WF-TASK-004_QUERY_TASKS.json",
+      "type": "subworkflow",
+      "phase": "F1",
+      "status": "implemented",
+      "contract_version": "1.0"
+    }
+  ]
+}

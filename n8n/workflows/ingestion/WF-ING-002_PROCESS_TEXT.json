@@ -1,0 +1,116 @@
+{
+  "name": "WF-ING-002_PROCESS_TEXT",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "// Step 1: Prepare Ingestion Context for Source Text\nconst input = $input.first().json;\n\nconst userId = input.user_id;\nconst ingestionId = input.ingestion_id;\nconst textContent = input.text || '';\nconst sourceKey = 'tg_msg_' + (input.message_id || Date.now());\nconst isEdited = Boolean(input.is_edited);\n\nreturn [{\n  json: {\n    ...input,\n    user_id: userId,\n    ingestion_id: ingestionId,\n    text_content: textContent,\n    source_key: sourceKey,\n    source_kind: isEdited ? 'edited_text' : 'telegram_text'\n  }\n}];"
+      },
+      "id": "node-prep-source-001",
+      "name": "Prepare Source Text Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT public.get_or_create_source_text($1::uuid, $2::uuid, $3, $4, $5, true, NULL, NULL) as st_res;",
+        "options": {
+          "queryReplacement": "={{ [$json.user_id, $json.ingestion_id, $json.text_content, $json.source_key, $json.source_kind] }}"
+        }
+      },
+      "id": "node-insert-source-002",
+      "name": "Insert Source Text RPC",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [420, 300],
+      "credentials": {
+        "postgres": {
+          "id": "supabase_dev_connection",
+          "name": "Supabase DEV Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const req = $('Prepare Source Text Payload').first().json;\nconst stRaw = $input.first().json.st_res;\nconst st = typeof stRaw === 'string' ? JSON.parse(stRaw) : stRaw;\n\nreturn [{\n  json: {\n    ...req,\n    source_text_id: st.source_text_id,\n    version_no: st.version_no\n  }\n}];"
+      },
+      "id": "node-prepare-ai-input-003",
+      "name": "Prepare AI Interpretation Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [640, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Post-AI Router: Validates Interpretation and Dispatches to Specialized Workflows\nconst input = $input.first().json;\nconst interp = input.interpretation || input;\n\nconst intent = interp.intent || 'note';\nconst requiresClarification = Boolean(interp.requires_clarification);\n\nlet nextStep = 'apply_actions';\nlet responseText = '';\n\nif (requiresClarification) {\n  nextStep = 'clarification';\n  responseText = (interp.clarification_questions && interp.clarification_questions[0]) || '¿Podrías especificar a qué te refieres?';\n} else if (['query_memory', 'evidence_request', 'correction', 'report_request'].includes(intent)) {\n  nextStep = 'unsupported_f1';\n  responseText = 'Esta función no está disponible en la fase actual del sistema.';\n} else if (intent === 'query_tasks') {\n  nextStep = 'query_tasks';\n} else if (['create_task', 'update_task', 'complete_task', 'postpone_task', 'cancel_task'].includes(intent)) {\n  nextStep = 'task_action';\n} else {\n  nextStep = 'note_memory';\n}\n\nreturn [{\n  json: {\n    ...input,\n    intent: intent,\n    next_step: nextStep,\n    initial_response_text: responseText\n  }\n}];"
+      },
+      "id": "node-route-intent-004",
+      "name": "Route Interpretation Intent",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [860, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const state = $('Route Interpretation Intent').first().json;\n\nreturn [{\n  json: {\n    ok: true,\n    status: 'completed',\n    correlation_id: state.correlation_id,\n    data: {\n      source_text_id: state.source_text_id,\n      intent: state.intent,\n      next_step: state.next_step,\n      response_text: state.initial_response_text\n    }\n  }\n}];"
+      },
+      "id": "node-format-process-out-005",
+      "name": "Format Process Text Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1080, 300]
+    }
+  ],
+  "connections": {
+    "Prepare Source Text Payload": {
+      "main": [
+        [
+          {
+            "node": "Insert Source Text RPC",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Source Text RPC": {
+      "main": [
+        [
+          {
+            "node": "Prepare AI Interpretation Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare AI Interpretation Input": {
+      "main": [
+        [
+          {
+            "node": "Route Interpretation Intent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Interpretation Intent": {
+      "main": [
+        [
+          {
+            "node": "Format Process Text Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "WF-SYS-001"
+  },
+  "id": "WF-ING-002"
+}

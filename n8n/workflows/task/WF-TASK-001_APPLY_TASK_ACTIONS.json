@@ -1,0 +1,74 @@
+{
+  "name": "WF-TASK-001_APPLY_TASK_ACTIONS",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "// Step 1: Validate Task Candidates and Resolve Idempotency Key\nconst input = $input.first().json;\n\nconst userId = input.user_id;\nconst ingestionId = input.ingestion_id;\nconst taskCandidates = input.tasks || (input.interpretation && input.interpretation.tasks) || [];\n\nif (!taskCandidates || taskCandidates.length === 0) {\n  return [{\n    json: {\n      ok: false,\n      status: 'no_op',\n      message: 'No task candidates provided'\n    }\n  }];\n}\n\nconst processedTasks = taskCandidates.map((t, idx) => {\n  const timeKnown = Boolean(t.time_known);\n  const dueTime = timeKnown && t.time_candidate ? t.time_candidate : null;\n  const dueDate = t.resolved_date_candidate || null;\n  \n  // Deterministic candidate hash\n  const candidateStr = `${t.title}_${dueDate}_${dueTime}_${timeKnown}_${(t.person_mentions || []).join(',')}`;\n  let hash = 0;\n  for (let i = 0; i < candidateStr.length; i++) {\n    hash = ((hash << 5) - hash) + candidateStr.charCodeAt(i);\n    hash |= 0;\n  }\n  const candidateHash = Math.abs(hash).toString(16);\n  const idempotencyKey = `task:auto:${ingestionId}:${candidateHash}`;\n\n  return {\n    operation: t.operation || 'create',\n    title: t.title,\n    description: t.description || null,\n    due_date: dueDate,\n    due_time: dueTime,\n    time_known: timeKnown,\n    priority: t.priority || 'normal',\n    priority_source: t.priority_source || 'ai',\n    status: t.status_candidate || 'pending',\n    person_mentions: t.person_mentions || [],\n    idempotency_key: idempotencyKey,\n    requires_clarification: Boolean(t.requires_clarification)\n  };\n});\n\nreturn [{\n  json: {\n    ...input,\n    user_id: userId,\n    ingestion_id: ingestionId,\n    processed_tasks: processedTasks\n  }\n}];"
+      },
+      "id": "node-validate-tasks-001",
+      "name": "Validate Task Candidates",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT public.apply_interpretation_bundle($1::uuid, $2::uuid, $3::uuid, $4::jsonb, NULL, 'openai', 'gpt-5.6-luna') as res;",
+        "options": {
+          "queryReplacement": "={{ [$json.user_id, $json.ingestion_id, $json.source_text_id, JSON.stringify($json.interpretation || { tasks: $json.processed_tasks, intent: 'create_task' })] }}"
+        }
+      },
+      "id": "node-persist-tasks-rpc-002",
+      "name": "Persist Task via Bundle RPC",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [420, 300],
+      "credentials": {
+        "postgres": {
+          "id": "supabase_dev_connection",
+          "name": "Supabase DEV Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const req = $('Validate Task Candidates').first().json;\nconst resRaw = $input.first().json.res;\nconst res = typeof resRaw === 'string' ? JSON.parse(resRaw) : resRaw;\n\nreturn [{\n  json: {\n    ok: true,\n    status: 'completed',\n    correlation_id: req.correlation_id,\n    data: {\n      ...res,\n      task_count: (res.task_ids || []).length,\n      reminder_status: 'DEFERRED_PHASE_DEPENDENCY_F2'\n    }\n  }\n}];"
+      },
+      "id": "node-format-apply-task-003",
+      "name": "Format Apply Task Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [640, 300]
+    }
+  ],
+  "connections": {
+    "Validate Task Candidates": {
+      "main": [
+        [
+          {
+            "node": "Persist Task via Bundle RPC",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Persist Task via Bundle RPC": {
+      "main": [
+        [
+          {
+            "node": "Format Apply Task Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "WF-SYS-001"
+  },
+  "id": "WF-TASK-001"
+}

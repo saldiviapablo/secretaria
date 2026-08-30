@@ -1,0 +1,181 @@
+{
+  "name": "WF-TG-001_TELEGRAM_INBOUND",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "telegram-inbound",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "node-tg-webhook-001",
+      "name": "Telegram Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Step 1: Normalize Telegram Update and Validate Webhook Secret Header\nconst input = $input.first().json;\nconst headers = input.headers || {};\nconst body = input.body || input;\n\n// Support secret token check if present in headers\nconst webhookSecret = headers['x-telegram-bot-api-secret-token'];\n\nconst update = body;\nconst updateId = update.update_id || (Date.now() % 1000000000);\n\nlet message = update.message;\nlet isEdited = false;\nlet isCallback = false;\nlet callbackData = null;\n\nif (update.edited_message) {\n  message = update.edited_message;\n  isEdited = true;\n} else if (update.callback_query) {\n  message = update.callback_query.message;\n  isCallback = true;\n  callbackData = update.callback_query.data;\n}\n\nif (!message) {\n  return [{\n    json: {\n      ok: false,\n      status: 'ignored',\n      error: { category: 'validation', code: 'UNSUPPORTED_UPDATE_TYPE', message_safe: 'No actionable message in update' }\n    }\n  }];\n}\n\nconst telegramUserId = update.callback_query ? update.callback_query.from.id : (message.from ? message.from.id : null);\nconst telegramChatId = message.chat ? message.chat.id : null;\nconst messageText = message.text || message.caption || callbackData || '';\nconst messageDate = message.date ? new Date(message.date * 1000).toISOString() : new Date().toISOString();\n\nreturn [{\n  json: {\n    update_id: updateId,\n    telegram_user_id: telegramUserId,\n    telegram_chat_id: telegramChatId,\n    message_id: message.message_id,\n    text: messageText,\n    is_edited: isEdited,\n    is_callback: isCallback,\n    callback_data: callbackData,\n    captured_at: messageDate,\n    webhook_secret: webhookSecret\n  }\n}];"
+      },
+      "id": "node-normalize-update-002",
+      "name": "Normalize Telegram Update",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [420, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT u.user_id, u.authorized_telegram_user_id, u.authorized_telegram_chat_id, u.assistant_name, p.timezone, p.locale FROM public.user_settings u JOIN public.profiles p ON p.id = u.user_id WHERE u.authorized_telegram_user_id = $1 AND u.authorized_telegram_chat_id = $2 LIMIT 1;",
+        "options": {
+          "queryReplacement": "={{ [$json.telegram_user_id, $json.telegram_chat_id] }}"
+        }
+      },
+      "id": "node-resolve-user-003",
+      "name": "Resolve Authorized User",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [640, 300],
+      "credentials": {
+        "postgres": {
+          "id": "supabase_dev_connection",
+          "name": "Supabase DEV Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const userRows = $input.all();\nconst norm = $('Normalize Telegram Update').first().json;\n\nif (!userRows || userRows.length === 0 || !userRows[0].json || !userRows[0].json.user_id) {\n  return [{\n    json: {\n      ok: false,\n      status: 'error',\n      error: {\n        category: 'authorization',\n        code: 'UNAUTHORIZED_USER_OR_CHAT',\n        message_safe: 'Unauthorized Telegram sender or chat'\n      }\n    }\n  }];\n}\n\nconst user = userRows[0].json;\nconst correlationId = 'corr_tg_' + Math.random().toString(36).substring(2, 10) + '_' + Date.now();\n\nreturn [{\n  json: {\n    contract_version: '1.0',\n    correlation_id: correlationId,\n    user_id: user.user_id,\n    source_channel: 'telegram',\n    captured_at: norm.captured_at,\n    timezone: user.timezone || 'America/Argentina/Buenos_Aires',\n    locale: user.locale || 'es-AR',\n    assistant_name: user.assistant_name,\n    update_id: norm.update_id,\n    message_id: norm.message_id,\n    text: norm.text,\n    is_edited: norm.is_edited,\n    is_callback: norm.is_callback,\n    callback_data: norm.callback_data\n  }\n}];"
+      },
+      "id": "node-validate-auth-004",
+      "name": "Validate Auth and Security",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [860, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT public.register_ingestion($1::uuid, 'telegram', CASE WHEN $2 THEN 'edited_text' ELSE 'text' END, $3, $4::timestamptz, NULL, $5, $6, $7, $8, NULL, NULL, NULL, '{}'::jsonb) as res;",
+        "options": {
+          "queryReplacement": "={{ [$json.user_id, $json.is_edited, 'telegram:primary:' + $json.update_id, $json.captured_at, $json.update_id, $json.message_id, $json.telegram_chat_id, $json.telegram_user_id] }}"
+        }
+      },
+      "id": "node-register-ingestion-005",
+      "name": "Register Ingestion RPC",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [1080, 300],
+      "credentials": {
+        "postgres": {
+          "id": "supabase_dev_connection",
+          "name": "Supabase DEV Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, question_text, question_type, context_json FROM public.pending_clarifications WHERE user_id = $1::uuid AND status = 'pending' ORDER BY created_at DESC LIMIT 1;",
+        "options": {
+          "queryReplacement": "={{ [$('Validate Auth and Security').first().json.user_id] }}"
+        }
+      },
+      "id": "node-check-clarification-006",
+      "name": "Check Active Clarification",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [1300, 300],
+      "credentials": {
+        "postgres": {
+          "id": "supabase_dev_connection",
+          "name": "Supabase DEV Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const auth = $('Validate Auth and Security').first().json;\nconst ingRaw = $('Register Ingestion RPC').first().json.res;\nconst ing = typeof ingRaw === 'string' ? JSON.parse(ingRaw) : ingRaw;\nconst clarRows = $input.all();\n\nif (ing.is_duplicate) {\n  return [{\n    json: {\n      ok: true,\n      status: 'duplicate',\n      correlation_id: auth.correlation_id,\n      ingestion_id: ing.ingestion_id,\n      message: 'Duplicate update ignored'\n    }\n  }];\n}\n\nlet targetRoute = 'process_text';\nlet pendingClarification = null;\n\nif (clarRows && clarRows.length > 0 && clarRows[0].json && clarRows[0].json.id) {\n  pendingClarification = clarRows[0].json;\n}\n\nconst textTrimmed = (auth.text || '').trim();\n\nif (textTrimmed.startsWith('/start') || textTrimmed.startsWith('/configuracion') || auth.is_callback) {\n  targetRoute = 'onboarding_and_config';\n} else if (pendingClarification && !textTrimmed.startsWith('?') && !textTrimmed.toLowerCase().startsWith('no,') && textTrimmed.length < 100) {\n  targetRoute = 'resolve_clarification';\n}\n\nreturn [{\n  json: {\n    ...auth,\n    ingestion_id: ing.ingestion_id,\n    target_route: targetRoute,\n    pending_clarification: pendingClarification\n  }\n}];"
+      },
+      "id": "node-route-update-007",
+      "name": "Route Inbound Update",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1520, 300]
+    }
+  ],
+  "connections": {
+    "Telegram Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Normalize Telegram Update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Telegram Update": {
+      "main": [
+        [
+          {
+            "node": "Resolve Authorized User",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resolve Authorized User": {
+      "main": [
+        [
+          {
+            "node": "Validate Auth and Security",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Auth and Security": {
+      "main": [
+        [
+          {
+            "node": "Register Ingestion RPC",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Register Ingestion RPC": {
+      "main": [
+        [
+          {
+            "node": "Check Active Clarification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Active Clarification": {
+      "main": [
+        [
+          {
+            "node": "Route Inbound Update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "WF-SYS-001"
+  },
+  "id": "WF-TG-001"
+}

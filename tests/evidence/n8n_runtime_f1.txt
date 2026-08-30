@@ -1,0 +1,37 @@
+======================================================================
+STARTING REAL N8N SUBWORKFLOW RUNTIME SUITE:
+Testing WF-ING-001, WF-SYS-001, and WF-TG-002 against Supabase Local
+======================================================================
+
+[SETUP] Synthetic user & settings created for workflow execution
+
+--- 1. TESTING WF-ING-001 RUNTIME EXECUTION & IDEMPOTENCY ---
+   [PASS] WF-ING-001 Initial Run: Ingestion registered (id: 94e24019-b152-41de-befc-025e7bdcd27a, duplicate: false)
+   [PASS] WF-ING-001 Replay Run (F0-COMP-ING-IDEMPOTENCY-N8N): returned is_duplicate=true with existing ID, exactly 1 row in DB
+
+--- 2. TESTING WF-SYS-001 RUNTIME EXECUTION & ERROR HANDLING ---
+   [PASS] WF-SYS-001 Error Class [transient]: Transient (Rate limit 429) -> Redacted message: "HTTP 429 Too Many Requests: Rate limit reached. Bearer [REDACTED]"
+   [PASS] WF-SYS-001 Error Class [authorization]: Authorization (401 Unauthorized) -> Redacted message: "Failed call: 401 Unauthorized. bot[REDACTED_TELEGRAM_TOKEN]"
+   [PASS] WF-SYS-001 Error Class [data integrity]: Data Integrity (Foreign Key Violation) -> Redacted message: "violates foreign key constraint on postgres://[REDACTED]@127.0.0.1:54322/postgres"
+   [PASS] WF-SYS-001 Error Class [permanent]: Permanent (Validation / 400 Bad Request) -> Redacted message: "400 Bad Request: Invalid delivery class. password=[REDACTED]"
+   [PASS] WF-SYS-001 Error Class [unknown]: Unknown Exception -> Redacted message: "Unexpected memory dump failure"
+   [PASS] WF-SYS-001: Ingestion error state persisted to Supabase successfully
+
+--- 3. TESTING WF-TG-002 RUNTIME EXECUTION & RULES ---
+   [PASS] WF-TG-002 Caso A: proactive_critical con critical_can_break_silence=false fue SUPRIMIDO
+   [PASS] WF-TG-002 Caso B: proactive_critical con flag=true y evento critico fue PERMITIDO atravesar silencio
+   [PASS] WF-TG-002 Caso C: proactive_critical con evento no-critico RECHAZO el bypass critico
+   [PASS] WF-TG-002 Caso D: proactive_normal durante silencio fue SUPRIMIDO
+   [PASS] WF-TG-002 Caso E: reactive PERMITIDO y destino resuelto estrictamente en servidor (chat_id=6491867, ignorando 99999999)
+
+--- 4. TESTING WF-TG-002 MOCK GATEWAY RESPONSES ---
+   [PASS] WF-TG-002 Mock 200 OK: Formateado como status=completed con provider_message_id=887766
+   [PASS] WF-TEST-028 / WF-TG-002 Mock 429: Rate limit reconocido, retry_after=35s preservado, status=retry (no exito falso)
+   [PASS] WF-TG-002 Mock 500 / Network Error: Clasificado como transitorio, status=retry (no reintento infinito ciego)
+   [PASS] WF-TG-002 Mock 403 Forbidden: Clasificado como permanente, status=failed (sin reintento ciego)
+   [PASS] WF-TG-002 Mock Unknown: Estado incierto registrado como status=unknown (sin exito falso ni reenvio ciego)
+   [PASS] WF-TG-002 Input Validation: Rechazo verificado ante delivery_class invalida, texto vacio y user_id ausente
+
+======================================================================
+ALL WORKFLOW RUNTIME TESTS (WF-ING-001, WF-SYS-001, WF-TG-002) PASSED
+======================================================================
