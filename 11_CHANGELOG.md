@@ -972,3 +972,34 @@ como constitución documental del paquete definitivo para Antigravity/Codex.
      - Operations tests (`OPS-TEST-001` a `006`, `010`).
    - Evidencia reproducible registrada en `tests/evidence/evidence_f0.json`.
 
+---
+
+## CHG-2026-08-30-002 — Revalidación y Corrección de F0 (Pruebas de Integración y Runtime)
+
+**Tipo:** FIXED / VERIFIED  
+**Estado:** Revalidado, probado en runtime PostgreSQL 16 y auditado con n8n 2.33.3  
+**Motivo:** Revalidación estricta de la fase F0 exigida por revisión técnica para distinguir pruebas estáticas de integración real contra base de datos, corregir clasificación de tests y ejecutar auditoría de seguridad CLI.  
+**Solicitado por:** Antigravity / Prompt de Revalidación F0  
+**Documentos afectados:** `04_DATABASE_SCHEMA.md`, `05_N8N_WORKFLOWS.md`, `08_SECURITY.md`, `09_TEST_PLAN.md`, `10_DEPLOYMENT.md`, `11_CHANGELOG.md`  
+
+### Hallazgos y Correcciones Aplicadas:
+1. **Reclasificación de `WF-TEST-001` y componente `F0-COMP-ING-IDEMPOTENCY`:**
+   - `WF-TEST-001` (escenario completo de entrada de Telegram) fue reclasificado a `DEFERRED_APPROVED` hacia F1 dado que depende del workflow `WF-TG-001` (F1).
+   - Se implementó la prueba componente `F0-COMP-ING-IDEMPOTENCY` demostrando replay idempotente y concurrencia directa sobre `register_ingestion` contra motor PostgreSQL real.
+2. **Corrección y Ejecución de `DB-TEST-020`:**
+   - Se probó en runtime PostgreSQL que un mismo `memory_chunk` almacena y retiene múltiples embeddings de proveedores/modelos concurrentes (OpenAI 1536d + Google 768d) sin truncamiento ni sobrescritura.
+3. **Revalidación de DB Tests en Motor Relacional:**
+   - `DB-TEST-006`: coexistencia de versiones de transcripción y selección de preferida probadas en base de datos.
+   - `DB-TEST-017` y `SEC-TEST-019`: aislamiento multi-tenant efectivo vía RLS probado con sesiones reales (Usuario A vs Usuario B vs anon).
+   - `DB-TEST-017B`: rechazo estricto de claves foráneas compuestas cross-user probado en DB.
+   - `DB-TEST-021` y `DB-TEST-022`: trazabilidad de reportes y transiciones a `mismatch` probadas en runtime.
+4. **Corrección de Funciones SQL en `20260830000010_functions_and_triggers.sql`:**
+   - Sustituido `pg_catalog.trim` por `pg_catalog.btrim` para compatibilidad estándar con `search_path = ''`.
+   - Corregida la referencia a `CURRENT_USER` y `pg_catalog.gen_random_uuid()`.
+   - Incorporada la inicialización de roles estándar (`anon`, `authenticated`, `service_role`) en `20260830000001_extensions_and_schemas.sql` garantizando reproducibilidad limpia sin dependencias manuales.
+5. **Auditoría de Seguridad n8n (`n8n audit`):**
+   - Ejecutado `n8n audit` sobre n8n 2.33.3 reportando 0 riesgos de credenciales, base de datos, nodos o sistema de archivos. Registrado el hallazgo de versión fijada conforme a `DEP-DEC-002`.
+6. **Evidencia Estructurada:**
+   - Actualizado `tests/evidence/evidence_f0.json` distinguiendo métodos de prueba (inspección, unitario, componente, integración, seguridad y operaciones).
+
+

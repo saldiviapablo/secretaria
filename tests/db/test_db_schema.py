@@ -1,7 +1,7 @@
 """
 Database Schema & Functional Tests for F0
 Covers: DB-TEST-001 through DB-TEST-022
-Baseline: SVIA-DOCSET-V1-RC1 (04_DATABASE_SCHEMA.md)
+Baseline: SVIA-DOCSET-V1-RC1 (04_DATABASE_SCHEMA.md & 09_TEST_PLAN.md)
 """
 
 import os
@@ -121,13 +121,11 @@ class TestDatabaseSchemaF0(unittest.TestCase):
             'reports', 'ai_usage_events', 'audit_log'
         ]
         self.assertIn('private.prevent_historical_delete()', self.all_sql)
-        # Verify all 21 tables are listed in the historical_tables array
         for t in historical_tables:
             self.assertIn(f"'{t}'", self.all_sql, f"Table {t} missing from historical protection")
 
     def test_db_test_013_embeddings_delete_exception(self):
         """DB-TEST-013: embeddings table is exempt from prevent_historical_delete and has delete policy"""
-        # Ensure embeddings is NOT in historical delete list
         m = re.search(r'historical_tables\s+text\[\]\s*:=\s*ARRAY\[([\s\S]*?)\];', self.all_sql)
         self.assertIsNotNone(m)
         self.assertNotIn("'embeddings'", m.group(1))
@@ -183,12 +181,16 @@ class TestDatabaseSchemaF0(unittest.TestCase):
         self.assertIn('private.prevent_source_text_mutation()', self.all_sql)
         self.assertIn('trg_source_texts_immutable', self.all_sql)
 
-    def test_db_test_020_embeddings_unconstrained_dimension_in_f0(self):
-        """DB-TEST-020: Embeddings column is vector (not prematurely fixed to vector(1536) or vector(3072))"""
+    def test_db_test_020_multiple_embeddings_per_chunk(self):
+        """DB-TEST-020: Same chunk can store multiple embeddings from different models concurrently"""
         embeddings_sql = [s for s in self.all_sql.split('CREATE TABLE') if 'public.embeddings' in s][0]
+        self.assertIn('chunk_id uuid not null', embeddings_sql.lower())
+        self.assertIn('provider text not null', embeddings_sql.lower())
+        self.assertIn('model text not null', embeddings_sql.lower())
         self.assertIn('embedding vector not null', embeddings_sql.lower())
-        self.assertNotIn('embedding vector(1536)', embeddings_sql.lower())
-        self.assertNotIn('embedding vector(3072)', embeddings_sql.lower())
+        # No unique index on chunk_id alone (allows multi-provider/multi-model)
+        self.assertNotIn('unique (chunk_id)', embeddings_sql.lower())
+        self.assertNotIn('unique(chunk_id)', embeddings_sql.lower())
 
     def test_db_test_021_reports_traceability(self):
         """DB-TEST-021: Reports link to source ingestion and result memory"""

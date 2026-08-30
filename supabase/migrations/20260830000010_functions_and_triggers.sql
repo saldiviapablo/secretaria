@@ -40,7 +40,7 @@ AS $$
     SELECT pg_catalog.lower(
         public.unaccent(
             pg_catalog.regexp_replace(
-                pg_catalog.trim(COALESCE(p_text, '')),
+                pg_catalog.btrim(COALESCE(p_text, '')),
                 '\s+',
                 ' ',
                 'g'
@@ -83,6 +83,9 @@ DECLARE
     v_tz text;
 BEGIN
     IF NEW.time_known = false OR NEW.time_known IS NULL THEN
+        IF NEW.due_time IS NOT NULL OR NEW.due_at IS NOT NULL THEN
+            RAISE EXCEPTION 'due_time and due_at must be NULL when time_known is false';
+        END IF;
         NEW.due_time = NULL;
         NEW.due_at = NULL;
         NEW.time_known = false;
@@ -90,7 +93,7 @@ BEGIN
         IF NEW.due_date IS NULL OR NEW.due_time IS NULL THEN
             RAISE EXCEPTION 'When time_known is true, due_date and due_time are required';
         END IF;
-        IF NEW.due_timezone IS NULL OR pg_catalog.trim(NEW.due_timezone) = '' THEN
+        IF NEW.due_timezone IS NULL OR pg_catalog.btrim(NEW.due_timezone) = '' THEN
             SELECT timezone INTO v_tz FROM public.profiles WHERE id = NEW.user_id;
             NEW.due_timezone = COALESCE(v_tz, 'America/Argentina/Buenos_Aires');
         END IF;
@@ -224,7 +227,7 @@ BEGIN
         TG_OP,
         'system',
         pg_catalog.current_setting('request.jwt.claim.sub', true),
-        pg_catalog.current_user,
+        CURRENT_USER,
         v_old_json,
         v_new_json,
         v_changed_fields,
@@ -365,7 +368,7 @@ AS $$
 DECLARE
     v_clean_name text;
 BEGIN
-    v_clean_name := pg_catalog.trim(COALESCE(p_new_name, ''));
+    v_clean_name := pg_catalog.btrim(COALESCE(p_new_name, ''));
     IF v_clean_name = '' THEN
         RAISE EXCEPTION 'Assistant name cannot be empty';
     END IF;
@@ -532,7 +535,7 @@ SECURITY DEFINER
 SET search_path = ''
 AS $$
 DECLARE
-    v_token UUID := public.gen_random_uuid();
+    v_token UUID := pg_catalog.gen_random_uuid();
     v_expires TIMESTAMPTZ := pg_catalog.now() + p_lease_duration;
 BEGIN
     RETURN QUERY

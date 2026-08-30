@@ -28,7 +28,7 @@ class TestSecurityF0(unittest.TestCase):
                 cls.compose_dev = f.read()
 
     def test_sec_test_019_cross_user_isolation(self):
-        """SEC-TEST-019: Multi-tenant isolation verified by composite FKs (user_id, id) across all related tables"""
+        """SEC-TEST-019: Multi-tenant isolation verified by composite FKs (user_id, id) and RLS own-user filters"""
         required_composite_fks = [
             'fk_asset_locations_asset_composite',
             'fk_mem_rel_from_composite',
@@ -49,6 +49,7 @@ class TestSecurityF0(unittest.TestCase):
         ]
         for fk in required_composite_fks:
             self.assertIn(fk, self.all_sql, f"Missing composite FK: {fk}")
+        self.assertIn("auth.uid() = user_id", self.all_sql)
 
     def test_sec_test_020_anon_db_access_revoked(self):
         """SEC-TEST-020: anon role has all table permissions explicitly revoked"""
@@ -92,7 +93,6 @@ class TestSecurityF0(unittest.TestCase):
             r'bot[0-9]{8,10}:[A-Za-z0-9_-]{35}'
         ]
         
-        # Excluded paths
         excluded_dirs = {'.git', 'node_modules', '.pytest_cache', '__pycache__', 'venv', '.venv'}
         
         scanned_files = []
@@ -103,7 +103,6 @@ class TestSecurityF0(unittest.TestCase):
                 if f.endswith('.pyc') or f.endswith('.pyd'):
                     continue
                 filepath = os.path.join(root, f)
-                # Skip test_security_f0.py itself since it defines the regex patterns
                 if filepath.endswith('test_security_f0.py'):
                     continue
                 scanned_files.append(filepath)
@@ -118,7 +117,6 @@ class TestSecurityF0(unittest.TestCase):
 
         self.assertEqual(len(violations), 0, f"Secrets detected in repository: {violations}")
 
-        # Canary check: verify the scanner WOULD catch a synthetic canary
         synthetic_canary = "-----BEGIN " + "RSA PRIVATE " + "KEY-----\nsynthetic_canary_test_key\n"
         matched_canary = any(re.search(p, synthetic_canary) for p in secret_patterns)
         self.assertTrue(matched_canary, "Scanner must detect synthetic key canary")
@@ -140,13 +138,13 @@ class TestSecurityF0(unittest.TestCase):
         self.assertIn('postgres:16-alpine', self.compose_dev)
 
     def test_sec_test_033_n8n_admin_bind_localhost(self):
-        """SEC-TEST-033: n8n admin port binds to 127.0.0.1 (not 0.0.0.0 or WAN) in DEV"""
+        """SEC-TEST-033: DEV configuration binds n8n admin port to 127.0.0.1 (NAS WAN scan deferred)"""
         self.assertIn('127.0.0.1', self.compose_dev)
         self.assertNotIn('"5678:5678"', self.compose_dev)
         self.assertNotIn("'5678:5678'", self.compose_dev)
 
     def test_sec_test_034_n8n_internal_db_port_not_exposed(self):
-        """SEC-TEST-034: n8n internal postgres container has NO host port mappings"""
+        """SEC-TEST-034: DEV configuration has NO host port mapping on internal postgres (NAS WAN scan deferred)"""
         lines = self.compose_dev.split('\n')
         postgres_block = False
         postgres_lines = []
