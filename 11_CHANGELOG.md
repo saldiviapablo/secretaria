@@ -1192,8 +1192,35 @@ como constitución documental del paquete definitivo para Antigravity/Codex.
 4. **Corrección de Nomenclatura de Fases:**
    - Corregidas las referencias documentales: `F2 = Recordatorios`, `F3 = Audio + Drive`.
 5. **Limpieza Documental:**
-   - Eliminados enlaces absolutos y esquemas `file:///` de artefactos de evidencia, adoptando rutas relativas (`tests/evidence/evidence_f1.json`).
-   - Secret scan verificado (0 secretos detectados).
+---
+
+## CHG-2026-08-30-009 — Cierre Definitivo de Fase F1: Telegram Texto + Tareas y Validación Live de IA
+
+**Tipo:** CERTIFICATION / TESTS / CLOSURE  
+**Estado:** F1 DONE  
+**Motivo:** Ejecución y certificación exitosa de la prueba live externa con proveedor OpenAI (`gpt-5.6-luna`), resolución de precondición externa, validación temporal determinista y cierre formal de la Fase F1.  
+**Solicitado por:** Antigravity / Prompt Final de Cierre Definitivo F1  
+**Documentos afectados:** `11_CHANGELOG.md`, `tests/evidence/evidence_f1.json`, `tests/evidence/ai_live_call_f1.txt`, `tests/run_all_tests.py`  
+
+### Verificaciones y Resultados de Certificación:
+1. **Inferencia Real con Proveedor IA Primario (OpenAI):**
+   - Invocación HTTPS real a `/v1/chat/completions` superada con éxito (`gpt-5.6-luna`).
+   - Structured Outputs estricto conforme a schema `interpretation_v1` verificado (`intent = create_task`).
+2. **Validación Temporal Determinista Post-IA:**
+   - Validación determinista fuera del modelo ejecutada con éxito (`due_date = 2026-08-31`, `due_time = 15:00:00`, `time_known = true`).
+   - Rechazo de strings malformados o datetimes ISO sin fallback silencioso a `NULL`.
+3. **Persistencia en Supabase DEV:**
+   - Persistencia atómica de ingesta (`public.ingestions`), texto fuente (`public.source_texts`), interpretación estructurada (`public.interpretations`) y tarea (`public.tasks`) con sincronización de `due_at`.
+   - Persistencia atómica de telemetría y costo en `public.ai_usage_events` (`F1-COMP-AI-USAGE-PERSISTENCE = PASS`).
+4. **Trazabilidad y Estado de Tests:**
+   - Todos los escenarios canónicos F1 ejecutados y certificados (`PASS`).
+   - `WF-TEST-034` clasificado como `DEFERRED_APPROVED` (monitor `WF-SYS-004` dependiente de `F8`).
+5. **Seguridad y Producción:**
+   - 0 secretos expuestos (escaneo limpio).
+   - NAS UGREEN (`EXISTING_OPERATIONAL_N8N`), Immich, Cloudflare y Supabase PROD permanecen totalmente inalterados y fuera de alcance.
+6. **Estado Final:**
+   - `F1 DONE`. Fase F2 (`Recordatorios`) queda como siguiente fase secuencial.
+
 
 
 

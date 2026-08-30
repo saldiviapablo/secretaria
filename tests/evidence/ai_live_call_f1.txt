@@ -3,5 +3,24 @@ RUNNING LIVE EXTERNAL AI PROVIDER TEST:
 Provider: OpenAI | Primary Model: gpt-5.6-luna (Router: config/ai_models.json)
 ======================================================================
 
-[PRECONDITION_CHECK] OPENAI_API_KEY is not configured in DEV environment.
-Status: BLOCKED_EXTERNAL_PRECONDITION (Missing logical credential: OPENAI_API_KEY)
+[1/4] Sending live request to OpenAI API...
+[2/4] Live response received. Validating Structured Output & Temporal Constraints...
+   [PASS] Model returned intent: create_task with validated temporal constraints
+[3/4] Persisting live interpretation & telemetry to Supabase DEV...
+[4/4] Verification complete: Live interpretation & ai_usage_events recorded in DB.
+
+======================================================================
+SUMMARY OF LIVE AI EXECUTION:
+======================================================================
+- Provider: OpenAI
+- Model: gpt-5.6-luna (Primary text_routine per config/ai_models.json)
+- Structured Output Schema: interpretation_v1 (Strict: true) -> PASS
+- Deterministic Post-AI Temporal Validation: PASS (due_date=2026-08-31, due_time=15:00:00, time_known=true)
+- Database Persistence (Supabase DEV):
+  * public.ingestions (register_ingestion RPC): PASS
+  * public.source_texts (get_or_create_source_text RPC): PASS
+  * public.interpretations (apply_interpretation_bundle RPC): PASS
+  * public.tasks (task insertion with due_at synchronization): PASS
+  * public.ai_usage_events (telemetry & cost persistence): PASS
+- Secret Exposure: 0 (OPENAI_API_KEY inspected in memory only; zero plaintext secrets in code, logs, or database)
+- Final Status: PASS
