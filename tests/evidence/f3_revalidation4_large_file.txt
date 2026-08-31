@@ -1,0 +1,16 @@
+F3 LARGE FILE FALLBACK & NOTIFICATION ENVELOPE EVIDENCE (WF-ING-003 / WF-TG-002)
+Timestamp: 2026-08-31T12:08:40.668525+00:00
+Workflow: WF-ING-003_PROCESS_MEDIA -> WF-TG-002_TELEGRAM_SEND_MESSAGE
+Threshold: 20 * 1024 * 1024 bytes (20 MB limit)
+Credential Required: SVIA_TELEGRAM_DEV
+
+Layer Verification:
+- static_contract: PASS
+- runtime_import: PASS
+- component_persistence: PASS (public.ingestions.status = 'awaiting_external_file')
+- live_provider_call: BLOCKED_EXTERNAL_PRECONDITION (Missing SVIA_TELEGRAM_DEV connection)
+- live_path_persistence: NOT_EXECUTED
+
+Verification:
+- Build Large File Notification formats valid envelope for WF-TG-002.
+- Macro quarantine completely separated from large file notification.

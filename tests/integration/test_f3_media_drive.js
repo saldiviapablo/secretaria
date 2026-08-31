@@ -79,7 +79,9 @@ const ai1 = read('ai/WF-AI-001_TRANSCRIBE.json');
 const s1 = JSON.stringify(ai1);
 assert(s1.includes('TRANSCRIPTION_PRIMARY_NOT_SELECTED'), 'Primary selection requirement enforced');
 assert(s1.includes('gpt-transcribe'), 'OpenAI gpt-transcribe candidate present');
-assert(s1.includes('gemini-3.5-transcribe'), 'Gemini gemini-3.5-transcribe adapter implemented');
+assert(s1.includes('gemini-3.5-transcribe'), 'Gemini gemini-3.5-transcribe candidate present');
+assert(s1.includes('Gemini Files API Start') && s1.includes('Extract Upload Session URL') && s1.includes('Gemini Files API Upload Finalize'), 'Gemini Files API resumable sequence present');
+assert(s1.includes('Gemini Transcribe Interaction') && s1.includes('transcription_config') && s1.includes('verbatim'), 'Gemini Interactions API verbatim structure present');
 
 const ai3 = read('ai/WF-AI-003_ANALYZE_VISUAL.json');
 const sAi3 = JSON.stringify(ai3);

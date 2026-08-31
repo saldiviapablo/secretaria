@@ -1,0 +1,16 @@
+F3 DOCUMENT EXTRACTION & MACRO QUARANTINE EVIDENCE (WF-ING-006)
+Timestamp: 2026-08-31T12:08:40.668525+00:00
+Workflow: WF-ING-006_DOCUMENT_EXTRACT
+
+Layer Verification:
+- static_contract: PASS
+- runtime_import: PASS
+- component_persistence: PASS
+- live_provider_call: PASS (Local document extractor engine)
+- live_path_persistence: PASS
+
+Security & Isolation Rules:
+1. Executables / Scripts (.exe, .bat, .ps1, .sh) blocked.
+2. Macro Documents (.docm, .xlsm, .pptm) quarantined with MACRO_ENABLED_DOCUMENT_QUARANTINED.
+3. Extracted text stored safely in public.source_texts.
+4. Durable status completed set in public.ingestions.

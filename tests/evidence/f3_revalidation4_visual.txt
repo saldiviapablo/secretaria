@@ -1,0 +1,15 @@
+F3 VISUAL ANALYSIS CONTRACT & UNTRUSTED BOUNDARY EVIDENCE (WF-AI-003)
+Timestamp: 2026-08-31T12:08:40.668525+00:00
+Workflow: WF-AI-003_ANALYZE_VISUAL
+Models: openai:gpt-5.6-luna (standard visuals), gemini:gemini-3.7-flash (complex diagrams)
+Credentials Required: SVIA_OPENAI_DEV_HEADER / SVIA_GEMINI_DEV_HEADER
+
+Layer Verification:
+- static_contract: PASS
+- runtime_import: PASS
+- component_persistence: PASS (Verified in Supabase DEV source_texts with visual_description)
+- live_provider_call: BLOCKED_EXTERNAL_PRECONDITION (Missing external API keys)
+- live_path_persistence: NOT_EXECUTED
+
+Security Boundary:
+- System prompt mandates treating visual text as UNTRUSTED_CONTENT.

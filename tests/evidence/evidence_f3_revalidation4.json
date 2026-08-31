@@ -1,0 +1,106 @@
+{
+  "phase": "F3",
+  "certification_stage": "FOURTH_CORRECTIVE_REVALIDATION",
+  "timestamp": "2026-08-31T12:08:40.668525+00:00",
+  "n8n_version": "2.35.4",
+  "total_workflows": 23,
+  "f3_workflows": [
+    "WF-ING-003_PROCESS_MEDIA",
+    "WF-ING-004_DRIVE_WATCH",
+    "WF-ING-005_DRIVE_RECONCILIATION",
+    "WF-AI-001_TRANSCRIBE",
+    "WF-ING-006_DOCUMENT_EXTRACT",
+    "WF-AI-003_ANALYZE_VISUAL"
+  ],
+  "f4_workflows_present": 0,
+  "evidence_semantics": {
+    "audio_transcription_openai": {
+      "static_contract": "PASS",
+      "runtime_import": "PASS",
+      "component_persistence": "PASS",
+      "live_provider_call": "BLOCKED_EXTERNAL_PRECONDITION",
+      "live_path_persistence": "NOT_EXECUTED",
+      "credential_required": "SVIA_OPENAI_DEV_HEADER"
+    },
+    "audio_transcription_gemini": {
+      "static_contract": "PASS",
+      "runtime_import": "PASS",
+      "component_persistence": "PASS",
+      "live_provider_call": "BLOCKED_EXTERNAL_PRECONDITION",
+      "live_path_persistence": "NOT_EXECUTED",
+      "credential_required": "SVIA_GEMINI_DEV_HEADER"
+    },
+    "visual_analysis_openai_luna": {
+      "static_contract": "PASS",
+      "runtime_import": "PASS",
+      "component_persistence": "PASS",
+      "live_provider_call": "BLOCKED_EXTERNAL_PRECONDITION",
+      "live_path_persistence": "NOT_EXECUTED",
+      "credential_required": "SVIA_OPENAI_DEV_HEADER"
+    },
+    "visual_analysis_gemini_flash": {
+      "static_contract": "PASS",
+      "runtime_import": "PASS",
+      "component_persistence": "PASS",
+      "live_provider_call": "BLOCKED_EXTERNAL_PRECONDITION",
+      "live_path_persistence": "NOT_EXECUTED",
+      "credential_required": "SVIA_GEMINI_DEV_HEADER"
+    },
+    "google_drive_watch_and_reconciliation": {
+      "static_contract": "PASS",
+      "runtime_import": "PASS",
+      "component_persistence": "PASS",
+      "live_provider_call": "BLOCKED_EXTERNAL_PRECONDITION",
+      "live_path_persistence": "NOT_EXECUTED",
+      "credential_required": "SVIA_DRIVE_DEV",
+      "controlled_review_flag": "DRIVE_ROOT_CONFIG_REQUIRES_CONTROLLED_REVIEW"
+    },
+    "document_extract_and_macro_quarantine": {
+      "static_contract": "PASS",
+      "runtime_import": "PASS",
+      "component_persistence": "PASS",
+      "live_provider_call": "PASS",
+      "live_path_persistence": "PASS"
+    },
+    "large_telegram_file_fallback_notification": {
+      "static_contract": "PASS",
+      "runtime_import": "PASS",
+      "component_persistence": "PASS",
+      "live_provider_call": "BLOCKED_EXTERNAL_PRECONDITION",
+      "live_path_persistence": "NOT_EXECUTED",
+      "credential_required": "SVIA_TELEGRAM_DEV"
+    }
+  },
+  "transcription_primary": null,
+  "transcription_benchmark": {
+    "status": "PENDING_EXTERNAL_BENCHMARK",
+    "candidates": [
+      "gpt-transcribe",
+      "gemini-3.5-transcribe"
+    ],
+    "reason": "Private human-evaluated dataset of 25-40 clips (45-90 min total) pending execution"
+  },
+  "p2_governance": {
+    "queryReplacement": "P2_PENDING_EXPLICIT_USER_ACCEPTANCE",
+    "code_nodes": "P2_PENDING_EXPLICIT_USER_ACCEPTANCE"
+  },
+  "n8n_audit_findings": {
+    "p0": 0,
+    "p1": 0,
+    "p2": 2,
+    "p3": 3
+  },
+  "deferred_phase_dependencies": {
+    "WF-TG-003_TELEGRAM_SEND_ASSET": "DEFERRED_APPROVED_PHASE_DEPENDENCY",
+    "WF-MEM-002_CHUNK_AND_INDEX": "DEFERRED_APPROVED_F4",
+    "WF-AI-004_EMBED_CHUNKS": "DEFERRED_APPROVED_F4"
+  },
+  "production_safety": {
+    "nas_modified": false,
+    "existing_operational_n8n_modified": false,
+    "supabase_prod_modified": false,
+    "immich_modified": false,
+    "cloudflare_modified": false
+  },
+  "status": "F3 BLOCKED_EXTERNAL_PRECONDITION"
+}

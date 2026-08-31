@@ -1,0 +1,19 @@
+F3 DRIVE BINDING & METADATA CONTRACT EVIDENCE (WF-ING-004 & WF-ING-005)
+Timestamp: 2026-08-31T12:08:40.668525+00:00
+Workflow IDs: WF-ING-004 (Drive Watch), WF-ING-005 (Drive Reconciliation)
+Target Folder: /SECRETARIA_VIRTUAL
+Credential Required: SVIA_DRIVE_DEV (Google Drive OAuth2 DEV)
+Drive Root Binding: $env.SVIA_DRIVE_ROOT_FOLDER_ID_DEV (Protected under N8N_BLOCK_ENV_ACCESS_IN_NODE=true)
+
+Layer Verification:
+- static_contract: PASS
+- runtime_import: PASS
+- component_persistence: PASS (Verified in Supabase DEV asset_locations)
+- live_provider_call: BLOCKED_EXTERNAL_PRECONDITION (Missing SVIA_DRIVE_DEV OAuth2 credential)
+- live_path_persistence: NOT_EXECUTED
+
+Contract Rules Verified:
+1. Idempotency Key: drive:<drive_file_id>:<drive_version>.
+2. Real Version Requirement: DRIVE_VERSION_METADATA_REQUIRED thrown if modifiedTime/version missing.
+3. Single V1 Owner: AMBIGUOUS_DRIVE_OWNER thrown if user_settings count != 1.
+4. Reconciliation: Unindexed files in asset_locations discovered and enqueued every 15 minutes.

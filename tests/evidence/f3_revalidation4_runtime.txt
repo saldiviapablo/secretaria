@@ -1,0 +1,19 @@
+F3 FOURTH REVALIDATION RUNTIME AUDIT EVIDENCE
+Timestamp: 2026-08-31T12:08:40.668525+00:00
+Environment: Local DEV Environment (Supabase DEV @ 127.0.0.1:54322, n8n 2.35.4 @ 127.0.0.1:5678)
+State: F3 BLOCKED_EXTERNAL_PRECONDITION
+
+Resolutions Verified (F3-CORR-023 to F3-CORR-025):
+- F3-CORR-023 (Gemini 3.5 Transcribe REST Protocol):
+  * Official Google Gemini Files API resumable upload protocol implemented (Start with X-Goog-Upload-Protocol: resumable -> Extract x-goog-upload-url -> Finalize binary upload -> file.uri).
+  * Interactions API invoked with model='gemini-3.5-transcribe' and generation_config.transcription_config={mode: "verbatim", language_code: "es-AR"}.
+  * static_contract = PASS.
+- F3-CORR-024 (Drive Root Configuration & n8n 2.35.4 Hardening):
+  * Documented architectural limitation: n8n 2.35.4 blocks $env in expressions by default (N8N_BLOCK_ENV_ACCESS_IN_NODE=true).
+  * Security protection preserved: N8N_BLOCK_ENV_ACCESS_IN_NODE is kept ENABLED to prevent exposing process secrets (N8N_ENCRYPTION_KEY, DB credentials) to Code nodes/expressions.
+  * Formal controlled review requested: DRIVE_ROOT_CONFIG_REQUIRES_CONTROLLED_REVIEW.
+- F3-CORR-025 (Evidence Semantics Separation):
+  * Separated five distinct layers: static_contract, runtime_import, component_persistence, live_provider_call, live_path_persistence.
+  * Direct DB tests are not conflated with live provider calls.
+
+Status: F3 BLOCKED_EXTERNAL_PRECONDITION

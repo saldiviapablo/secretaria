@@ -1,0 +1,29 @@
+F3 GEMINI 3.5 TRANSCRIBE ADAPTER CONTRACT EVIDENCE (WF-AI-001)
+Timestamp: 2026-08-31T12:08:40.668525+00:00
+Workflow: WF-AI-001_TRANSCRIBE
+Candidate: gemini:gemini-3.5-transcribe
+Files API Start: POST https://generativelanguage.googleapis.com/upload/v1beta/files (resumable)
+Files API Finalize: POST <x-goog-upload-url> (binary)
+Interactions API: POST https://generativelanguage.googleapis.com/v1beta/interactions
+Credential Required: SVIA_GEMINI_DEV_HEADER (HTTP Header Auth)
+
+Layer Verification:
+- static_contract: PASS (Fully aligned with official Google Gemini Files API + Interactions API verbatim spec)
+- runtime_import: PASS
+- component_persistence: PASS (Verified in Supabase DEV source_texts & ai_usage_events)
+- live_provider_call: BLOCKED_EXTERNAL_PRECONDITION (Missing SVIA_GEMINI_DEV_HEADER credential)
+- live_path_persistence: NOT_EXECUTED
+
+REST Specification Details:
+1. Start Upload:
+   - Header: X-Goog-Upload-Protocol: resumable
+   - Header: X-Goog-Upload-Command: start
+   - Header: X-Goog-Upload-Header-Content-Length: size_bytes
+   - Header: X-Goog-Upload-Header-Content-Type: mime_type
+   - Captures x-goog-upload-url response header.
+2. Finalize Upload:
+   - Header: X-Goog-Upload-Command: upload, finalize
+   - Body: Raw audio binary data.
+   - Captures file.uri.
+3. Interaction:
+   - Body: { model: "gemini-3.5-transcribe", input: [{ type: "audio", uri: file_uri, mime_type: mime_type }], generation_config: { transcription_config: { mode: "verbatim", language_code: "es-AR" } } }

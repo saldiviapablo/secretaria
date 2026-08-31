@@ -119,7 +119,7 @@
       "typeVersion": 4.2,
       "position": [
         800,
-        220
+        200
       ],
       "credentials": {
         "httpHeaderAuth": {
@@ -137,9 +137,99 @@
         "url": "https://generativelanguage.googleapis.com/upload/v1beta/files",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Goog-Upload-Protocol",
+              "value": "resumable"
+            },
+            {
+              "name": "X-Goog-Upload-Command",
+              "value": "start"
+            },
+            {
+              "name": "X-Goog-Upload-Header-Content-Length",
+              "value": "={{ $binary.data.fileSize || $json.payload?.file_size || 0 }}"
+            },
+            {
+              "name": "X-Goog-Upload-Header-Content-Type",
+              "value": "={{ $binary.data.mimeType || 'audio/ogg' }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"file\": {\n    \"display_name\": \"svia-\" + ($json.ingestion_id || \"audio\")\n  }\n}",
+        "options": {
+          "timeout": 120000,
+          "response": {
+            "response": {
+              "fullResponse": true
+            }
+          }
+        }
+      },
+      "id": "ai1-gemini-start",
+      "name": "Gemini Files API Start",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        800,
+        420
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "gemini_dev_header_auth",
+          "name": "SVIA_GEMINI_DEV_HEADER"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first();\nconst j = item.json;\nconst headers = j.headers || {};\nconst uploadUrl = headers['x-goog-upload-url'] || headers['X-Goog-Upload-URL'] || j['x-goog-upload-url'] || null;\nif (!uploadUrl) {\n  throw new Error('GEMINI_FILES_API_START_FAILED: x-goog-upload-url header not returned by Files API');\n}\nconst prev = $('Validate Transcription Contract').first().json;\nreturn [{\n  json: {\n    ...prev,\n    upload_session_url: uploadUrl,\n    file_size: item.binary?.data?.fileSize || prev.payload?.file_size || 0,\n    mime_type: item.binary?.data?.mimeType || 'audio/ogg'\n  },\n  binary: item.binary\n}];"
+      },
+      "id": "ai1-gemini-extract-url",
+      "name": "Extract Upload Session URL",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1000,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.upload_session_url }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Length",
+              "value": "={{ $binary.data.fileSize || $json.file_size }}"
+            },
+            {
+              "name": "X-Goog-Upload-Offset",
+              "value": "0"
+            },
+            {
+              "name": "X-Goog-Upload-Command",
+              "value": "upload, finalize"
+            }
+          ]
+        },
         "sendBody": true,
         "contentType": "raw",
-        "rawContentType": "={{ $binary.data.mimeType || 'audio/ogg' }}",
         "bodyParameters": {
           "parameters": []
         },
@@ -147,12 +237,12 @@
           "timeout": 120000
         }
       },
-      "id": "ai1-gemini-upload",
-      "name": "Gemini Files API Upload",
+      "id": "ai1-gemini-finalize",
+      "name": "Gemini Files API Upload Finalize",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        800,
+        1200,
         420
       ],
       "credentials": {
@@ -173,7 +263,7 @@
         "nodeCredentialType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"model\": \"gemini-3.5-transcribe\",\n  \"input\": {\n    \"file_uri\": $json.file?.uri || $json.uri\n  },\n  \"transcription_config\": {\n    \"mode\": \"verbatim\",\n    \"language_code\": \"es-AR\"\n  }\n}",
+        "jsonBody": "={\n  \"model\": \"gemini-3.5-transcribe\",\n  \"input\": [\n    {\n      \"type\": \"audio\",\n      \"uri\": $json.file?.uri || $json.uri,\n      \"mime_type\": $json.file?.mimeType || \"audio/ogg\"\n    }\n  ],\n  \"generation_config\": {\n    \"transcription_config\": {\n      \"mode\": \"verbatim\",\n      \"language_code\": \"es-AR\"\n    }\n  }\n}",
         "options": {
           "timeout": 120000
         }
@@ -183,7 +273,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1020,
+        1400,
         420
       ],
       "credentials": {
@@ -198,14 +288,14 @@
     },
     {
       "parameters": {
-        "jsCode": "const j = $input.first().json;\nconst ctx = $('Validate Transcription Contract').first().json;\nconst text = j.text || j.transcript || j.output?.text || j.candidates?.[0]?.content?.parts?.[0]?.text || j.output_text || null;\nif (!text || !String(text).trim()) {\n  throw new Error('EMPTY_TRANSCRIPTION: provider returned empty transcript');\n}\n\nconst inputTokens = j.usage?.prompt_tokens ?? j.usageMetadata?.promptTokenCount ?? null;\nconst outputTokens = j.usage?.completion_tokens ?? j.usageMetadata?.candidatesTokenCount ?? null;\nconst reqId = j.id || j.responseId || j.interaction_id || null;\nconst durationMs = ctx.payload?.duration_ms || ctx.duration_ms || null;\nconst audioSec = durationMs ? Number((durationMs / 1000).toFixed(2)) : (j.duration ? Number(j.duration) : null);\n\nreturn [{\n  json: {\n    ...ctx,\n    transcript_text: String(text).trim(),\n    transcript_language: j.language || j.language_code || 'es-AR',\n    provider_request_id: reqId,\n    input_tokens: inputTokens,\n    output_tokens: outputTokens,\n    audio_seconds: audioSec,\n    estimated_cost_usd: null,\n    pricing_version: null,\n    raw_provider_metadata: {\n      has_segments: Array.isArray(j.segments),\n      has_words: Array.isArray(j.words)\n    }\n  }\n}];"
+        "jsCode": "const j = $input.first().json;\nconst ctx = $('Validate Transcription Contract').first().json;\nconst text = j.text || j.transcript || j.output?.[0]?.text || j.output?.text || j.candidates?.[0]?.content?.parts?.[0]?.text || j.output_text || null;\nif (!text || !String(text).trim()) {\n  throw new Error('EMPTY_TRANSCRIPTION: provider returned empty transcript');\n}\n\nconst inputTokens = j.usage?.prompt_tokens ?? j.usageMetadata?.promptTokenCount ?? null;\nconst outputTokens = j.usage?.completion_tokens ?? j.usageMetadata?.candidatesTokenCount ?? null;\nconst reqId = j.id || j.responseId || j.interaction_id || null;\nconst durationMs = ctx.payload?.duration_ms || ctx.duration_ms || null;\nconst audioSec = durationMs ? Number((durationMs / 1000).toFixed(2)) : (j.duration ? Number(j.duration) : null);\n\nreturn [{\n  json: {\n    ...ctx,\n    transcript_text: String(text).trim(),\n    transcript_language: j.language || j.language_code || 'es-AR',\n    provider_request_id: reqId,\n    input_tokens: inputTokens,\n    output_tokens: outputTokens,\n    audio_seconds: audioSec,\n    estimated_cost_usd: null,\n    pricing_version: null,\n    raw_provider_metadata: {\n      has_segments: Array.isArray(j.segments),\n      has_words: Array.isArray(j.words)\n    }\n  }\n}];"
       },
       "id": "ai1-normalize",
       "name": "Normalize Transcription Output",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1240,
+        1620,
         300
       ]
     },
@@ -222,7 +312,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
-        1460,
+        1840,
         300
       ],
       "credentials": {
@@ -245,7 +335,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
-        1680,
+        2060,
         300
       ],
       "credentials": {
@@ -264,7 +354,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1900,
+        2280,
         300
       ]
     }
@@ -303,7 +393,7 @@
         ],
         [
           {
-            "node": "Gemini Files API Upload",
+            "node": "Gemini Files API Start",
             "type": "main",
             "index": 0
           }
@@ -321,7 +411,29 @@
         ]
       ]
     },
-    "Gemini Files API Upload": {
+    "Gemini Files API Start": {
+      "main": [
+        [
+          {
+            "node": "Extract Upload Session URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Upload Session URL": {
+      "main": [
+        [
+          {
+            "node": "Gemini Files API Upload Finalize",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Files API Upload Finalize": {
       "main": [
         [
           {

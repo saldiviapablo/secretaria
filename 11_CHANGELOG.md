@@ -1752,3 +1752,27 @@ Producción/NAS/EXISTING_OPERATIONAL_N8N/Supabase PROD/Immich/Cloudflare: NO MOD
 - **Producción:** NAS UGREEN, Supabase PROD, Immich y Cloudflare permanecen totalmente intactos y fuera de alcance.
 - **Fase F4 (Memoria Semántica):** NO INICIADA.
 
+---
+
+## CHG-2026-08-31-025 — F3 Audio + Drive — Cuarta Revalidación Correctiva, Protocolo Resumable Files/Interactions API y Análisis de Seguridad Drive Root ($env)
+
+**Tipo:** FIXED / RUNTIME / REVALIDATION / SECURITY
+**Estado:** F3 BLOCKED_EXTERNAL_PRECONDITION
+**Motivo:** Cuarta revalidación correctiva tras la auditoría del commit `ed43852`. Se aplicaron las siguientes resoluciones definitivas: (1) corrección exhaustiva del adaptador Gemini 3.5 Transcribe en `WF-AI-001` implementando el protocolo REST oficial de Google Gemini Files API en modo resumable (`X-Goog-Upload-Protocol: resumable`, captura de header `x-goog-upload-url`, finalización binaria y llamada a Interactions API con `model = gemini-3.5-transcribe` y `transcription_config.mode = verbatim`); (2) análisis formal de seguridad sobre la configuración de la raíz de Drive en n8n 2.35.4: se mantiene la protección por defecto `N8N_BLOCK_ENV_ACCESS_IN_NODE=true` para no exponer variables sensibles del proceso a Code nodes/expressions, declarando formalmente el estado de revisión controlada requerida (`DRIVE_ROOT_CONFIG_REQUIRES_CONTROLLED_REVIEW`); (3) normalización de la semántica de evidencias separando de forma estricta `static_contract`, `runtime_import`, `component_persistence`, `live_provider_call` y `live_path_persistence`; y (4) generación de la suite de evidencias factuales `f3_revalidation4_*` y `evidence_f3_revalidation4.json`.
+**Solicitado por:** Antigravity / Prompt Final Cuarta Revalidación Correctiva Mínima F3
+**Documentos afectados:** `11_CHANGELOG.md`, `n8n/workflows/ai/WF-AI-001_TRANSCRIBE.json`, `tests/integration/test_f3_media_drive.js`, `tests/evidence/f3_revalidation4_*`, `tests/evidence/evidence_f3_revalidation4.json`
+
+### Resoluciones Factuales y Estado de Verificación:
+1. **F3-CORR-023 (Gemini 3.5 Transcribe REST Protocol):** Adaptador en `WF-AI-001` alineado con la secuencia oficial de Google Gemini: inicio de carga resumable (`X-Goog-Upload-Protocol: resumable` con headers de longitud y tipo MIME) -> captura del header de respuesta `x-goog-upload-url` -> POST de carga y finalización con el payload binario de audio -> POST a `https://generativelanguage.googleapis.com/v1beta/interactions` con `generation_config.transcription_config.mode = verbatim` e idioma `es-AR` -> normalización segura en `public.source_texts`.
+2. **F3-CORR-024 (Seguridad de Entorno y Configuración Drive Root):** En n8n 2.35.4 self-hosted (Community Edition), `$vars` es una característica licenciada no disponible y `$env` se encuentra bloqueado por diseño (`N8N_BLOCK_ENV_ACCESS_IN_NODE=true`). Para no debilitar la seguridad del contenedor ni exponer secretos globales a los Code nodes, se mantiene activada la protección y se emite la solicitud de revisión controlada `DRIVE_ROOT_CONFIG_REQUIRES_CONTROLLED_REVIEW`.
+3. **F3-CORR-025 (Semántica de Evidencias Factuales):** Se estructuró la matriz de evidencias separando formalmente la persistencia de base de datos (`component_persistence = PASS`) de las llamadas live a APIs externas (`live_provider_call = BLOCKED_EXTERNAL_PRECONDITION`, `live_path_persistence = NOT_EXECUTED`).
+
+### Gobernanza y Estado del Sistema:
+- **Estado de Fase:** `F3 BLOCKED_EXTERNAL_PRECONDITION`
+- **Total Workflows:** Exactamente 23 workflows activos en n8n 2.35.4 (6 F3, 0 F4+).
+- **Tablas en DB:** Exactamente 25 tablas públicas V1 en Supabase DEV (migración 13 head, 2 resets exitosos).
+- **Benchmark Transcripción:** `transcription_primary = null` (Pendiente de dataset privado con evaluación humana según `AI-DEC-007`).
+- **Gobernanza P2:** `queryReplacement` y `Code Nodes` en `P2_PENDING_EXPLICIT_USER_ACCEPTANCE`.
+- **Producción:** NAS UGREEN, Supabase PROD, Immich y Cloudflare permanecen totalmente intactos y fuera de alcance.
+- **Fase F4 (Memoria Semántica):** NO INICIADA.
+
