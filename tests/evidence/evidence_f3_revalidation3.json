@@ -1,0 +1,98 @@
+{
+  "phase": "F3",
+  "certification_stage": "THIRD_CORRECTIVE_REVALIDATION",
+  "timestamp": "2026-08-31T11:33:53.689790+00:00",
+  "n8n_version": "2.35.4",
+  "total_workflows": 23,
+  "f3_workflows": [
+    "WF-ING-003_PROCESS_MEDIA",
+    "WF-ING-004_DRIVE_WATCH",
+    "WF-ING-005_DRIVE_RECONCILIATION",
+    "WF-AI-001_TRANSCRIBE",
+    "WF-ING-006_DOCUMENT_EXTRACT",
+    "WF-AI-003_ANALYZE_VISUAL"
+  ],
+  "f4_workflows_present": 0,
+  "capabilities_summary": {
+    "audio_transcription_openai": {
+      "static_contract": "PASS",
+      "runtime_import": "PASS",
+      "live_provider_call": "BLOCKED_EXTERNAL_PRECONDITION",
+      "persistent_state": "PASS",
+      "blocked_reason": "Missing SVIA_OPENAI_DEV header credential in DEV environment"
+    },
+    "audio_transcription_gemini": {
+      "static_contract": "PASS",
+      "runtime_import": "PASS",
+      "live_provider_call": "BLOCKED_EXTERNAL_PRECONDITION",
+      "persistent_state": "PASS",
+      "blocked_reason": "Missing SVIA_GEMINI_DEV header credential in DEV environment"
+    },
+    "visual_analysis_openai_luna": {
+      "static_contract": "PASS",
+      "runtime_import": "PASS",
+      "live_provider_call": "BLOCKED_EXTERNAL_PRECONDITION",
+      "persistent_state": "PASS",
+      "blocked_reason": "Missing SVIA_OPENAI_DEV header credential in DEV environment"
+    },
+    "visual_analysis_gemini_flash": {
+      "static_contract": "PASS",
+      "runtime_import": "PASS",
+      "live_provider_call": "BLOCKED_EXTERNAL_PRECONDITION",
+      "persistent_state": "PASS",
+      "blocked_reason": "Missing SVIA_GEMINI_DEV header credential in DEV environment"
+    },
+    "google_drive_watch_and_reconciliation": {
+      "static_contract": "PASS",
+      "runtime_import": "PASS",
+      "live_provider_call": "BLOCKED_EXTERNAL_PRECONDITION",
+      "persistent_state": "PASS",
+      "blocked_reason": "Missing SVIA_DRIVE_DEV OAuth2 connection in DEV environment"
+    },
+    "document_extract_and_macro_quarantine": {
+      "static_contract": "PASS",
+      "runtime_import": "PASS",
+      "live_provider_call": "PASS",
+      "persistent_state": "PASS"
+    },
+    "large_telegram_file_fallback_notification": {
+      "static_contract": "PASS",
+      "runtime_import": "PASS",
+      "live_provider_call": "BLOCKED_EXTERNAL_PRECONDITION",
+      "persistent_state": "PASS",
+      "blocked_reason": "Missing SVIA_TELEGRAM_DEV connection in DEV environment"
+    }
+  },
+  "transcription_primary": null,
+  "transcription_benchmark": {
+    "status": "PENDING_EXTERNAL_BENCHMARK",
+    "candidates": [
+      "gpt-transcribe",
+      "gemini-3.5-transcribe"
+    ],
+    "reason": "Private human-evaluated dataset of 25-40 clips (45-90 min total) pending execution"
+  },
+  "p2_governance": {
+    "queryReplacement": "P2_PENDING_EXPLICIT_USER_ACCEPTANCE",
+    "code_nodes": "P2_PENDING_EXPLICIT_USER_ACCEPTANCE"
+  },
+  "n8n_audit_findings": {
+    "p0": 0,
+    "p1": 0,
+    "p2": 2,
+    "p3": 3
+  },
+  "deferred_phase_dependencies": {
+    "WF-TG-003_TELEGRAM_SEND_ASSET": "DEFERRED_APPROVED_PHASE_DEPENDENCY",
+    "WF-MEM-002_CHUNK_AND_INDEX": "DEFERRED_APPROVED_F4",
+    "WF-AI-004_EMBED_CHUNKS": "DEFERRED_APPROVED_F4"
+  },
+  "production_safety": {
+    "nas_modified": false,
+    "existing_operational_n8n_modified": false,
+    "supabase_prod_modified": false,
+    "immich_modified": false,
+    "cloudflare_modified": false
+  },
+  "status": "F3 BLOCKED_EXTERNAL_PRECONDITION"
+}

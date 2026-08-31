@@ -1,0 +1,19 @@
+F3 DRIVE BINDING & METADATA CONTRACT EVIDENCE (WF-ING-004 & WF-ING-005)
+Timestamp: 2026-08-31T11:33:53.689790+00:00
+Workflow IDs: WF-ING-004 (Drive Watch), WF-ING-005 (Drive Reconciliation)
+Root Binding: $env.SVIA_DRIVE_ROOT_FOLDER_ID_DEV (Target: /SECRETARIA_VIRTUAL)
+Credential Required: SVIA_DRIVE_DEV (Google Drive OAuth2 DEV)
+Live Cloud Status: BLOCKED_EXTERNAL_PRECONDITION (Missing SVIA_DRIVE_DEV credential in local environment)
+
+Contract & Component Verification:
+1. Trigger Metadata Preservation:
+   - File metadata normalized before user_settings query.
+   - Idempotency key derived strictly as `drive:<id>:<version>`.
+2. Strict Version Requirement:
+   - Missing version or modifiedTime throws DRIVE_VERSION_METADATA_REQUIRED (zero fake version fallback).
+3. Single V1 Owner Guard:
+   - Exactly 1 user in public.user_settings required (0 or >1 users throws AMBIGUOUS_DRIVE_OWNER).
+4. Reconciliation Logic:
+   - Compares Google Drive files against public.asset_locations to en-queue unindexed files.
+
+Status: CONTRACT PASS / LIVE BLOCKED_EXTERNAL_PRECONDITION

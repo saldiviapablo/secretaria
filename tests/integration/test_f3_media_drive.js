@@ -205,6 +205,47 @@ assert.strictEqual(normTransOut.audio_seconds, 15.4, 'Real duration derived from
 assert.strictEqual(normTransOut.estimated_cost_usd, null, 'No hardcoded synthetic cost generated');
 console.log('[PASS] COMPONENT: WF-AI-001 Telemetry verified with zero fabricated IDs or costs');
 
+// Test 2.6: Large File Notification Envelope & Quarantine Separation (DEFECT F3-CORR-021)
+const ing3GateNode = ing3.nodes.find(n => n.name === 'Validate / Gate Media');
+const ing3BuildNotifyNode = ing3.nodes.find(n => n.name === 'Build Large File Notification');
+
+// Subtest A: >20MB Telegram file produces awaiting_external_file gate and valid WF-TG-002 envelope
+const largeFileInput = {
+  user_id: '11111111-1111-1111-1111-111111111111',
+  ingestion_id: '22222222-2222-2222-2222-222222222222',
+  source_channel: 'telegram',
+  payload: {
+    file_size: 25 * 1024 * 1024,
+    mime_type: 'audio/ogg',
+    telegram_file_id: 'tg_large_audio_123'
+  }
+};
+const gatedLargeFile = runCodeNode(ing3GateNode.parameters.jsCode, [{ json: largeFileInput }])[0].json;
+assert.strictEqual(gatedLargeFile.media_gate, 'awaiting_external_file', 'Large file identified as awaiting_external_file');
+
+const notifyEnvelope = runCodeNode(ing3BuildNotifyNode.parameters.jsCode, [{ json: {} }], {
+  'Validate / Gate Media': gatedLargeFile
+})[0].json;
+assert.strictEqual(notifyEnvelope.user_id, '11111111-1111-1111-1111-111111111111');
+assert.strictEqual(notifyEnvelope.delivery_class, 'reactive');
+assert(notifyEnvelope.text.includes('20 MB'), 'Informative notification text references 20MB limit');
+assert.strictEqual(notifyEnvelope.payload.delivery_class, 'reactive');
+
+// Subtest B: Macro document (.xlsm) produces quarantine gate (NOT awaiting_external_file)
+const macroInput = {
+  user_id: '11111111-1111-1111-1111-111111111111',
+  ingestion_id: '33333333-3333-3333-3333-333333333333',
+  source_channel: 'telegram',
+  payload: {
+    file_size: 500000,
+    original_filename: 'budget_sheet.xlsm',
+    mime_type: 'application/vnd.ms-excel.sheet.macroEnabled.12'
+  }
+};
+const gatedMacro = runCodeNode(ing3GateNode.parameters.jsCode, [{ json: macroInput }])[0].json;
+assert.strictEqual(gatedMacro.media_gate, 'quarantine', 'Macro file routed to quarantine gate, not awaiting_external_file');
+console.log('[PASS] COMPONENT: WF-ING-003 Large file notification envelope and quarantine separation verified');
+
 // -----------------------------------------------------------------------------
 // 3. Database / RPC / Integration Tests (DB / RPC / RLS)
 // -----------------------------------------------------------------------------

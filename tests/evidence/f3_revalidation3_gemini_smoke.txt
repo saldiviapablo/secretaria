@@ -1,0 +1,16 @@
+F3 GEMINI 3.5 TRANSCRIBE ADAPTER CONTRACT EVIDENCE (WF-AI-001)
+Timestamp: 2026-08-31T11:33:53.689790+00:00
+Workflow: WF-AI-001_TRANSCRIBE
+Candidate: gemini:gemini-3.5-transcribe
+Endpoint 1 (Files API Upload): POST https://generativelanguage.googleapis.com/upload/v1beta/files
+Endpoint 2 (Transcribe Interaction): POST https://generativelanguage.googleapis.com/v1beta/interactions
+Credential Required: SVIA_GEMINI_DEV (HTTP Header Auth)
+Live External Status: BLOCKED_EXTERNAL_PRECONDITION (Missing SVIA_GEMINI_DEV header credential in local environment)
+
+Official Specification Flow:
+- Step 1: Upload raw binary to Google Gemini Files API -> receives file.uri.
+- Step 2: Invoke Interactions API with model='gemini-3.5-transcribe' and transcription_config={"mode": "verbatim", "language_code": "es-AR"}.
+- Step 3: Extract transcript from response interaction output.
+- Step 4: Persist in public.source_texts via public.create_source_text_variant.
+
+Status: CONTRACT PASS / LIVE BLOCKED_EXTERNAL_PRECONDITION

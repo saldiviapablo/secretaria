@@ -67,7 +67,7 @@
           "folderId": {
             "__rl": true,
             "mode": "id",
-            "value": "={{ $env.SVIA_DRIVE_ROOT_FOLDER_ID_DEV || 'SVIA_DRIVE_ROOT_FOLDER_ID_DEV' }}"
+            "value": "={{ $env.SVIA_DRIVE_ROOT_FOLDER_ID_DEV }}"
           },
           "whatToSearch": "files"
         },

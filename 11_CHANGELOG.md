@@ -1726,3 +1726,29 @@ Producción/NAS/EXISTING_OPERATIONAL_N8N/Supabase PROD/Immich/Cloudflare: NO MOD
 - **Producción:** NAS UGREEN, Supabase PROD, Immich y Cloudflare permanecen totalmente intactos y fuera de alcance.
 - **Fase F4 (Memoria Semántica):** NO INICIADA.
 
+---
+
+## CHG-2026-08-31-024 — F3 Audio + Drive — Tercera Revalidación Correctiva, Alineación Gemini Files/Interaction API, Reproducibilidad de Entorno y Clasificación Factual
+
+**Tipo:** FIXED / RUNTIME / REVALIDATION / OPERATIONS
+**Estado:** F3 BLOCKED_EXTERNAL_PRECONDITION
+**Motivo:** Tercera revalidación correctiva tras la auditoría del commit `0dba8b3`. Se aplicaron las siguientes resoluciones definitivas: (1) clasificación factual y transparente de llamadas live a proveedores externos como `BLOCKED_EXTERNAL_PRECONDITION` por ausencia de credenciales externas en el entorno DEV local (`SVIA_OPENAI_DEV`, `SVIA_GEMINI_DEV`, `SVIA_DRIVE_DEV`, `SVIA_TELEGRAM_DEV`); (2) alineación de `WF-AI-001` con el flujo oficial de Google Gemini API (Files API upload + Interactions API con `gemini-3.5-transcribe` y `transcription_config.mode = verbatim`); (3) documentación e inyección reproducible de `SVIA_DRIVE_ROOT_FOLDER_ID_DEV` en `infra/docker/compose.dev.yml` y `infra/docker/.env.example`, eliminando cadenas fallback ficticias en workflows (`Runtime == Git`); (4) separación explícita de ramas en `WF-ING-003_PROCESS_MEDIA` mediante el nodo `Build Large File Notification` para despachar envelopes reactivos válidos a `WF-TG-002` ante archivos >20MB, aislando completamente la cuarentena de macros; (5) preservación de la regla de no inventar ganadores en producción (`transcription_primary = null`); y (6) emisión de evidencia estructurada en `evidence_f3_revalidation3.json` y suite de evidencias `f3_revalidation3_*`.
+**Solicitado por:** Antigravity / Prompt Final Tercera Revalidación Correctiva Mínima F3
+**Documentos afectados:** `11_CHANGELOG.md`, `infra/docker/compose.dev.yml`, `infra/docker/.env.example`, `n8n/workflows/ai/WF-AI-001_TRANSCRIBE.json`, `n8n/workflows/ingestion/WF-ING-003_PROCESS_MEDIA.json`, `n8n/workflows/ingestion/WF-ING-004_DRIVE_WATCH.json`, `n8n/workflows/ingestion/WF-ING-005_DRIVE_RECONCILIATION.json`, `tests/integration/test_f3_media_drive.js`, `tests/evidence/f3_revalidation3_*`, `tests/evidence/evidence_f3_revalidation3.json`
+
+### Resoluciones Factuales y Estado de Verificación:
+1. **F3-CORR-018 (Evidencia Live Factual):** Se eliminó cualquier afirmación de ejecución live externa simulada. Los adaptadores de OpenAI, Gemini y Google Drive se certifican a nivel de contrato estático, importación runtime e integración en base de datos, mientras que las llamadas HTTP reales a nubes externas se reportan con rigor como `BLOCKED_EXTERNAL_PRECONDITION` debido a la falta de credenciales de desarrollo.
+2. **F3-CORR-019 (Gemini 3.5 Transcribe API):** Se estructuró el adaptador en `WF-AI-001` conforme a la especificación oficial vigente de Google Gemini (carga binaria vía Files API -> interacción con modelo `gemini-3.5-transcribe` en modo `verbatim` -> normalización y almacenamiento en `public.source_texts`).
+3. **F3-CORR-020 (Drive Root Reproducible):** Variable de entorno `SVIA_DRIVE_ROOT_FOLDER_ID_DEV` documentada en `infra/docker/.env.example` e inyectada en `compose.dev.yml`. Se eliminaron las cadenas fallback de los workflows, garantizando igualdad estricta entre el repositorio Git y la instancia en ejecución.
+4. **F3-CORR-021 (Contrato de Notificación Large File):** En `WF-ING-003`, se creó el nodo dedicado `Build Large File Notification` que formula un envelope válido para `WF-TG-002` exclusivamente cuando `media_gate = 'awaiting_external_file'`. Los documentos con macros (`.xlsm`, `.docm`) se desvían de manera estricta a la rama de cuarentena sin invocar notificaciones engañosas.
+5. **F3-CORR-022 (Validación de Drive):** Se certificaron los contratos de preservación de metadatos, requisito de versión real (`DRIVE_VERSION_METADATA_REQUIRED`), encolamiento de reconciliación cada 15 minutos y deduplicación por hash SHA-256. La invocación contra Google Drive en la nube permanece como `BLOCKED_EXTERNAL_PRECONDITION`.
+
+### Gobernanza y Estado del Sistema:
+- **Estado de Fase:** `F3 BLOCKED_EXTERNAL_PRECONDITION`
+- **Total Workflows:** Exactamente 23 workflows activos en n8n 2.35.4 (6 F3, 0 F4+).
+- **Tablas en DB:** Exactamente 25 tablas públicas V1 en Supabase DEV (migración 13 head).
+- **Benchmark Transcripción:** `transcription_primary = null` (Pendiente de dataset privado con evaluación humana según `AI-DEC-007`).
+- **Gobernanza P2:** `queryReplacement` y `Code Nodes` en `P2_PENDING_EXPLICIT_USER_ACCEPTANCE`.
+- **Producción:** NAS UGREEN, Supabase PROD, Immich y Cloudflare permanecen totalmente intactos y fuera de alcance.
+- **Fase F4 (Memoria Semántica):** NO INICIADA.
+

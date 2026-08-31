@@ -1,0 +1,14 @@
+F3 OPENAI GPT-TRANSCRIBE ADAPTER CONTRACT EVIDENCE (WF-AI-001)
+Timestamp: 2026-08-31T11:33:53.689790+00:00
+Workflow: WF-AI-001_TRANSCRIBE
+Candidate: openai:gpt-transcribe
+Endpoint: POST https://api.openai.com/v1/audio/transcriptions
+Credential Required: SVIA_OPENAI_DEV (HTTP Header Auth)
+Live External Status: BLOCKED_EXTERNAL_PRECONDITION (Missing SVIA_OPENAI_DEV header credential in local environment)
+
+Contract & Telemetry Verification:
+- Multipart form-data audio binary payload.
+- Telemetry normalization: provider_request_id (real or NULL), audio_seconds (from payload duration_ms or NULL), estimated_cost_usd (NULL), pricing_version (NULL).
+- Persistence: public.create_source_text_variant with provider='openai', model='gpt-transcribe'.
+
+Status: CONTRACT PASS / LIVE BLOCKED_EXTERNAL_PRECONDITION

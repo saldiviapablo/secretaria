@@ -134,18 +134,21 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-transcribe:generateContent",
+        "url": "https://generativelanguage.googleapis.com/upload/v1beta/files",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "httpHeaderAuth",
         "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"contents\": [\n    {\n      \"parts\": [\n        {\n          \"text\": \"Generate a verbatim transcript of the audio, word for word. Do not summarize.\"\n        },\n        {\n          \"inlineData\": {\n            \"mimeType\": $binary.data.mimeType || \"audio/ogg\",\n            \"data\": $binary.data.data\n          }\n        }\n      ]\n    }\n  ]\n}",
+        "contentType": "raw",
+        "rawContentType": "={{ $binary.data.mimeType || 'audio/ogg' }}",
+        "bodyParameters": {
+          "parameters": []
+        },
         "options": {
           "timeout": 120000
         }
       },
-      "id": "ai1-gemini",
-      "name": "Gemini 3.5 Transcribe Adapter",
+      "id": "ai1-gemini-upload",
+      "name": "Gemini Files API Upload",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
@@ -164,14 +167,45 @@
     },
     {
       "parameters": {
-        "jsCode": "const j = $input.first().json;\nconst ctx = $('Validate Transcription Contract').first().json;\nconst text = j.text || j.transcript || j.candidates?.[0]?.content?.parts?.[0]?.text || j.output_text || j.output?.text || null;\nif (!text || !String(text).trim()) {\n  throw new Error('EMPTY_TRANSCRIPTION: provider returned empty transcript');\n}\n\nconst inputTokens = j.usage?.prompt_tokens ?? j.usageMetadata?.promptTokenCount ?? null;\nconst outputTokens = j.usage?.completion_tokens ?? j.usageMetadata?.candidatesTokenCount ?? null;\nconst reqId = j.id || j.responseId || null;\nconst durationMs = ctx.payload?.duration_ms || ctx.duration_ms || null;\nconst audioSec = durationMs ? Number((durationMs / 1000).toFixed(2)) : (j.duration ? Number(j.duration) : null);\n\nreturn [{\n  json: {\n    ...ctx,\n    transcript_text: String(text).trim(),\n    transcript_language: j.language || 'es-AR',\n    provider_request_id: reqId,\n    input_tokens: inputTokens,\n    output_tokens: outputTokens,\n    audio_seconds: audioSec,\n    estimated_cost_usd: null,\n    pricing_version: null,\n    raw_provider_metadata: {\n      has_segments: Array.isArray(j.segments),\n      has_words: Array.isArray(j.words)\n    }\n  }\n}];"
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/interactions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"gemini-3.5-transcribe\",\n  \"input\": {\n    \"file_uri\": $json.file?.uri || $json.uri\n  },\n  \"transcription_config\": {\n    \"mode\": \"verbatim\",\n    \"language_code\": \"es-AR\"\n  }\n}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "ai1-gemini-interact",
+      "name": "Gemini Transcribe Interaction",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1020,
+        420
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "gemini_dev_header_auth",
+          "name": "SVIA_GEMINI_DEV_HEADER"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "jsCode": "const j = $input.first().json;\nconst ctx = $('Validate Transcription Contract').first().json;\nconst text = j.text || j.transcript || j.output?.text || j.candidates?.[0]?.content?.parts?.[0]?.text || j.output_text || null;\nif (!text || !String(text).trim()) {\n  throw new Error('EMPTY_TRANSCRIPTION: provider returned empty transcript');\n}\n\nconst inputTokens = j.usage?.prompt_tokens ?? j.usageMetadata?.promptTokenCount ?? null;\nconst outputTokens = j.usage?.completion_tokens ?? j.usageMetadata?.candidatesTokenCount ?? null;\nconst reqId = j.id || j.responseId || j.interaction_id || null;\nconst durationMs = ctx.payload?.duration_ms || ctx.duration_ms || null;\nconst audioSec = durationMs ? Number((durationMs / 1000).toFixed(2)) : (j.duration ? Number(j.duration) : null);\n\nreturn [{\n  json: {\n    ...ctx,\n    transcript_text: String(text).trim(),\n    transcript_language: j.language || j.language_code || 'es-AR',\n    provider_request_id: reqId,\n    input_tokens: inputTokens,\n    output_tokens: outputTokens,\n    audio_seconds: audioSec,\n    estimated_cost_usd: null,\n    pricing_version: null,\n    raw_provider_metadata: {\n      has_segments: Array.isArray(j.segments),\n      has_words: Array.isArray(j.words)\n    }\n  }\n}];"
       },
       "id": "ai1-normalize",
       "name": "Normalize Transcription Output",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1040,
+        1240,
         300
       ]
     },
@@ -188,7 +222,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
-        1260,
+        1460,
         300
       ],
       "credentials": {
@@ -211,7 +245,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
-        1480,
+        1680,
         300
       ],
       "credentials": {
@@ -230,7 +264,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1700,
+        1900,
         300
       ]
     }
@@ -269,7 +303,7 @@
         ],
         [
           {
-            "node": "Gemini 3.5 Transcribe Adapter",
+            "node": "Gemini Files API Upload",
             "type": "main",
             "index": 0
           }
@@ -287,7 +321,18 @@
         ]
       ]
     },
-    "Gemini 3.5 Transcribe Adapter": {
+    "Gemini Files API Upload": {
+      "main": [
+        [
+          {
+            "node": "Gemini Transcribe Interaction",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Transcribe Interaction": {
       "main": [
         [
           {

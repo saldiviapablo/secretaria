@@ -1,0 +1,14 @@
+F3 VISUAL ANALYSIS CONTRACT & UNTRUSTED BOUNDARY EVIDENCE (WF-AI-003)
+Timestamp: 2026-08-31T11:33:53.689790+00:00
+Workflow: WF-AI-003_ANALYZE_VISUAL
+Models: openai:gpt-5.6-luna (standard visuals), gemini:gemini-3.7-flash (complex diagrams)
+Credentials Required: SVIA_OPENAI_DEV / SVIA_GEMINI_DEV
+Live External Status: BLOCKED_EXTERNAL_PRECONDITION (Missing external API keys in local environment)
+
+Contract & Security Verification:
+- Prompt Injection Defense: System prompt strictly instructs treating all image text as UNTRUSTED_CONTENT.
+- Normalization: provider_request_id real or NULL, cost NULL.
+- Persistence: public.create_source_text_variant with source_type='visual_description'.
+- Telemetry: public.record_media_ai_usage with untrusted_content=true.
+
+Status: CONTRACT PASS / LIVE BLOCKED_EXTERNAL_PRECONDITION

@@ -1,0 +1,13 @@
+F3 THIRD REVALIDATION RUNTIME AUDIT EVIDENCE
+Timestamp: 2026-08-31T11:33:53.689790+00:00
+Environment: Local DEV Environment (Supabase DEV @ 127.0.0.1:54322, n8n 2.35.4 @ 127.0.0.1:5678)
+State: F3 BLOCKED_EXTERNAL_PRECONDITION (Pending External Credentials, External Benchmark & P2 Acceptance)
+
+Factual Resolution of Blockers (F3-CORR-018 to F3-CORR-022):
+- F3-CORR-018: Live external provider calls classified honestly as BLOCKED_EXTERNAL_PRECONDITION due to unconfigured live credentials in local DEV environment (SVIA_OPENAI_DEV, SVIA_GEMINI_DEV, SVIA_DRIVE_DEV, SVIA_TELEGRAM_DEV).
+- F3-CORR-019: Gemini 3.5 Transcribe adapter aligned with official Google Gemini API specification (Files API upload + Transcribe Interaction in verbatim mode).
+- F3-CORR-020: Drive root folder binding unified via $env.SVIA_DRIVE_ROOT_FOLDER_ID_DEV in docker compose and workflows, eliminating hardcoded fallback strings and guaranteeing exact Git == Runtime parity.
+- F3-CORR-021: Large Telegram file notification envelope explicitly separated from macro quarantine in WF-ING-003 via 'Build Large File Notification' node connecting to WF-TG-002.
+- F3-CORR-022: Drive logic verified via strict schema & RPC validation. Real live cloud drive operations remain BLOCKED_EXTERNAL_PRECONDITION on Google OAuth2 DEV connection.
+
+Status: BLOCKED_EXTERNAL_PRECONDITION (External Credentials Required for Live Provider Calls)

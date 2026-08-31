@@ -1,0 +1,13 @@
+F3 LARGE FILE FALLBACK & NOTIFICATION ENVELOPE EVIDENCE (WF-ING-003 / WF-TG-002)
+Timestamp: 2026-08-31T11:33:53.689790+00:00
+Workflow: WF-ING-003_PROCESS_MEDIA -> WF-TG-002_TELEGRAM_SEND_MESSAGE
+Threshold: 20 * 1024 * 1024 bytes (20 MB Telegram download limit)
+
+Verification:
+1. Gating: Files > 20 MB set media_gate = 'awaiting_external_file'.
+2. Status Persistence: public.set_ingestion_media_status called with status = 'awaiting_external_file'.
+3. Dedicated Router Branch: Gate and Source Router branches directly to 'Build Large File Notification' node.
+4. Envelope Structure: Produces valid reactive delivery request for WF-TG-002 with informative message to upload to Drive.
+5. Quarantine Separation: Macro-enabled documents route to 'quarantine' branch without triggering large file notification.
+
+Status: PASS (Component contract & envelope verified)

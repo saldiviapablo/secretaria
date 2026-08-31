@@ -1,0 +1,11 @@
+F3 DOCUMENT EXTRACTION & MACRO QUARANTINE EVIDENCE (WF-ING-006)
+Timestamp: 2026-08-31T11:33:53.689790+00:00
+Workflow: WF-ING-006_DOCUMENT_EXTRACT
+
+Contract & Component Verification:
+1. Executable / Script Rejection: .exe, .bat, .ps1, .sh, .vbs blocked with UNSAFE_DOCUMENT_TYPE_QUARANTINED.
+2. Macro Document Quarantine: .docm, .xlsm, .pptm, .xlam, .dotm, .potm, .ppam blocked with MACRO_ENABLED_DOCUMENT_QUARANTINED.
+3. Safe String Persistence: Extracted document contents stored as untrusted text in public.source_texts.
+4. Durable Completion: Successful text extraction calls public.set_ingestion_media_status('completed').
+
+Status: PASS (Fully verified in DB & Node logic)
