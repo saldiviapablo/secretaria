@@ -574,6 +574,37 @@ con:
 - motivo;
 - link/documentación de la versión.
 
+
+## 10.1 Hardening específico verificado para n8n 2.33.4
+
+El `n8n audit` posterior al upgrade a `2.33.4` reportó:
+
+```text
+communityPackagesEnabled = true
+publicApiEnabled = true
+```
+
+Para F0/F1/F2 esas capacidades no son necesarias.
+
+Se adopta en DEV, sujeto a certificación runtime:
+
+```dotenv
+N8N_PUBLIC_API_DISABLED=true
+N8N_PUBLIC_API_SWAGGERUI_DISABLED=true
+N8N_COMMUNITY_PACKAGES_ENABLED=false
+```
+
+Este hardening no modifica workflows, Supabase, contratos ni fases.
+
+Una futura necesidad de Public API o community nodes requiere revisión controlada, mínimo privilegio, tests y CHANGELOG.
+
+Referencias oficiales:
+
+```text
+https://docs.n8n.io/deploy/host-n8n/configure-n8n/security/disable-the-public-api/
+https://docs.n8n.io/integrations/community-nodes/risks/
+```
+
 ---
 
 # 11. Execution data

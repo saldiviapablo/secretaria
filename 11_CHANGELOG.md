@@ -1408,3 +1408,85 @@ Este CHG no declara el parche certificado hasta que exista evidencia runtime.
    - Micro-parche n8n `2.33.4` certificado y cerrado (`DONE`).
    - F0 = DONE, F1 = DONE, F2 = DONE. Fase F3 (`Audio + Drive`) NO INICIADA.
 
+---
+## CHG-2026-08-30-016 — Micro-Hardening n8n: Public API y Community Packages
+
+**Tipo:** SECURITY / HARDENING / OPERATIONS
+**Estado:** APPROVED_PENDING_RUNTIME_CERTIFICATION
+**Motivo:** El `n8n audit` posterior al upgrade certificado a `2.33.4` reportó `publicApiEnabled=true` y `communityPackagesEnabled=true`. Ninguna de esas capacidades es necesaria para F0/F1/F2.
+**Base:** `main @ 45c9c48`.
+**Cambios DEV aprobados:** `N8N_PUBLIC_API_DISABLED=true`, `N8N_PUBLIC_API_SWAGGERUI_DISABLED=true`, `N8N_COMMUNITY_PACKAGES_ENABLED=false`.
+**Workflows:** 0 cambios; deben permanecer exactamente 17.
+**Supabase:** 0 cambios.
+**F3:** NO INICIADA.
+**Producción:** fuera de alcance.
+
+### Gobernanza P2
+
+Este cambio NO autoacepta los P2 previos de `queryReplacement` y Code Nodes.
+
+Ambos permanecen:
+
+```text
+P2_PENDING_EXPLICIT_USER_ACCEPTANCE
+```
+
+hasta una aceptación explícita separada del usuario.
+
+### Gates
+
+- runtime n8n `2.33.4`;
+- `publicApiEnabled=false`;
+- `communityPackagesEnabled=false`;
+- Swagger deshabilitado por configuración;
+- 17 workflows intactos;
+- regresión F1/F2;
+- restart/recovery;
+- `n8n audit`;
+- secret scan;
+- 0 P0/P1;
+- evidence + commit/push.
+
+Este CHG no declara DONE.
+
+---
+
+## CHG-2026-08-30-017 — Certificación y Cierre de Micro-Hardening n8n: Public API y Community Packages
+
+**Tipo:** SECURITY / HARDENING / CERTIFICATION
+**Estado:** N8N_MICRO_HARDENING_DONE
+**Motivo:** Certificación técnica y runtime del micro-hardening de n8n `2.33.4` (`N8N_PUBLIC_API_DISABLED=true`, `N8N_PUBLIC_API_SWAGGERUI_DISABLED=true`, `N8N_COMMUNITY_PACKAGES_ENABLED=false`). Verificación de endpoints administrativos deshabilitados (HTTP 404), auditoría de configuración `n8n audit` limpia (`publicApiEnabled=false`, `communityPackagesEnabled=false`), 17 workflows intactos y 100% de tests de regresión F0/F1/F2 aprobados.
+**Solicitado por:** Antigravity / Prompt Final Micro-Hardening n8n
+**Documentos afectados:** `11_CHANGELOG.md`, `10_DEPLOYMENT.md`, `infra/docker/compose.dev.yml`, `infra/docker/.env.example`, `infra/docker/README.md`, `tests/evidence/evidence_n8n_micro_hardening.json`, `tests/evidence/n8n_micro_hardening_*`
+
+### Verificaciones y Resultados de Hardening:
+1. **Configuración y Runtime DEV:**
+   - Variables aplicadas en contenedor `secretaria-n8n-dev`:
+     * `N8N_PUBLIC_API_DISABLED=true`
+     * `N8N_PUBLIC_API_SWAGGERUI_DISABLED=true`
+     * `N8N_COMMUNITY_PACKAGES_ENABLED=false`
+   - Reinicio de contenedor ejecutado con persistencia de base de datos y volúmenes intactos.
+2. **Negative API Check (Localhost):**
+   - `/api/v1/workflows` -> HTTP 404 (Deshabilitado / Bloqueado)
+   - `/api/v1/credentials` -> HTTP 404 (Deshabilitado / Bloqueado)
+   - `/api/v1/docs` (Swagger UI) -> HTTP 404 (Deshabilitado / Bloqueado)
+   - `/api/v1/docs/json` (Swagger Spec) -> HTTP 404 (Deshabilitado / Bloqueado)
+3. **Auditoría de Configuración (`n8n audit`):**
+   - `publicApiEnabled` verificado en `false`.
+   - `communityPackagesEnabled` verificado en `false`.
+   - 0 defectos P0 / P1.
+4. **Gobernanza P2:**
+   - Este micro-hardening NO autoacepta los P2 de `queryReplacement` ni Code Nodes.
+   - Ambos ítems se mantienen formalmente clasificados como `P2_PENDING_EXPLICIT_USER_ACCEPTANCE` a la espera de aprobación explícita por parte del usuario.
+5. **Integridad de Workflows y Regresión:**
+   - 17 workflows activos en runtime (3 F0 + 10 F1 + 4 F2; 0 F3+).
+   - 52/52 tests unitarios en Python aprobados (`PASS`).
+   - 9/9 escenarios de recordatorios F2 (`test_f2_reminders.js`) aprobados (`PASS`).
+   - Suite end-to-end F1 (`test_f1_e2e.js`) 100% aprobada (`PASS`).
+   - Secret scan limpio (0 secretos detectados).
+6. **Producción Preservada:**
+   - NAS UGREEN (`EXISTING_OPERATIONAL_N8N`), Immich, Cloudflare y Supabase PROD permanecen totalmente inalterados y fuera de alcance.
+7. **Estado:**
+   - Micro-hardening técnico certificado y cerrado (`N8N_MICRO_HARDENING_DONE`).
+   - F0 = DONE, F1 = DONE, F2 = DONE. Fase F3 (`Audio + Drive`) NO INICIADA.
+

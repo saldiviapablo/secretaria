@@ -1,0 +1,47 @@
+{
+  "package": "SVIA_N8N_MICRO_HARDENING_API_COMMUNITY_v1",
+  "timestamp": "2026-08-31T03:14:49.884908+00:00",
+  "n8n_version": "2.33.4",
+  "hardening": {
+    "public_api_disabled": true,
+    "public_api_swaggerui_disabled": true,
+    "community_packages_enabled": false,
+    "audit_public_api_enabled": false,
+    "audit_community_packages_enabled": false
+  },
+  "negative_api_checks": {
+    "/api/v1/workflows": 404,
+    "/api/v1/credentials": 404,
+    "/api/v1/docs": 404,
+    "/api/v1/docs/json": 404
+  },
+  "total_workflows": 17,
+  "f3_workflows_present": 0,
+  "p2_governance": {
+    "queryReplacement": "P2_PENDING_EXPLICIT_USER_ACCEPTANCE",
+    "code_nodes": "P2_PENDING_EXPLICIT_USER_ACCEPTANCE"
+  },
+  "defects": {
+    "p0": 0,
+    "p1": 0,
+    "p2": 2,
+    "p3": 1
+  },
+  "tests": {
+    "static_hardening_config": "PASS",
+    "workflow_manifest_import": "PASS",
+    "python_unit_tests": "52/52 PASS",
+    "f1_regression": "PASS",
+    "f2_regression": "PASS",
+    "negative_api_check": "PASS",
+    "n8n_audit": "PASS"
+  },
+  "production_safety": {
+    "nas_modified": false,
+    "existing_operational_n8n_modified": false,
+    "supabase_prod_modified": false,
+    "immich_modified": false,
+    "cloudflare_modified": false
+  },
+  "technical_status": "N8N_MICRO_HARDENING_DONE"
+}

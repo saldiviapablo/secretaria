@@ -1,0 +1,21 @@
+N8N MICRO-HARDENING NEGATIVE API AUDIT EVIDENCE
+Timestamp: 2026-08-31T03:14:02.223521+00:00
+Target: 127.0.0.1:5678 (Local DEV)
+
+- Endpoint: Public API Workflows (http://127.0.0.1:5678/api/v1/workflows)
+  Status: 404
+  Result: BLOCKED/DISABLED (HTTP 404)
+
+- Endpoint: Public API Credentials (http://127.0.0.1:5678/api/v1/credentials)
+  Status: 404
+  Result: BLOCKED/DISABLED (HTTP 404)
+
+- Endpoint: Public API Swagger UI Docs (http://127.0.0.1:5678/api/v1/docs)
+  Status: 404
+  Result: BLOCKED/DISABLED (HTTP 404)
+
+- Endpoint: Public API Swagger JSON (http://127.0.0.1:5678/api/v1/docs/json)
+  Status: 404
+  Result: BLOCKED/DISABLED (HTTP 404)
+
+Status: ALL NEGATIVE CHECKS PASS (Public API and Swagger UI are disabled and inaccessible)

@@ -1,0 +1,21 @@
+N8N MICRO-HARDENING RUNTIME EVIDENCE
+Timestamp: 2026-08-31T03:14:46.107804+00:00
+Target: secretaria-n8n-dev (n8n 2.33.4)
+
+1. Container Version & Status:
+- Version: 2.33.4
+- Services Status:
+NAME                          IMAGE                            COMMAND                  SERVICE        CREATED              STATUS                 PORTS
+secretaria-n8n-dev            docker.n8n.io/n8nio/n8n:2.33.4   "tini -- /docker-entâ€¦"   n8n            About a minute ago   Up About a minute      127.0.0.1:5678->5678/tcp
+secretaria-n8n-postgres-dev   postgres:16-alpine               "docker-entrypoint.sâ€¦"   n8n-postgres   8 hours ago          Up 8 hours (healthy)   5432/tcp
+
+2. Hardening Variables Resolved:
+- N8N_PUBLIC_API_DISABLED: true
+- N8N_PUBLIC_API_SWAGGERUI_DISABLED: true
+- N8N_COMMUNITY_PACKAGES_ENABLED: false
+
+3. Persistence & Volumes:
+- Container restarted with updated environment: PASS
+- Data volumes /home/node/.n8n and Postgres intact: PASS
+
+Status: RUNTIME HARDENING VERIFIED (PASS)

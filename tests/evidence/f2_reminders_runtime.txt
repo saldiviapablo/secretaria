@@ -18,7 +18,7 @@ Target: 127.0.0.1:54322 / Supabase Local DEV
   retry_due: 0,
   overdue_pending: 1,
   failed_deliveries: 0,
-  unknown_quarantined: 12,
+  unknown_quarantined: 16,
   expired_sending_leases: 0
 }
 ======================================================================

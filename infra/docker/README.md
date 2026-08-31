@@ -28,15 +28,34 @@ Este directorio contiene la configuración de Docker Compose para el entorno de 
 - Los upgrades de n8n son manuales: backup + rehearsal DEV + tests + `n8n audit`.
 - No se hará downgrade ciego: si n8n migra su DB interna, rollback exige DB compatible + imagen previa + `N8N_ENCRYPTION_KEY`.
 
+### Micro-Hardening n8n 2.33.4 (Public API y Community Packages)
+
+Conforme a la revisión de seguridad, se establecen las siguientes directivas de hardening:
+
+```text
+N8N_PUBLIC_API_DISABLED=true
+N8N_PUBLIC_API_SWAGGERUI_DISABLED=true
+N8N_COMMUNITY_PACKAGES_ENABLED=false
+```
+
+- La Public REST API administrativa y su Swagger UI playground no son necesarios para F0/F1/F2 y quedan deshabilitados en DEV.
+- V1 no requiere community nodes. Se deshabilitan para mitigar riesgos de supply-chain.
+- El informe de `n8n audit` refleja:
+  * `publicApiEnabled = false`
+  * `communityPackagesEnabled = false`
+
 ## Levantamiento en DEV
 
 1. Copiar `.env.example` a `.env` local (no versionado), si aún no existe:
    ```bash
    cp .env.example .env
    ```
-2. Si ya existe `.env`, actualizar **solo** `N8N_IMAGE` a:
+2. Si ya existe `.env`, actualizar las variables de hardening y versión de forma segura:
    ```text
-   docker.n8n.io/n8nio/n8n:2.33.4
+   N8N_IMAGE=docker.n8n.io/n8nio/n8n:2.33.4
+   N8N_PUBLIC_API_DISABLED=true
+   N8N_PUBLIC_API_SWAGGERUI_DISABLED=true
+   N8N_COMMUNITY_PACKAGES_ENABLED=false
    ```
    No imprimir ni publicar el resto del archivo porque puede contener secretos.
 3. Iniciar contenedores:
@@ -61,3 +80,5 @@ Este directorio contiene la configuración de Docker Compose para el entorno de 
 
 - Advisory: `https://github.com/n8n-io/n8n/security/advisories/GHSA-c9c6-rq46-h25v`
 - Release: `https://github.com/n8n-io/n8n/releases/tag/n8n@2.33.4`
+- Disable Public API: `https://docs.n8n.io/deploy/host-n8n/configure-n8n/security/disable-the-public-api/`
+- Community Nodes Security: `https://docs.n8n.io/integrations/community-nodes/risks/`
