@@ -17,7 +17,7 @@ services:
       timeout: 5s
       retries: 5
   n8n:
-    image: ${N8N_IMAGE:-docker.n8n.io/n8nio/n8n:2.33.4}
+    image: ${N8N_IMAGE:-docker.n8n.io/n8nio/n8n:2.35.4}
     container_name: secretaria-n8n-dev
     restart: unless-stopped
     ports:

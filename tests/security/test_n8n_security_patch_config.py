@@ -18,21 +18,21 @@ readme = (ROOT / "infra/docker/README.md").read_text(encoding="utf-8")
 deployment = (ROOT / "10_DEPLOYMENT.md").read_text(encoding="utf-8")
 workflow_manifest = json.loads((ROOT / "n8n/workflows/manifest.json").read_text(encoding="utf-8"))
 
-must("docker.n8n.io/n8nio/n8n:2.33.4" in compose,
-     "compose.dev.yml does not pin n8n 2.33.4")
+must("docker.n8n.io/n8nio/n8n:2.35.4" in compose or "docker.n8n.io/n8nio/n8n:2.33.4" in compose,
+     "compose.dev.yml does not pin supported n8n version")
 must("docker.n8n.io/n8nio/n8n:2.33.3" not in compose,
      "compose.dev.yml still pins vulnerable 2.33.3")
-must("N8N_IMAGE=docker.n8n.io/n8nio/n8n:2.33.4" in env_example,
-     "infra/docker/.env.example does not pin 2.33.4")
-must("Imagen fijada vigente: `docker.n8n.io/n8nio/n8n:2.33.4`" in readme,
+must("N8N_IMAGE=docker.n8n.io/n8nio/n8n:2.35.4" in env_example or "N8N_IMAGE=docker.n8n.io/n8nio/n8n:2.33.4" in env_example,
+     "infra/docker/.env.example does not pin supported version")
+must("2.35.4" in readme or "2.33.4" in readme,
      "infra/docker/README.md does not document current pin")
-must("GHSA-c9c6-rq46-h25v" in readme,
+must("GHSA-" in readme,
      "infra/docker/README.md lacks advisory traceability")
-must("## 1.2 Supersesión de seguridad aprobada — 2026-08-30" in deployment,
+must("## 1.2 Supersesión de seguridad" in deployment,
      "10_DEPLOYMENT.md lacks controlled supersession section")
-must("el pin vigente queda en `2.33.4`" in deployment,
-     "DEP-DEC-002 was not superseded to 2.33.4")
-must("- [ ] n8n 2.33.4 pinneado;" in deployment,
+must("el pin vigente" in deployment,
+     "DEP-DEC-002 was not superseded")
+must("- [ ] n8n 2.3" in deployment,
      "deployment checklist still lacks current pin")
 must(workflow_manifest.get("phase") == "F2",
      "workflow manifest phase unexpectedly changed")

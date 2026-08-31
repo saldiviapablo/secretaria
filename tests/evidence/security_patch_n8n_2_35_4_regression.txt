@@ -1,3 +1,9 @@
+N8N 2.35.4 SECURITY PATCH REGRESSION TEST EVIDENCE
+Timestamp: 2026-08-31T03:34:07.877848+00:00
+
+======================================================================
+1. F1 TARGETED REGRESSION TEST (test_f1_e2e.js)
+======================================================================
 ======================================================================
 STARTING REAL F1 E2E & CANONICAL TESTS SUITE:
 Target: Real Supabase DEV PostgreSQL at 127.0.0.1:54322
@@ -6,13 +12,13 @@ Target: Real Supabase DEV PostgreSQL at 127.0.0.1:54322
 [SETUP] Synthetic User A & Settings initialized in Supabase DEV
 
 1. RUNNING E2E-A / WF-TEST-002 (Canonical Task Creation):
-   [PASS] E2E-A / WF-TEST-002: Tarea Ãºnica persistida (4db285ab-3890-4a97-ac9d-539f98e61206) con vencimiento Tue Sep 01 2026 00:00:00 GMT-0300 (hora estÃ¡ndar de Argentina) 15:00:00 y entidad vinculada
+   [PASS] E2E-A / WF-TEST-002: Tarea Ãºnica persistida (824dcaab-eef6-46dc-88ae-7b48acd2fc3b) con vencimiento Tue Sep 01 2026 00:00:00 GMT-0300 (hora estÃ¡ndar de Argentina) 15:00:00 y entidad vinculada
 
 2. RUNNING E2E-B / WF-TEST-004 (Task without Time - DATE-* Rule):
    [PASS] E2E-B / WF-TEST-004: Tarea creada con due_date=Wed Sep 02 2026 00:00:00 GMT-0300 (hora estÃ¡ndar de Argentina), time_known=false, due_time=NULL, due_at=NULL (sin 00:00 inventado)
 
 3. RUNNING E2E-C / WF-TEST-003 (Ambiguous Person & Clarification):
-   [PASS] E2E-C Step 1: Clarification creada pendiente (978b138c-7d8f-4cf9-a73f-e7a801e8a863) sin mutaciÃ³n errÃ³nea de tarea
+   [PASS] E2E-C Step 1: Clarification creada pendiente (50e22272-da94-4d0b-9fb1-e1a5e6ef42ff) sin mutaciÃ³n errÃ³nea de tarea
    [PASS] E2E-C / WF-TEST-003 Step 2: Clarification resuelta con Ã©xito -> Juan PÃ©rez asignado inequÃ­vocamente
 
 4. RUNNING E2E-D (Interleaved Query with Active Clarification):
@@ -39,3 +45,44 @@ Target: Real Supabase DEV PostgreSQL at 127.0.0.1:54322
 ======================================================================
 ALL F1 E2E & CANONICAL TESTS PASSED WITH 100% SUCCESS
 ======================================================================
+
+======================================================================
+2. F2 REMINDER & RESILIENCE SUITE (test_f2_reminders.js)
+======================================================================
+======================================================================
+F2 REMINDERS â€” INTEGRATION + RESILIENCE
+Target: 127.0.0.1:54322 / Supabase Local DEV
+======================================================================
+[PASS] REM-001/002 + DB-TEST-014
+[PASS] temporal rule: no invented time
+[PASS] REM-003/004/005 capability + REM-008 authority boundary
+[PASS] cross-user planning blocked
+[PASS] WF-TEST-013 + DB-TEST-015 + REM-009/011
+[PASS] WF-TEST-014 + DB-TEST-016
+[PASS] WF-TEST-015 + DB-TEST-016B
+[PASS] mid-attempt crash -> UNKNOWN quarantine
+[PASS] WF-TEST-016 / REM-007
+[PASS] WF-TEST-017 / REM-008
+[PASS] REM-006 + follow-up anti-spam
+[PASS] worker RPCs denied to authenticated
+[INFO] watchdog snapshot: {
+  retry_due: 0,
+  overdue_pending: 1,
+  failed_deliveries: 0,
+  unknown_quarantined: 22,
+  expired_sending_leases: 0
+}
+======================================================================
+F2 REMINDER SUITE: PASS
+DB-TEST-014 PASS
+DB-TEST-015 PASS
+DB-TEST-016 PASS
+DB-TEST-016B PASS
+WF-TEST-013 PASS
+WF-TEST-014 PASS
+WF-TEST-015 PASS
+WF-TEST-016 PASS
+WF-TEST-017 PASS
+======================================================================
+
+Result: REGRESSION GATES PASS (100% F1 & F2 tests green)

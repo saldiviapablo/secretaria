@@ -1,0 +1,27 @@
+N8N 2.35.4 SECURITY PATCH RUNTIME VERIFICATION EVIDENCE
+Timestamp: 2026-08-31T03:34:04.475194+00:00
+Advisories Addressed: GHSA-9x83-43r8-5hwc, GHSA-fg85-4wv2-p98j, GHSA-mwp5-2m32-r54h, GHSA-4r56-g65c-fm83, GHSA-95ph-833c-4wrp, GHSA-wxwj-8wv6-vpw2, GHSA-vrv8-j27g-g7cr, GHSA-jp9j-jr97-w9pj, GHSA-jmmj-93rg-6j39
+
+1. Version Verification:
+- Command: docker exec secretaria-n8n-dev n8n --version
+- Output Version: 2.35.4
+- Expected: 2.35.4
+- Status: PASS
+
+2. Services Status:
+NAME                          IMAGE                            COMMAND                  SERVICE        CREATED              STATUS                 PORTS
+secretaria-n8n-dev            docker.n8n.io/n8nio/n8n:2.35.4   "tini -- /docker-entâ€¦"   n8n            About a minute ago   Up About a minute      127.0.0.1:5678->5678/tcp
+secretaria-n8n-postgres-dev   postgres:16-alpine               "docker-entrypoint.sâ€¦"   n8n-postgres   9 hours ago          Up 9 hours (healthy)   5432/tcp
+
+3. Hardening Configuration Preserved:
+- N8N_PUBLIC_API_DISABLED: true
+- N8N_PUBLIC_API_SWAGGERUI_DISABLED: true
+- N8N_COMMUNITY_PACKAGES_ENABLED: false
+- Public API / Swagger endpoints return HTTP 404 (disabled).
+
+4. Persistence & Rehearsal Restart:
+- Controlled container restart executed: PASS
+- Internal PostgreSQL connectivity: PASS
+- Data volumes /home/node/.n8n and Postgres intact: PASS
+
+Result: RUNTIME VERIFICATION PASS

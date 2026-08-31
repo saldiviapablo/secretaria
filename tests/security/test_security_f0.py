@@ -134,7 +134,7 @@ class TestSecurityF0(unittest.TestCase):
         self.assertNotIn('docker.sock', self.compose_dev)
         self.assertNotIn('privileged: true', self.compose_dev)
         self.assertIn('no-new-privileges:true', self.compose_dev)
-        self.assertIn('docker.n8n.io/n8nio/n8n:2.33.4', self.compose_dev)
+        self.assertIn('docker.n8n.io/n8nio/n8n:2.35.4', self.compose_dev)
         self.assertIn('postgres:16-alpine', self.compose_dev)
 
     def test_sec_test_033_n8n_admin_bind_localhost(self):

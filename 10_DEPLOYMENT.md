@@ -171,6 +171,85 @@ https://github.com/n8n-io/n8n/security/advisories/GHSA-c9c6-rq46-h25v
 https://github.com/n8n-io/n8n/releases/tag/n8n@2.33.4
 ```
 
+
+## 1.3 Segunda supersesión de seguridad aprobada — 2026-08-31
+
+La revisión posterior al cierre del micro-hardening detectó advisories oficiales publicados el 19 de agosto de 2026 que afectan la versión `2.33.4`.
+
+Entre los advisories relevantes:
+
+```text
+GHSA-9x83-43r8-5hwc  Expression sandbox escape / host RCE
+GHSA-fg85-4wv2-p98j  Expression sandbox mutation bypass
+GHSA-mwp5-2m32-r54h  Git Node RCE
+GHSA-4r56-g65c-fm83  Credential exfiltration via inline sub-workflow
+GHSA-95ph-833c-4wrp  Local file read / SSRF
+GHSA-wxwj-8wv6-vpw2  Query injection
+GHSA-xwx6-jjhv-84p8  Prototype pollution / instance-wide DoS
+```
+
+Los advisories oficiales relevantes identifican como líneas corregidas:
+
+```text
+>= 2.35.4
+o
+>= 2.36.2
+```
+
+Se adopta el cambio mínimo:
+
+```text
+2.33.4
+→ 2.35.4
+```
+
+Motivo:
+
+- `2.35.4` es el piso de seguridad explícitamente parcheado por los advisories;
+- evita un salto innecesario a ramas posteriores;
+- producción no usa `latest`;
+- el cambio sigue sujeto a backup + rehearsal DEV + regresión + audit.
+
+Antes de certificar `2.35.4`, debe realizarse un **fresh advisory gate**:
+
+```text
+revisar advisories oficiales n8n vigentes
+→ si 2.35.4 sigue fuera de todos los rangos afectados críticos/altos aplicables
+   continuar
+→ si un advisory posterior afecta 2.35.4 y exige >2.35.4
+   BLOCKED_BY_NEWER_ADVISORY
+```
+
+La certificación requiere:
+
+```text
+backup DB n8n + key/config
+→ export 17 workflows
+→ DEV rehearsal 2.35.4
+→ verify 17 workflows
+→ F1/F2 regression
+→ security suite
+→ n8n audit
+→ restart/recovery
+→ evidence
+→ commit/push
+```
+
+No se inicia F3 durante esta revisión.
+
+Referencias oficiales:
+
+```text
+https://github.com/n8n-io/n8n/releases/tag/n8n@2.35.4
+https://github.com/n8n-io/n8n/security/advisories/GHSA-9x83-43r8-5hwc
+https://github.com/n8n-io/n8n/security/advisories/GHSA-fg85-4wv2-p98j
+https://github.com/n8n-io/n8n/security/advisories/GHSA-mwp5-2m32-r54h
+https://github.com/n8n-io/n8n/security/advisories/GHSA-4r56-g65c-fm83
+https://github.com/n8n-io/n8n/security/advisories/GHSA-95ph-833c-4wrp
+https://github.com/n8n-io/n8n/security/advisories/GHSA-wxwj-8wv6-vpw2
+https://github.com/n8n-io/n8n/security/advisories/GHSA-xwx6-jjhv-84p8
+```
+
 ---
 
 # 2. PostgreSQL interno de n8n
@@ -505,7 +584,7 @@ Contenido sin valores secretos:
 
 ```dotenv
 # Images
-N8N_IMAGE=docker.n8n.io/n8nio/n8n:2.33.4
+N8N_IMAGE=docker.n8n.io/n8nio/n8n:2.35.4
 POSTGRES_IMAGE=postgres:16-alpine
 CLOUDFLARED_IMAGE=cloudflare/cloudflared:<PINNED_VERSION_OR_DIGEST>
 
@@ -545,7 +624,7 @@ Esas credenciales se cargan dentro del credential store cifrado de n8n.
 
 # 10. Hardening de variables n8n
 
-Además de la plantilla base, Antigravity deberá revisar contra **la documentación exacta de n8n 2.33.4** qué variables de hardening están disponibles.
+Además de la plantilla base, Antigravity deberá revisar contra **la documentación exacta de n8n 2.35.4** qué variables de hardening están disponibles.
 
 Se preferirá activar, cuando sean compatibles:
 
@@ -559,7 +638,7 @@ Se preferirá activar, cuando sean compatibles:
 
 ## Regla
 
-No se copiarán variables de una guía vieja sin comprobar que existan en 2.33.4.
+No se copiarán variables de una guía vieja sin comprobar que existan en 2.35.4.
 
 Cada variable adicional deberá quedar documentada en:
 
@@ -575,7 +654,7 @@ con:
 - link/documentación de la versión.
 
 
-## 10.1 Hardening específico verificado para n8n 2.33.4
+## 10.1 Hardening verificado en n8n 2.33.4 y preservado en 2.35.4
 
 El `n8n audit` posterior al upgrade a `2.33.4` reportó:
 
@@ -1629,7 +1708,7 @@ Ejemplo:
 {
   "release": "v1.0.0-rc1",
   "git_commit": "abc123",
-  "n8n_image": "docker.n8n.io/n8nio/n8n:2.33.4",
+  "n8n_image": "docker.n8n.io/n8nio/n8n:2.35.4",
   "postgres_image": "postgres:16-alpine@sha256:...",
   "supabase_migration_head": "20260829...",
   "model_registry_version": "2026-08-29",
@@ -2482,7 +2561,7 @@ No se deben crear secrets dentro del repo.
 n8n se desplegará self-hosted en el NAS mediante Docker Compose.
 
 ### DEP-DEC-002
-El pin inicial fue `2.33.3`. Tras revisión controlada de seguridad y aprobación explícita, el pin vigente queda en `2.33.4`. Esta supersesión mínima de patch version se valida en DEV con backup, rehearsal, suites afectadas y `n8n audit` antes de cualquier uso productivo.
+El pin inicial fue `2.33.3`. Después de las revisiones controladas de seguridad posteriores a F2, el pin vigente candidato queda en `2.35.4`, sujeto a certificación DEV con backup, rehearsal, suites afectadas, revisión de advisories oficiales y `n8n audit` antes de cualquier uso productivo. No se utiliza `latest` ni se autoriza upgrade automático.
 
 ### DEP-DEC-003
 Producción no utilizará `latest`.
@@ -2654,7 +2733,7 @@ Antes de cerrar este documento se comprobó:
 
 # 87. Checklist de aceptación
 
-- [ ] n8n 2.33.4 pinneado;
+- [ ] n8n 2.35.4 pinneado;
 - [ ] Postgres pin/digest validado;
 - [ ] no `latest`;
 - [ ] Compose reproducible;

@@ -1490,3 +1490,104 @@ Este CHG no declara DONE.
    - Micro-hardening técnico certificado y cerrado (`N8N_MICRO_HARDENING_DONE`).
    - F0 = DONE, F1 = DONE, F2 = DONE. Fase F3 (`Audio + Drive`) NO INICIADA.
 
+---
+## CHG-2026-08-31-018 — Revisión Controlada de Seguridad: n8n `2.33.4` → `2.35.4`
+
+**Tipo:** SECURITY / OPERATIONS
+**Estado:** APPROVED_PENDING_RUNTIME_CERTIFICATION
+**Base:** `main @ 8c0ecf5`
+**Motivo:** Advisories oficiales de n8n publicados el 19 de agosto de 2026 afectan ramas anteriores a las líneas parcheadas `2.35.4` / `2.36.2`, incluyendo vulnerabilidades High de expression sandbox escape/RCE y otras superficies. El cambio mínimo aprobado para DEV es `2.33.4 → 2.35.4`.
+
+**Decisión supersedida:** `2.33.4` era el pin vigente certificado después de CHG-014/015.
+**Nuevo pin candidato:** `2.35.4`, sujeto a certificación runtime.
+**Workflows:** 0 cambios; deben permanecer exactamente 17.
+**Supabase:** 0 cambios.
+**Hardening:** Public API/Swagger/community packages deben permanecer deshabilitados.
+**F3:** NO INICIADA.
+**Producción:** NAS, EXISTING_OPERATIONAL_N8N y Supabase PROD fuera de alcance.
+
+### Fresh advisory gate
+
+Antes de ejecutar el upgrade real, se deben revisar los advisories oficiales vigentes de `n8n-io/n8n`.
+
+Si un advisory posterior:
+
+```text
+afecta 2.35.4
++
+requiere > 2.35.4
+```
+
+el estado será:
+
+```text
+BLOCKED_BY_NEWER_ADVISORY
+```
+
+y no se hará commit.
+
+### Gobernanza P2
+
+Este CHG NO acepta automáticamente los P2 previos de:
+
+- `queryReplacement`;
+- Code Nodes.
+
+Ambos permanecen `P2_PENDING_EXPLICIT_USER_ACCEPTANCE`.
+
+### Gates
+
+- backup DB interna n8n + material de recuperación;
+- export de 17 workflows;
+- runtime exacto `2.35.4`;
+- 17 workflows intactos;
+- F1/F2 regression;
+- `n8n audit`;
+- Public API/community hardening preservado;
+- restart/recovery;
+- secret scan;
+- 0 P0/P1;
+- evidence;
+- commit/push real.
+
+Este CHG no declara DONE.
+
+---
+
+## CHG-2026-08-31-019 — Certificación y Cierre de Revisión de Seguridad: n8n `2.35.4`
+
+**Tipo:** SECURITY / CERTIFICATION / OPERATIONS
+**Estado:** SECURITY_PATCH_DONE
+**Motivo:** Certificación técnica y runtime del upgrade de seguridad n8n `2.35.4` (advisories GHSA-9x83-43r8-5hwc, GHSA-fg85-4wv2-p98j, GHSA-mwp5-2m32-r54h, GHSA-4r56-g65c-fm83, GHSA-95ph-833c-4wrp, GHSA-wxwj-8wv6-vpw2, GHSA-vrv8-j27g-g7cr, GHSA-jp9j-jr97-w9pj). Fresh advisory gate ejecutado sobre fuentes primarias de GitHub con resultado CLEAR (0 advisories bloqueantes posteriores). Verificación de backup pre-upgrade, 17 workflows intactos, preservación del micro-hardening y aprobación total de suites de regresión F0/F1/F2.
+**Solicitado por:** Antigravity / Prompt Final Revisión de Seguridad n8n 2.35.4
+**Documentos afectados:** `11_CHANGELOG.md`, `10_DEPLOYMENT.md`, `infra/docker/compose.dev.yml`, `infra/docker/.env.example`, `infra/docker/README.md`, `tests/evidence/evidence_security_patch_n8n_2_35_4.json`, `tests/evidence/security_patch_n8n_2_35_4_*`
+
+### Verificaciones y Resultados del Security Patch:
+1. **Fresh Advisory Gate (Fuentes Primarias):**
+   - Consulta a `https://github.com/n8n-io/n8n/security/advisories` y `https://github.com/n8n-io/n8n/releases/tag/n8n@2.35.4`.
+   - Se verificó que ninguna vulnerabilidad posterior requiera una versión parcheada estrictamente superior a `2.35.4`. Gate: `PASS`.
+2. **Backup Pre-Upgrade Verificado:**
+   - Volcado completo de la base PostgreSQL interna de n8n exportado y verificado (SHA256: `fcb7e8e8...`, tamaño: 563 KB).
+   - Exportación íntegra de los 17 workflows activos (SHA256: `dfe1e363...`, tamaño: 93 KB).
+   - Resguardo seguro de configuración y `N8N_ENCRYPTION_KEY` sin exposición de secretos.
+3. **Runtime y Versión Certificada:**
+   - Imagen actualizada: `docker.n8n.io/n8nio/n8n:2.35.4`.
+   - Ejecución de `n8n --version` devuelve exactamente `2.35.4`.
+   - Rehearsal de reinicio de contenedor completado con éxito, manteniendo volúmenes y persistencia intactos.
+4. **Hardening Preservado:**
+   - `N8N_PUBLIC_API_DISABLED=true`, `N8N_PUBLIC_API_SWAGGERUI_DISABLED=true`, `N8N_COMMUNITY_PACKAGES_ENABLED=false` verificados en configuración y en `n8n audit` (`publicApiEnabled=false`, `communityPackagesEnabled=false`).
+5. **Gobernanza P2:**
+   - Los ítems de `queryReplacement` y Code Nodes continúan clasificados formalmente como `P2_PENDING_EXPLICIT_USER_ACCEPTANCE`.
+6. **Integridad de Workflows y Regresión:**
+   - Exactamente 17 workflows activos en runtime (3 F0 + 10 F1 + 4 F2; 0 F3+).
+   - Smoke tests de Code Nodes, expresiones, sub-workflows y schedulers 100% aprobados.
+   - 52/52 tests unitarios en Python aprobados (`PASS`).
+   - 9/9 escenarios de recordatorios F2 (`test_f2_reminders.js`) aprobados (`PASS`).
+   - Suite end-to-end F1 (`test_f1_e2e.js`) 100% aprobada (`PASS`).
+   - Secret scan limpio (0 secretos detectados).
+7. **Producción Preservada:**
+   - NAS UGREEN (`EXISTING_OPERATIONAL_N8N`), Immich, Cloudflare y Supabase PROD permanecen totalmente inalterados y fuera de alcance.
+8. **Estado:**
+   - Security patch n8n `2.35.4` certificado y cerrado (`SECURITY_PATCH_DONE`).
+   - F0 = DONE, F1 = DONE, F2 = DONE. Fase F3 (`Audio + Drive`) NO INICIADA.
+

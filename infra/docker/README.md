@@ -1,36 +1,42 @@
 # Infraestructura DEV — Secretaria Virtual con IA
 
-Este directorio contiene la configuración de Docker Compose para el entorno de desarrollo (DEV) de la Secretaria Virtual con IA, conforme a `10_DEPLOYMENT.md` y `08_SECURITY.md`.
+Este directorio contiene la configuración DEV de n8n y su PostgreSQL interno.
 
-## Servicios
+## Pin vigente propuesto
 
-1. **n8n (`secretaria-n8n-dev`)**:
-   - Imagen fijada vigente: `docker.n8n.io/n8nio/n8n:2.33.4`.
-   - `2.33.4` supersede el pin inicial `2.33.3` por revisión controlada de seguridad posterior a F2.
-   - Motivo: parche oficial para `GHSA-c9c6-rq46-h25v` (sandbox escape en JavaScript Code Node por prototype pollution), que afecta `< 2.33.4`.
-   - Single-instance (sin Redis, sin queue mode, sin workers distribuidos).
-   - Acceso web confinado a localhost (`127.0.0.1:5678`). No expuesto a WAN.
-   - Modo de datos binarios: `filesystem`.
-   - Pruning automático: habilitado cada 168 horas (`EXECUTIONS_DATA_PRUNE=true`, `EXECUTIONS_DATA_MAX_AGE=168`).
-   - Timezone: `America/Argentina/Buenos_Aires`.
-2. **PostgreSQL interno de n8n (`secretaria-n8n-postgres-dev`)**:
-   - Imagen: `postgres:16-alpine`.
-   - Servidor exclusivo para el estado y orquestación de n8n.
-   - Totalmente aislado en la red interna de Docker (`n8n_internal_network`).
-   - **No publica puertos hacia el host ni hacia WAN.**
+```text
+docker.n8n.io/n8nio/n8n:2.35.4
+```
 
-## Seguridad y Hardening
+Historial:
 
-- **Sin `privileged: true`** y con `no-new-privileges:true`.
-- **Sin montaje de `/var/run/docker.sock`**.
-- **Sin secrets en etiquetas ni commits.**
-- **Supabase** es la fuente de verdad del producto y corre de forma desacoplada de la base interna de n8n.
-- Los upgrades de n8n son manuales: backup + rehearsal DEV + tests + `n8n audit`.
-- No se hará downgrade ciego: si n8n migra su DB interna, rollback exige DB compatible + imagen previa + `N8N_ENCRYPTION_KEY`.
+```text
+2.33.3
+→ 2.33.4
+→ 2.35.4
+```
 
-### Micro-Hardening n8n 2.33.4 (Public API y Community Packages)
+`2.35.4` se adopta mediante revisión controlada de seguridad posterior a F2.
+No es un upgrade automático ni autoriza `latest`.
 
-Conforme a la revisión de seguridad, se establecen las siguientes directivas de hardening:
+## Motivo de seguridad
+
+Advisories oficiales de n8n publicados el 19 de agosto de 2026 indican que varias vulnerabilidades afectan ramas anteriores y están corregidas a partir de `2.35.4` o `2.36.2`.
+
+Entre ellas:
+
+- `GHSA-9x83-43r8-5hwc` — Expression sandbox escape / host RCE.
+- `GHSA-fg85-4wv2-p98j` — expression sandbox mutation bypass.
+- `GHSA-mwp5-2m32-r54h` — Git Node RCE.
+- `GHSA-4r56-g65c-fm83` — credential exfiltration via inline sub-workflow.
+- `GHSA-95ph-833c-4wrp` — local file read / SSRF in Gmail/Brevo.
+- `GHSA-wxwj-8wv6-vpw2` — query injection in Elasticsearch/Firestore.
+- `GHSA-xwx6-jjhv-84p8` — prototype pollution / instance-wide DoS.
+
+Release oficial:
+`https://github.com/n8n-io/n8n/releases/tag/n8n@2.35.4`
+
+## Hardening preservado
 
 ```text
 N8N_PUBLIC_API_DISABLED=true
@@ -38,47 +44,68 @@ N8N_PUBLIC_API_SWAGGERUI_DISABLED=true
 N8N_COMMUNITY_PACKAGES_ENABLED=false
 ```
 
-- La Public REST API administrativa y su Swagger UI playground no son necesarios para F0/F1/F2 y quedan deshabilitados en DEV.
-- V1 no requiere community nodes. Se deshabilitan para mitigar riesgos de supply-chain.
-- El informe de `n8n audit` refleja:
-  * `publicApiEnabled = false`
-  * `communityPackagesEnabled = false`
+Además:
 
-## Levantamiento en DEV
+- bind DEV por defecto en `127.0.0.1`;
+- sin Docker socket;
+- sin `privileged: true`;
+- `no-new-privileges:true`;
+- PostgreSQL interno sin port mapping;
+- telemetry/templates deshabilitados;
+- 17 workflows F0/F1/F2;
+- F3 no iniciada.
 
-1. Copiar `.env.example` a `.env` local (no versionado), si aún no existe:
-   ```bash
-   cp .env.example .env
-   ```
-2. Si ya existe `.env`, actualizar las variables de hardening y versión de forma segura:
-   ```text
-   N8N_IMAGE=docker.n8n.io/n8nio/n8n:2.33.4
-   N8N_PUBLIC_API_DISABLED=true
-   N8N_PUBLIC_API_SWAGGERUI_DISABLED=true
-   N8N_COMMUNITY_PACKAGES_ENABLED=false
-   ```
-   No imprimir ni publicar el resto del archivo porque puede contener secretos.
-3. Iniciar contenedores:
-   ```bash
-   docker compose -f compose.dev.yml up -d
-   ```
-4. Verificar estado:
-   ```bash
-   docker compose -f compose.dev.yml ps
-   ```
-5. Verificar versión:
-   ```bash
-   docker exec secretaria-n8n-dev n8n --version
-   ```
-   Debe devolver `2.33.4`.
-6. Detener entorno DEV sin borrar volúmenes:
-   ```bash
-   docker compose -f compose.dev.yml stop
-   ```
+## Gate de frescura de seguridad
 
-## Referencias oficiales
+Antes de certificar `2.35.4`, Antigravity debe volver a revisar los advisories oficiales publicados de `n8n-io/n8n`.
 
-- Advisory: `https://github.com/n8n-io/n8n/security/advisories/GHSA-c9c6-rq46-h25v`
-- Release: `https://github.com/n8n-io/n8n/releases/tag/n8n@2.33.4`
-- Disable Public API: `https://docs.n8n.io/deploy/host-n8n/configure-n8n/security/disable-the-public-api/`
-- Community Nodes Security: `https://docs.n8n.io/integrations/community-nodes/risks/`
+Si existe un advisory posterior que:
+
+```text
+afecta 2.35.4
++
+requiere una versión parcheada > 2.35.4
+```
+
+entonces:
+
+```text
+SECURITY PATCH BLOCKED_BY_NEWER_ADVISORY
+```
+
+No se hace commit y no se inicia F3.
+
+## Upgrade DEV
+
+No imprimir el `.env` local.
+
+Si existe:
+
+```text
+infra/docker/.env
+```
+
+cambiar únicamente:
+
+```text
+N8N_IMAGE=docker.n8n.io/n8nio/n8n:2.35.4
+```
+
+preservando todas las demás variables.
+
+El upgrade real requiere:
+
+```text
+backup DB interna n8n
+→ export workflows
+→ pull 2.35.4
+→ restart n8n DEV
+→ verify version
+→ 17 workflows
+→ F1/F2 regression
+→ n8n audit
+→ restart/recovery
+→ evidence
+```
+
+No usar `docker compose down -v`.

@@ -30,7 +30,7 @@ for x in [
     must(x in readme, f"README missing {x}")
     must(x in deployment, f"10_DEPLOYMENT missing {x}")
 
-must("docker.n8n.io/n8nio/n8n:2.33.4" in compose, "n8n pin drift")
+must("docker.n8n.io/n8nio/n8n:2.35.4" in compose, "n8n pin drift")
 must("no-new-privileges:true" in compose, "no-new-privileges missing")
 must("/var/run/docker.sock" not in compose, "docker.sock mounted")
 must("privileged:" not in compose, "privileged mode enabled")
@@ -45,7 +45,7 @@ if errors:
     sys.exit(1)
 
 print("N8N MICRO-HARDENING STATIC TEST: PASS")
-print("n8n_pin=2.33.4")
+print("n8n_pin=2.35.4")
 print("public_api_disabled=true")
 print("swagger_ui_disabled=true")
 print("community_packages_enabled=false")

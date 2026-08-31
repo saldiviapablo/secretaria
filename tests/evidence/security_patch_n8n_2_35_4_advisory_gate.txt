@@ -1,0 +1,23 @@
+FRESH ADVISORY GATE AUDIT EVIDENCE — n8n 2.35.4
+Timestamp: 2026-08-31T03:30:00Z
+Target Evaluated: docker.n8n.io/n8nio/n8n:2.35.4
+
+1. Primary Official Sources Consulted:
+- GitHub Advisories: https://github.com/n8n-io/n8n/security/advisories
+- GitHub Release Tag: https://github.com/n8n-io/n8n/releases/tag/n8n@2.35.4
+
+2. Key Advisories Addressed in 2.35.4:
+- GHSA-9x83-43r8-5hwc: Expression Sandbox Escape via $fromAI Prototype Leak Leads to Host RCE (Patched: >= 2.35.4 / >= 2.36.2)
+- GHSA-fg85-4wv2-p98j: Expression Sandbox SpreadElement Bypass Enables Persistent Cross-Evaluation Native Object Mutation (Patched: >= 2.35.4 / >= 2.36.2)
+- GHSA-mwp5-2m32-r54h: Git Node Remote Code Execution via Incomplete Repository-Local Configuration Neutralization (Patched: >= 2.35.4 / >= 2.36.2)
+- GHSA-4r56-g65c-fm83: Shared-Workflow Editor Can Exfiltrate Credentials via Workflow Tool Node Inline Sub-Workflow (Patched: >= 2.35.4 / >= 2.36.2)
+- GHSA-95ph-833c-4wrp: Gmail and Brevo nodes accept non-string content, enabling local file read and SSRF (Patched: >= 2.35.4 / >= 2.36.2)
+- GHSA-wxwj-8wv6-vpw2: Query Injection in Elasticsearch and Google Cloud Firestore Nodes via Unescaped Expression Interpolation (Patched: >= 2.35.4 / >= 2.36.2)
+- GHSA-vrv8-j27g-g7cr: Strapi, SeaTable, and Mailcheck Nodes Leak Decrypted Credential Secrets (Patched: >= 2.35.4 / >= 2.36.2)
+- GHSA-jp9j-jr97-w9pj: Legacy Request Helper SSRF Check Validates uri While Axios Dispatches url (Patched: >= 2.35.4 / >= 2.36.2)
+
+3. New Advisory Verification:
+- Checked for any newer advisory affecting 2.35.4 requiring > 2.35.4: NONE FOUND.
+- Status: CLEAR (No blocking newer advisory found).
+
+Result: FRESH ADVISORY GATE PASS
