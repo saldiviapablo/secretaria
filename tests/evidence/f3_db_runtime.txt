@@ -1,0 +1,20 @@
+F3 DATABASE RUNTIME & RPC VERIFICATION
+Timestamp: 2026-08-31T04:35:04.984121+00:00
+Migration: 20260831000013_f3_media_drive_runtime.sql
+
+1. Function Privileges & Grants:
+- public.set_ingestion_media_status: SECURITY DEFINER, public=false, anon=false, auth=false, service_role=true
+- public.upsert_asset_with_location: SECURITY DEFINER, public=false, anon=false, auth=false, service_role=true
+- public.create_source_text_variant: SECURITY DEFINER, public=false, anon=false, auth=false, service_role=true
+- public.record_media_ai_usage: SECURITY DEFINER, public=false, anon=false, auth=false, service_role=true
+
+2. RLS & Tenant Isolation:
+- Cross-user asset attachment strictly blocked (User B cannot mutate User A asset/location): PASS
+- Cross-user source_text variant strictly blocked: PASS
+- Cross-user AI usage recording strictly blocked: PASS
+
+3. SHA Deduplication & Location Tracking:
+- Same SHA-256 binary uploaded via Telegram and Drive links to 1 asset with 2 locations: PASS
+- Drive modified file (same drive_file_id, new SHA) creates new asset version with versioned external_id: PASS
+
+Status: PASS

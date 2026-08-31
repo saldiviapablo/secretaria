@@ -1,0 +1,15 @@
+F3 AUDIO TRANSCRIPTION EVIDENCE (WF-AI-001)
+Timestamp: 2026-08-31T04:35:09.258346+00:00
+Workflow ID: WF-AI-001
+Candidates in Model Registry (config/ai_models.json):
+- OpenAI: gpt-transcribe (Candidate A)
+- Google Gemini: gemini-3.5-transcribe (Candidate B)
+
+Transcription Invariants:
+- transcription_primary: null (Unselected pending external human-evaluated benchmark)
+- Raw literal transcriptions preserved in public.source_texts without lossy summaries
+- Content marked as UNTRUSTED_CONTENT
+- Source text variant versioning (version_no increments, is_preferred shifts, supersedes_source_text_id linked)
+- A/B execution mode supported with isolated source_texts per provider
+
+Status: PASS (Pending External Benchmark)

@@ -1,0 +1,44 @@
+SUPABASE DEV RESET EVIDENCE (PHASE F3)
+Timestamp: 2026-08-31T04:35:04.983810+00:00
+Target: Supabase Local DEV (127.0.0.1:54322)
+
+Cycle 1 Reset:
+- Command: npx supabase db reset
+- Result: SUCCESS (All 13 migrations applied)
+- Migration Head: 20260831000013_f3_media_drive_runtime.sql
+- Total Base Tables in public: 25
+
+Cycle 2 Reset (Reproducibility):
+- Command: npx supabase db reset
+- Result: SUCCESS (Reproducibility confirmed)
+- Migration Head: 20260831000013_f3_media_drive_runtime.sql
+- Total Base Tables in public: 25
+
+Tables List (25 V1 tables):
+- ai_usage_events
+- asset_locations
+- assets
+- assistant_name_history
+- audit_log
+- embeddings
+- entities
+- entity_aliases
+- facts
+- ingestions
+- interpretations
+- memory_asset_links
+- memory_chunks
+- memory_entity_links
+- memory_items
+- memory_relations
+- notification_deliveries
+- pending_clarifications
+- profiles
+- reminders
+- reports
+- source_texts
+- task_entity_links
+- tasks
+- user_settings
+
+Status: PASS (25 tables V1 model strictly preserved, zero tables created in migration 13)

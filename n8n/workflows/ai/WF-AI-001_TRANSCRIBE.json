@@ -1,0 +1,297 @@
+{
+  "name": "WF-AI-001_TRANSCRIBE",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "ai1-trigger",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        120,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const i=$input.first();\nconst j=i.json;\nconst p=j.payload||j;\nconst mode=p.mode||'production';\nconst provider=p.provider||null;\nconst model=p.model||null;\nconst allowed=new Set(['openai:gpt-transcribe','gemini:gemini-3.5-transcribe']);\nif(mode==='production' && (!provider || !model)) {\n  throw new Error('TRANSCRIPTION_PRIMARY_NOT_SELECTED: run approved benchmark before production routing');\n}\nif(!provider || !model || !allowed.has(`${provider}:${model}`)) {\n  throw new Error('TRANSCRIPTION_PROVIDER_MODEL_NOT_APPROVED');\n}\nreturn [{json:{...j,transcription_mode:mode,transcription_provider:provider,transcription_model:model},binary:i.binary}];"
+      },
+      "id": "ai1-gate",
+      "name": "Validate Transcription Contract",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        340,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.transcription_provider }}",
+                    "rightValue": "openai",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "openai"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.transcription_provider }}",
+                    "rightValue": "gemini",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "gemini"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ai1-switch",
+      "name": "Provider Router",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        560,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/audio/transcriptions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "data"
+            },
+            {
+              "name": "model",
+              "value": "gpt-transcribe"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "ai1-openai",
+      "name": "OpenAI GPT-Transcribe",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        800,
+        220
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "openai_dev_header_auth",
+          "name": "SVIA_OPENAI_DEV_HEADER"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "jsCode": "/*\nRuntime compatibility gate by design:\nGemini 3.5 Transcribe became GA on 2026-08-26. The package refuses to invent an\nn8n 2.35.4 adapter shape. Antigravity must inspect the live 2.35.4 node/API\ncapabilities and replace ONLY this adapter node with the minimum secure supported\ncall, preserving model=gemini-3.5-transcribe and all contracts.\n*/\nthrow new Error('GEMINI_3_5_TRANSCRIBE_RUNTIME_ADAPTER_BINDING_REQUIRED');"
+      },
+      "id": "ai1-gemini",
+      "name": "Gemini 3.5 Transcribe — Runtime Adapter Gate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const j=$input.first().json;\nconst ctx=$('Validate Transcription Contract').first().json;\nconst text=j.text || j.transcript || j.output_text || j.output?.text || null;\nif(!text || !String(text).trim()) throw new Error('EMPTY_TRANSCRIPTION');\nreturn [{json:{\n  ...ctx,\n  transcript_text:String(text),\n  transcript_language:j.language || null,\n  provider_request_id:j.id || j.request_id || null,\n  usage:j.usage || {},\n  raw_provider_metadata:{has_segments:Array.isArray(j.segments),has_words:Array.isArray(j.words)}\n}}];"
+      },
+      "id": "ai1-normalize",
+      "name": "Normalize Transcript",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT public.create_source_text_variant($1::uuid,$2::uuid,$3::uuid,'transcription',$4,$5,$6,$7,'P-TRANS-001',true) AS res;",
+        "options": {
+          "queryReplacement": "={{ [$json.user_id,$json.ingestion_id,$json.asset_id,$json.transcript_text,$json.transcript_language,$json.transcription_provider,$json.transcription_model] }}"
+        }
+      },
+      "id": "ai1-source",
+      "name": "Persist Immutable Source Text",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1260,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "supabase_dev_connection",
+          "name": "Supabase DEV Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT public.record_media_ai_usage($1::uuid,$2::uuid,$3::uuid,'transcription',$4,$5,NULL,$6,$7::bigint,$8::bigint,$9::numeric,NULL,NULL,NULL,$10::jsonb) AS usage_id;",
+        "options": {
+          "queryReplacement": "={{ [$('Normalize Transcript').first().json.user_id,$('Normalize Transcript').first().json.ingestion_id,$('Normalize Transcript').first().json.asset_id,$('Normalize Transcript').first().json.transcription_provider,$('Normalize Transcript').first().json.transcription_model,$('Normalize Transcript').first().json.provider_request_id,$('Normalize Transcript').first().json.usage?.input_tokens || null,$('Normalize Transcript').first().json.usage?.output_tokens || null,$('Normalize Transcript').first().json.payload?.duration_ms ? $('Normalize Transcript').first().json.payload.duration_ms/1000 : null,JSON.stringify($('Normalize Transcript').first().json.raw_provider_metadata)] }}"
+        }
+      },
+      "id": "ai1-usage",
+      "name": "Record Transcription Usage",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1480,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "supabase_dev_connection",
+          "name": "Supabase DEV Database"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Validate Transcription Contract",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Transcription Contract": {
+      "main": [
+        [
+          {
+            "node": "Provider Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Provider Router": {
+      "main": [
+        [
+          {
+            "node": "OpenAI GPT-Transcribe",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Gemini 3.5 Transcribe — Runtime Adapter Gate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI GPT-Transcribe": {
+      "main": [
+        [
+          {
+            "node": "Normalize Transcript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini 3.5 Transcribe — Runtime Adapter Gate": {
+      "main": [
+        [
+          {
+            "node": "Normalize Transcript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Transcript": {
+      "main": [
+        [
+          {
+            "node": "Persist Immutable Source Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Persist Immutable Source Text": {
+      "main": [
+        [
+          {
+            "node": "Record Transcription Usage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "id": "WF-AI-001"
+}

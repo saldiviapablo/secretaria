@@ -1,0 +1,811 @@
+Failed to load Custom API options for the node "n8n-nodes-base.confluence": Unknown credential name "confluenceCloudOAuth2Api"
+Postgres 16 is outside the supported range and receives compatibility support only. Upgrade to Postgres 17 or newer.
+Acquiring database migration lock...
+{
+  "Database Risk Report": {
+    "risk": "database",
+    "sections": [
+      {
+        "title": "Unused \"Query Parameters\" fields in SQL nodes",
+        "description": "These SQL nodes have no \"Query Parameters\" field in the \"Execute Query\" operation. Building a SQL query with unsanitized data may lead to a SQL injection attack.",
+        "recommendation": "Consider using the \"Query Parameters\" field to sanitize parameters passed to the query. See: https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.postgres#use-query-parameters",
+        "location": [
+          {
+            "kind": "node",
+            "workflowId": "WF-ING-001",
+            "workflowName": "WF-ING-001_REGISTER_INGESTION",
+            "nodeId": "node-supabase-rpc-003",
+            "nodeName": "Register Ingestion RPC",
+            "nodeType": "n8n-nodes-base.postgres"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-ING-002",
+            "workflowName": "WF-ING-002_PROCESS_TEXT",
+            "nodeId": "node-insert-source-002",
+            "nodeName": "Insert Source Text RPC",
+            "nodeType": "n8n-nodes-base.postgres"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-SYS-001",
+            "workflowName": "WF-SYS-001_ERROR_HANDLER",
+            "nodeId": "node-update-ingestion-004",
+            "nodeName": "Update Ingestion Error State",
+            "nodeType": "n8n-nodes-base.postgres"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-AI-001",
+            "workflowName": "WF-AI-001_TRANSCRIBE",
+            "nodeId": "ai1-source",
+            "nodeName": "Persist Immutable Source Text",
+            "nodeType": "n8n-nodes-base.postgres"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-AI-001",
+            "workflowName": "WF-AI-001_TRANSCRIBE",
+            "nodeId": "ai1-usage",
+            "nodeName": "Record Transcription Usage",
+            "nodeType": "n8n-nodes-base.postgres"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-AI-002",
+            "workflowName": "WF-AI-002_INTERPRET_STRUCTURED",
+            "nodeId": "node-record-usage-003",
+            "nodeName": "Record AI Usage RPC",
+            "nodeType": "n8n-nodes-base.postgres"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-TG-001",
+            "workflowName": "WF-TG-001_TELEGRAM_INBOUND",
+            "nodeId": "node-resolve-user-003",
+            "nodeName": "Resolve Authorized User",
+            "nodeType": "n8n-nodes-base.postgres"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-TG-001",
+            "workflowName": "WF-TG-001_TELEGRAM_INBOUND",
+            "nodeId": "node-register-ingestion-005",
+            "nodeName": "Register Ingestion RPC",
+            "nodeType": "n8n-nodes-base.postgres"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-TG-001",
+            "workflowName": "WF-TG-001_TELEGRAM_INBOUND",
+            "nodeId": "node-check-clarification-006",
+            "nodeName": "Check Active Clarification",
+            "nodeType": "n8n-nodes-base.postgres"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-ING-003",
+            "workflowName": "WF-ING-003_PROCESS_MEDIA",
+            "nodeId": "ing3-status-start",
+            "nodeName": "Persist Processing / Fallback Status",
+            "nodeType": "n8n-nodes-base.postgres"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-ING-003",
+            "workflowName": "WF-ING-003_PROCESS_MEDIA",
+            "nodeId": "ing3-upsert",
+            "nodeName": "Upsert Asset + Location RPC",
+            "nodeType": "n8n-nodes-base.postgres"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-ING-004",
+            "workflowName": "WF-ING-004_DRIVE_WATCH",
+            "nodeId": "ing4-owner",
+            "nodeName": "Resolve DEV Owner",
+            "nodeType": "n8n-nodes-base.postgres"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-ING-004",
+            "workflowName": "WF-ING-004_DRIVE_WATCH",
+            "nodeId": "ing4-register",
+            "nodeName": "Register Drive Ingestion",
+            "nodeType": "n8n-nodes-base.postgres"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-ING-005",
+            "workflowName": "WF-ING-005_DRIVE_RECONCILIATION",
+            "nodeId": "ing5-owner",
+            "nodeName": "Resolve DEV Owner",
+            "nodeType": "n8n-nodes-base.postgres"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-ING-005",
+            "workflowName": "WF-ING-005_DRIVE_RECONCILIATION",
+            "nodeId": "ing5-register",
+            "nodeName": "Register / Detect Missed Events",
+            "nodeType": "n8n-nodes-base.postgres"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-ING-006",
+            "workflowName": "WF-ING-006_DOCUMENT_EXTRACT",
+            "nodeId": "ing6-source",
+            "nodeName": "Persist Literal Extraction",
+            "nodeType": "n8n-nodes-base.postgres"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-MEM-001",
+            "workflowName": "WF-MEM-001_PERSIST_MEMORY",
+            "nodeId": "node-insert-memory-002",
+            "nodeName": "Insert Memory Item",
+            "nodeType": "n8n-nodes-base.postgres"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-MEM-006",
+            "workflowName": "WF-MEM-006_APPLY_INTERPRETATION",
+            "nodeId": "node-apply-bundle-rpc-002",
+            "nodeName": "Apply Interpretation Bundle RPC",
+            "nodeType": "n8n-nodes-base.postgres"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-REM-001",
+            "workflowName": "WF-REM-001_PLAN_REMINDERS",
+            "nodeId": "rem001-plan",
+            "nodeName": "Plan Task Reminders RPC",
+            "nodeType": "n8n-nodes-base.postgres"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-REM-002",
+            "workflowName": "WF-REM-002_DISPATCH_DUE",
+            "nodeId": "rem002-claim",
+            "nodeName": "Claim Due Reminders",
+            "nodeType": "n8n-nodes-base.postgres"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-REM-002",
+            "workflowName": "WF-REM-002_DISPATCH_DUE",
+            "nodeId": "rem002-policy",
+            "nodeName": "Revalidate Task and Delivery Policy",
+            "nodeType": "n8n-nodes-base.postgres"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-REM-002",
+            "workflowName": "WF-REM-002_DISPATCH_DUE",
+            "nodeId": "rem002-hold",
+            "nodeName": "Apply Non-Send Decision",
+            "nodeType": "n8n-nodes-base.postgres"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-REM-002",
+            "workflowName": "WF-REM-002_DISPATCH_DUE",
+            "nodeId": "rem002-attempt",
+            "nodeName": "Record Delivery Attempt Start",
+            "nodeType": "n8n-nodes-base.postgres"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-REM-002",
+            "workflowName": "WF-REM-002_DISPATCH_DUE",
+            "nodeId": "rem002-final",
+            "nodeName": "Persist Final Delivery Result",
+            "nodeType": "n8n-nodes-base.postgres"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-REM-003",
+            "workflowName": "WF-REM-003_REMINDER_WATCHDOG",
+            "nodeId": "rem003-recover",
+            "nodeName": "Recover Expired Reminder Leases",
+            "nodeType": "n8n-nodes-base.postgres"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-REM-003",
+            "workflowName": "WF-REM-003_REMINDER_WATCHDOG",
+            "nodeId": "rem003-snapshot",
+            "nodeName": "Inspect Reminder Health",
+            "nodeType": "n8n-nodes-base.postgres"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-REM-004",
+            "workflowName": "WF-REM-004_FOLLOWUP_PLANNER",
+            "nodeId": "rem004-candidates",
+            "nodeName": "List Follow-up Candidates",
+            "nodeType": "n8n-nodes-base.postgres"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-REM-004",
+            "workflowName": "WF-REM-004_FOLLOWUP_PLANNER",
+            "nodeId": "rem004-plan",
+            "nodeName": "Persist Follow-up Reminder",
+            "nodeType": "n8n-nodes-base.postgres"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-TASK-001",
+            "workflowName": "WF-TASK-001_APPLY_TASK_ACTIONS",
+            "nodeId": "node-persist-tasks-rpc-002",
+            "nodeName": "Persist Task via Bundle RPC",
+            "nodeType": "n8n-nodes-base.postgres"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-TASK-002",
+            "workflowName": "WF-TASK-002_MUTATE_TASK",
+            "nodeId": "node-transition-rpc-002",
+            "nodeName": "Transition Task Status RPC",
+            "nodeType": "n8n-nodes-base.postgres"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-TASK-003",
+            "workflowName": "WF-TASK-003_CLARIFICATION_MANAGER",
+            "nodeId": "node-exec-clar-rpc-002",
+            "nodeName": "Execute Clarification Operation",
+            "nodeType": "n8n-nodes-base.postgres"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-TASK-004",
+            "workflowName": "WF-TASK-004_QUERY_TASKS",
+            "nodeId": "node-exec-query-rpc-002",
+            "nodeName": "Execute Query Tasks RPC",
+            "nodeType": "n8n-nodes-base.postgres"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-TG-002",
+            "workflowName": "WF-TG-002_TELEGRAM_SEND_MESSAGE",
+            "nodeId": "node-get-settings-003",
+            "nodeName": "Fetch User Telegram Settings",
+            "nodeType": "n8n-nodes-base.postgres"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-TG-004",
+            "workflowName": "WF-TG-004_ONBOARDING_AND_CONFIG",
+            "nodeId": "node-get-settings-002",
+            "nodeName": "Get User Settings",
+            "nodeType": "n8n-nodes-base.postgres"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-TG-004",
+            "workflowName": "WF-TG-004_ONBOARDING_AND_CONFIG",
+            "nodeId": "node-update-name-rpc-004",
+            "nodeName": "Set Assistant Name RPC",
+            "nodeType": "n8n-nodes-base.postgres"
+          }
+        ]
+      }
+    ]
+  },
+  "Nodes Risk Report": {
+    "risk": "nodes",
+    "sections": [
+      {
+        "title": "Official risky nodes",
+        "description": "These nodes are part of n8n's official nodes and may be used to fetch and run any arbitrary code in the host system. This may lead to exploits such as remote code execution.",
+        "recommendation": "Consider reviewing the parameters in these nodes, replacing them with app nodes where possible, and not loading unneeded node types with the NODES_EXCLUDE environment variable. See: https://docs.n8n.io/hosting/configuration/environment-variables/",
+        "location": [
+          {
+            "kind": "node",
+            "workflowId": "WF-ING-001",
+            "workflowName": "WF-ING-001_REGISTER_INGESTION",
+            "nodeId": "node-build-params-002",
+            "nodeName": "Validate and Build Ingestion Params",
+            "nodeType": "n8n-nodes-base.code"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-ING-001",
+            "workflowName": "WF-ING-001_REGISTER_INGESTION",
+            "nodeId": "node-format-output-004",
+            "nodeName": "Format Envelope Output",
+            "nodeType": "n8n-nodes-base.code"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-ING-002",
+            "workflowName": "WF-ING-002_PROCESS_TEXT",
+            "nodeId": "node-prep-source-001",
+            "nodeName": "Prepare Source Text Payload",
+            "nodeType": "n8n-nodes-base.code"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-ING-002",
+            "workflowName": "WF-ING-002_PROCESS_TEXT",
+            "nodeId": "node-prepare-ai-input-003",
+            "nodeName": "Prepare AI Interpretation Input",
+            "nodeType": "n8n-nodes-base.code"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-ING-002",
+            "workflowName": "WF-ING-002_PROCESS_TEXT",
+            "nodeId": "node-route-intent-004",
+            "nodeName": "Route Interpretation Intent",
+            "nodeType": "n8n-nodes-base.code"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-ING-002",
+            "workflowName": "WF-ING-002_PROCESS_TEXT",
+            "nodeId": "node-format-process-out-005",
+            "nodeName": "Format Process Text Output",
+            "nodeType": "n8n-nodes-base.code"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-SYS-001",
+            "workflowName": "WF-SYS-001_ERROR_HANDLER",
+            "nodeId": "node-classify-error-002",
+            "nodeName": "Classify and Sanitize Error",
+            "nodeType": "n8n-nodes-base.code"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-SYS-001",
+            "workflowName": "WF-SYS-001_ERROR_HANDLER",
+            "nodeId": "node-final-log-005",
+            "nodeName": "Format Handled Log Output",
+            "nodeType": "n8n-nodes-base.code"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-AI-001",
+            "workflowName": "WF-AI-001_TRANSCRIBE",
+            "nodeId": "ai1-gate",
+            "nodeName": "Validate Transcription Contract",
+            "nodeType": "n8n-nodes-base.code"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-AI-001",
+            "workflowName": "WF-AI-001_TRANSCRIBE",
+            "nodeId": "ai1-openai",
+            "nodeName": "OpenAI GPT-Transcribe",
+            "nodeType": "n8n-nodes-base.httpRequest"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-AI-001",
+            "workflowName": "WF-AI-001_TRANSCRIBE",
+            "nodeId": "ai1-gemini",
+            "nodeName": "Gemini 3.5 Transcribe â€” Runtime Adapter Gate",
+            "nodeType": "n8n-nodes-base.code"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-AI-001",
+            "workflowName": "WF-AI-001_TRANSCRIBE",
+            "nodeId": "ai1-normalize",
+            "nodeName": "Normalize Transcript",
+            "nodeType": "n8n-nodes-base.code"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-AI-002",
+            "workflowName": "WF-AI-002_INTERPRET_STRUCTURED",
+            "nodeId": "node-format-ai-prompt-001",
+            "nodeName": "Format Prompt Context",
+            "nodeType": "n8n-nodes-base.code"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-AI-002",
+            "workflowName": "WF-AI-002_INTERPRET_STRUCTURED",
+            "nodeId": "node-ai-adapter-002",
+            "nodeName": "Provider Adapter Engine",
+            "nodeType": "n8n-nodes-base.code"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-AI-002",
+            "workflowName": "WF-AI-002_INTERPRET_STRUCTURED",
+            "nodeId": "node-format-ai-out-004",
+            "nodeName": "Format Structured Output",
+            "nodeType": "n8n-nodes-base.code"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-AI-003",
+            "workflowName": "WF-AI-003_ANALYZE_VISUAL",
+            "nodeId": "ai3-gate",
+            "nodeName": "Validate Visual Contract + Untrusted Boundary",
+            "nodeType": "n8n-nodes-base.code"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-AI-003",
+            "workflowName": "WF-AI-003_ANALYZE_VISUAL",
+            "nodeId": "ai3-adapter",
+            "nodeName": "Vision Provider Adapter â€” Runtime Gate",
+            "nodeType": "n8n-nodes-base.code"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-TG-001",
+            "workflowName": "WF-TG-001_TELEGRAM_INBOUND",
+            "nodeId": "node-normalize-update-002",
+            "nodeName": "Normalize Telegram Update",
+            "nodeType": "n8n-nodes-base.code"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-TG-001",
+            "workflowName": "WF-TG-001_TELEGRAM_INBOUND",
+            "nodeId": "node-validate-auth-004",
+            "nodeName": "Validate Auth and Security",
+            "nodeType": "n8n-nodes-base.code"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-TG-001",
+            "workflowName": "WF-TG-001_TELEGRAM_INBOUND",
+            "nodeId": "node-route-update-007",
+            "nodeName": "Route Inbound Update",
+            "nodeType": "n8n-nodes-base.code"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-ING-003",
+            "workflowName": "WF-ING-003_PROCESS_MEDIA",
+            "nodeId": "ing3-gate",
+            "nodeName": "Validate / Gate Media",
+            "nodeType": "n8n-nodes-base.code"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-ING-003",
+            "workflowName": "WF-ING-003_PROCESS_MEDIA",
+            "nodeId": "ing3-drive-passthrough",
+            "nodeName": "Drive Binary Passthrough",
+            "nodeType": "n8n-nodes-base.code"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-ING-003",
+            "workflowName": "WF-ING-003_PROCESS_MEDIA",
+            "nodeId": "ing3-prepare",
+            "nodeName": "Prepare Asset Identity",
+            "nodeType": "n8n-nodes-base.code"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-ING-004",
+            "workflowName": "WF-ING-004_DRIVE_WATCH",
+            "nodeId": "ing4-normalize",
+            "nodeName": "Normalize Drive Event",
+            "nodeType": "n8n-nodes-base.code"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-ING-005",
+            "workflowName": "WF-ING-005_DRIVE_RECONCILIATION",
+            "nodeId": "ing5-normalize",
+            "nodeName": "Normalize Reconciliation Candidates",
+            "nodeType": "n8n-nodes-base.code"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-ING-005",
+            "workflowName": "WF-ING-005_DRIVE_RECONCILIATION",
+            "nodeId": "ing5-route-new",
+            "nodeName": "Only Newly Registered",
+            "nodeType": "n8n-nodes-base.code"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-ING-006",
+            "workflowName": "WF-ING-006_DOCUMENT_EXTRACT",
+            "nodeId": "ing6-gate",
+            "nodeName": "Document Safety Gate",
+            "nodeType": "n8n-nodes-base.code"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-ING-006",
+            "workflowName": "WF-ING-006_DOCUMENT_EXTRACT",
+            "nodeId": "ing6-normalize",
+            "nodeName": "Normalize Extracted Text",
+            "nodeType": "n8n-nodes-base.code"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-MEM-001",
+            "workflowName": "WF-MEM-001_PERSIST_MEMORY",
+            "nodeId": "node-prep-memory-001",
+            "nodeName": "Prepare Memory Payload",
+            "nodeType": "n8n-nodes-base.code"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-MEM-001",
+            "workflowName": "WF-MEM-001_PERSIST_MEMORY",
+            "nodeId": "node-format-mem-out-003",
+            "nodeName": "Format Memory Output",
+            "nodeType": "n8n-nodes-base.code"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-MEM-006",
+            "workflowName": "WF-MEM-006_APPLY_INTERPRETATION",
+            "nodeId": "node-prep-bundle-001",
+            "nodeName": "Prepare Interpretation Bundle",
+            "nodeType": "n8n-nodes-base.code"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-MEM-006",
+            "workflowName": "WF-MEM-006_APPLY_INTERPRETATION",
+            "nodeId": "node-format-bundle-out-003",
+            "nodeName": "Format Apply Interpretation Output",
+            "nodeType": "n8n-nodes-base.code"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-REM-001",
+            "workflowName": "WF-REM-001_PLAN_REMINDERS",
+            "nodeId": "rem001-validate",
+            "nodeName": "Validate and Expand Planning Request",
+            "nodeType": "n8n-nodes-base.code"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-REM-001",
+            "workflowName": "WF-REM-001_PLAN_REMINDERS",
+            "nodeId": "rem001-format",
+            "nodeName": "Format Reminder Planning Output",
+            "nodeType": "n8n-nodes-base.code"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-REM-002",
+            "workflowName": "WF-REM-002_DISPATCH_DUE",
+            "nodeId": "rem002-normalize",
+            "nodeName": "Normalize Dispatch Policy",
+            "nodeType": "n8n-nodes-base.code"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-REM-002",
+            "workflowName": "WF-REM-002_DISPATCH_DUE",
+            "nodeId": "rem002-envelope",
+            "nodeName": "Prepare Telegram Reminder Envelope",
+            "nodeType": "n8n-nodes-base.code"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-REM-002",
+            "workflowName": "WF-REM-002_DISPATCH_DUE",
+            "nodeId": "rem002-restore",
+            "nodeName": "Restore Telegram Envelope",
+            "nodeType": "n8n-nodes-base.code"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-REM-002",
+            "workflowName": "WF-REM-002_DISPATCH_DUE",
+            "nodeId": "rem002-result",
+            "nodeName": "Normalize Telegram Delivery Result",
+            "nodeType": "n8n-nodes-base.code"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-REM-003",
+            "workflowName": "WF-REM-003_REMINDER_WATCHDOG",
+            "nodeId": "rem003-format",
+            "nodeName": "Format Watchdog Result",
+            "nodeType": "n8n-nodes-base.code"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-REM-004",
+            "workflowName": "WF-REM-004_FOLLOWUP_PLANNER",
+            "nodeId": "rem004-rules",
+            "nodeName": "Build Deterministic Follow-up Proposal",
+            "nodeType": "n8n-nodes-base.code"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-TASK-001",
+            "workflowName": "WF-TASK-001_APPLY_TASK_ACTIONS",
+            "nodeId": "node-validate-tasks-001",
+            "nodeName": "Validate Task Candidates",
+            "nodeType": "n8n-nodes-base.code"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-TASK-001",
+            "workflowName": "WF-TASK-001_APPLY_TASK_ACTIONS",
+            "nodeId": "node-prepare-reminders-003",
+            "nodeName": "Prepare F2 Reminder Planning",
+            "nodeType": "n8n-nodes-base.code"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-TASK-001",
+            "workflowName": "WF-TASK-001_APPLY_TASK_ACTIONS",
+            "nodeId": "node-format-apply-task-005",
+            "nodeName": "Format Apply Task Output",
+            "nodeType": "n8n-nodes-base.code"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-TASK-002",
+            "workflowName": "WF-TASK-002_MUTATE_TASK",
+            "nodeId": "node-prep-mutation-001",
+            "nodeName": "Prepare Task Mutation",
+            "nodeType": "n8n-nodes-base.code"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-TASK-002",
+            "workflowName": "WF-TASK-002_MUTATE_TASK",
+            "nodeId": "node-format-mutate-out-003",
+            "nodeName": "Format Task Mutation Output",
+            "nodeType": "n8n-nodes-base.code"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-TASK-003",
+            "workflowName": "WF-TASK-003_CLARIFICATION_MANAGER",
+            "nodeId": "node-prep-clar-001",
+            "nodeName": "Prepare Clarification Action",
+            "nodeType": "n8n-nodes-base.code"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-TASK-003",
+            "workflowName": "WF-TASK-003_CLARIFICATION_MANAGER",
+            "nodeId": "node-format-clar-out-003",
+            "nodeName": "Format Clarification Output",
+            "nodeType": "n8n-nodes-base.code"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-TASK-004",
+            "workflowName": "WF-TASK-004_QUERY_TASKS",
+            "nodeId": "node-parse-query-001",
+            "nodeName": "Parse Query Filters",
+            "nodeType": "n8n-nodes-base.code"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-TASK-004",
+            "workflowName": "WF-TASK-004_QUERY_TASKS",
+            "nodeId": "node-format-query-out-003",
+            "nodeName": "Format Query Output",
+            "nodeType": "n8n-nodes-base.code"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-TG-002",
+            "workflowName": "WF-TG-002_TELEGRAM_SEND_MESSAGE",
+            "nodeId": "node-validate-input-002",
+            "nodeName": "Validate Delivery Request",
+            "nodeType": "n8n-nodes-base.code"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-TG-002",
+            "workflowName": "WF-TG-002_TELEGRAM_SEND_MESSAGE",
+            "nodeId": "node-eval-silence-004",
+            "nodeName": "Evaluate Silence and Rest Rules",
+            "nodeType": "n8n-nodes-base.code"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-TG-002",
+            "workflowName": "WF-TG-002_TELEGRAM_SEND_MESSAGE",
+            "nodeId": "node-format-success-007",
+            "nodeName": "Format Success Output",
+            "nodeType": "n8n-nodes-base.code"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-TG-002",
+            "workflowName": "WF-TG-002_TELEGRAM_SEND_MESSAGE",
+            "nodeId": "node-format-suppressed-008",
+            "nodeName": "Format Suppressed Output",
+            "nodeType": "n8n-nodes-base.code"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-TG-004",
+            "workflowName": "WF-TG-004_ONBOARDING_AND_CONFIG",
+            "nodeId": "node-parse-config-001",
+            "nodeName": "Parse Config Intent",
+            "nodeType": "n8n-nodes-base.code"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-TG-004",
+            "workflowName": "WF-TG-004_ONBOARDING_AND_CONFIG",
+            "nodeId": "node-handle-config-003",
+            "nodeName": "Handle Config Action",
+            "nodeType": "n8n-nodes-base.code"
+          },
+          {
+            "kind": "node",
+            "workflowId": "WF-TG-004",
+            "workflowName": "WF-TG-004_ONBOARDING_AND_CONFIG",
+            "nodeId": "node-format-config-out-005",
+            "nodeName": "Format Config Output",
+            "nodeType": "n8n-nodes-base.code"
+          }
+        ]
+      }
+    ]
+  },
+  "Instance Risk Report": {
+    "risk": "instance",
+    "sections": [
+      {
+        "title": "Outdated instance",
+        "description": "This n8n instance is outdated. Currently at version 2.35.4, missing 2 updates.",
+        "recommendation": "Consider updating this n8n instance to the latest version to prevent security vulnerabilities.",
+        "nextVersions": [
+          {
+            "name": "2.36.8",
+            "createdAt": "2026-08-28T10:25:30.997Z",
+            "hasSecurityIssue": null,
+            "hasSecurityFix": null,
+            "securityIssueFixVersion": null,
+            "hasBreakingChange": false,
+            "documentationUrl": "https://docs.n8n.io/release-notes/#n8n2368?utm_source=n8n_app&utm_medium=instance_upgrade_releases",
+            "nodes": [],
+            "description": "Includes <strong>bug fixes</strong>"
+          },
+          {
+            "name": "2.35.7",
+            "createdAt": "2026-08-24T11:07:44.794Z",
+            "hasSecurityIssue": null,
+            "hasSecurityFix": null,
+            "securityIssueFixVersion": null,
+            "hasBreakingChange": false,
+            "documentationUrl": "https://docs.n8n.io/release-notes/#n8n2357?utm_source=n8n_app&utm_medium=instance_upgrade_releases",
+            "nodes": [],
+            "description": "Includes <strong>bug fixes</strong>"
+          }
+        ]
+      },
+      {
+        "title": "Security settings",
+        "description": "This n8n instance has the following security settings.",
+        "recommendation": "Consider adjusting the security settings for your n8n instance based on your needs. See: https://docs.n8n.io/hosting/configuration/environment-variables/",
+        "settings": {
+          "features": {
+            "communityPackagesEnabled": false,
+            "versionNotificationsEnabled": false,
+            "templatesEnabled": false,
+            "publicApiEnabled": false
+          },
+          "nodes": {
+            "nodesExclude": "n8n-nodes-base.executeCommand, n8n-nodes-base.localFileTrigger, n8n-nodes-base.e2eTest, n8n-nodes-base.dynamicCredentialCheck",
+            "nodesInclude": "none"
+          },
+          "telemetry": {
+            "diagnosticsEnabled": false
+          }
+        }
+      }
+    ]
+  }
+}

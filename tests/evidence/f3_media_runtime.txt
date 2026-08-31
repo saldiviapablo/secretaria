@@ -1,0 +1,17 @@
+======================================================================
+F3 MEDIA / DRIVE â€” CONTRACT & RUNTIME SUITE
+Target: 127.0.0.1:54322 / Supabase Local DEV & n8n Workflows
+======================================================================
+[PASS] F3 Static Workflow Contracts Verified
+[PASS] WF-TEST-005 / E2E-TEST-009: Audio Telegram Ingestion & Full F3 Cycle PASS
+[PASS] WF-TEST-006: A/B Transcription Variants on same asset PASS
+[PASS] WF-TEST-032: Retry / Replay idempotency on source_text PASS
+[PASS] WF-TEST-007 / E2E-TEST-013: Large Telegram file handled with awaiting_external_file PASS
+[PASS] WF-TEST-008 / E2E-TEST-011: SHA Deduplication across Telegram & Drive PASS
+[PASS] WF-TEST-009 / E2E-TEST-014: Drive Modified Versioning with Versioned external_id PASS
+[PASS] WF-TEST-011 / E2E-TEST-015: PDF Untrusted Content Quarantine PASS
+[PASS] WF-TEST-016 / E2E-TEST-016: Visual & Diagram analysis F3 PASS
+[PASS] Tenant Isolation & Cross-User Authority Boundary Verified PASS
+======================================================================
+ALL F3 CONTRACT & RUNTIME INTEGRATION TESTS PASSED (100% SUCCESS)
+======================================================================

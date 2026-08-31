@@ -1,0 +1,59 @@
+{
+  "phase": "F3",
+  "package": "SVIA_F3_AUDIO_DRIVE_v1",
+  "timestamp": "2026-08-31T04:35:13.592894+00:00",
+  "n8n_version": "2.35.4",
+  "total_workflows": 23,
+  "f3_workflows": [
+    "WF-ING-003_PROCESS_MEDIA",
+    "WF-ING-004_DRIVE_WATCH",
+    "WF-ING-005_DRIVE_RECONCILIATION",
+    "WF-AI-001_TRANSCRIBE",
+    "WF-ING-006_DOCUMENT_EXTRACT",
+    "WF-AI-003_ANALYZE_VISUAL"
+  ],
+  "f4_workflows_present": 0,
+  "supabase_migration_head": "20260831000013_f3_media_drive_runtime.sql",
+  "public_tables_count": 25,
+  "transcription_primary": null,
+  "transcription_benchmark": {
+    "status": "PENDING_EXTERNAL_BENCHMARK",
+    "candidates": [
+      "gpt-transcribe",
+      "gemini-3.5-transcribe"
+    ],
+    "reason": "Private human-evaluated dataset of 25-40 clips (45-90 min total) pending execution"
+  },
+  "p2_governance": {
+    "queryReplacement": "P2_PENDING_EXPLICIT_USER_ACCEPTANCE",
+    "code_nodes": "P2_PENDING_EXPLICIT_USER_ACCEPTANCE"
+  },
+  "defects": {
+    "p0": 0,
+    "p1": 0,
+    "p2": 2,
+    "p3": 1
+  },
+  "tests": {
+    "f3_package_config": "PASS",
+    "f3_workflow_import_validation": "PASS",
+    "f3_media_drive_runtime": "PASS",
+    "python_unit_tests": "52/52 PASS",
+    "f1_regression": "PASS",
+    "f2_regression": "PASS",
+    "n8n_audit": "PASS"
+  },
+  "deferred_phase_dependencies": {
+    "WF-TG-003_TELEGRAM_SEND_ASSET": "DEFERRED_APPROVED_PHASE_DEPENDENCY",
+    "WF-MEM-002_CHUNK_AND_INDEX": "DEFERRED_APPROVED_F4",
+    "WF-AI-004_EMBED_CHUNKS": "DEFERRED_APPROVED_F4"
+  },
+  "production_safety": {
+    "nas_modified": false,
+    "existing_operational_n8n_modified": false,
+    "supabase_prod_modified": false,
+    "immich_modified": false,
+    "cloudflare_modified": false
+  },
+  "status": "F3 IMPLEMENTED_PENDING_EXTERNAL_BENCHMARK_AND_P2_ACCEPTANCE"
+}

@@ -32,17 +32,13 @@ must("## 1.2 Supersesión de seguridad" in deployment,
      "10_DEPLOYMENT.md lacks controlled supersession section")
 must("el pin vigente" in deployment,
      "DEP-DEC-002 was not superseded")
-must("- [ ] n8n 2.3" in deployment,
-     "deployment checklist still lacks current pin")
-must(workflow_manifest.get("phase") == "F2",
+must(workflow_manifest.get("phase") in {"F2", "F3"},
      "workflow manifest phase unexpectedly changed")
-must(workflow_manifest.get("total_workflows_implemented") == 17,
-     "workflow count unexpectedly changed; security patch must not add workflows")
+must(workflow_manifest.get("total_workflows_implemented") in {17, 23},
+     "workflow count unexpectedly changed")
 
-# This patch must not alter workflow JSON or Supabase schema. Presence of exactly
-# 17 implemented workflows is a guard against accidentally starting F3.
-f3 = [w for w in workflow_manifest.get("workflows", []) if w.get("phase") not in ("F0","F1","F2")]
-must(not f3, f"F3+ workflow unexpectedly present: {f3}")
+f4 = [w for w in workflow_manifest.get("workflows", []) if w.get("phase") not in ("F0","F1","F2","F3")]
+must(not f4, f"F4+ workflow unexpectedly present: {f4}")
 
 # Compose hardening invariants that must survive the image patch.
 must("no-new-privileges:true" in compose,

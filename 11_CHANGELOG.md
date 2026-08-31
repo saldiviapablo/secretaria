@@ -1591,3 +1591,79 @@ Este CHG no declara DONE.
    - Security patch n8n `2.35.4` certificado y cerrado (`SECURITY_PATCH_DONE`).
    - F0 = DONE, F1 = DONE, F2 = DONE. Fase F3 (`Audio + Drive`) NO INICIADA.
 
+
+## CHG-2026-08-31-020 — F3 Audio + Drive — paquete aplicado pendiente de certificación runtime
+
+**Tipo:** ADDED / PHASE IMPLEMENTATION
+**Estado:** `F3_PACKAGE_APPLIED_PENDING_RUNTIME_CERTIFICATION`
+
+**Base:** `main @ c469bc1`
+
+Se aplica el paquete preconstruido F3 sin declarar `F3 DONE`.
+
+Incluye exclusivamente los seis workflows congelados de F3:
+
+- `WF-ING-003_PROCESS_MEDIA`
+- `WF-ING-004_DRIVE_WATCH`
+- `WF-ING-005_DRIVE_RECONCILIATION`
+- `WF-AI-001_TRANSCRIBE`
+- `WF-ING-006_DOCUMENT_EXTRACT`
+- `WF-AI-003_ANALYZE_VISUAL`
+
+Se agrega `20260831000013_f3_media_drive_runtime.sql` con helpers RPC, sin crear tablas nuevas; el modelo permanece en exactamente 25 tablas V1.
+
+Se corrige `config/ai_models.json` para que el candidato B de transcripción respete AI-DEC-007:
+`gemini-3.5-transcribe`. `transcription_primary` permanece `null` hasta benchmark real.
+
+Pendientes obligatorios:
+- certificación runtime n8n DEV;
+- binding de credenciales DEV y root Drive DEV;
+- benchmark privado con ground truth humano;
+- adaptación runtime mínima de proveedor si n8n 2.35.4 no soporta directamente el nodo requerido;
+- aceptación P2 separada de `queryReplacement` y `Code Nodes`.
+
+No se adelantan F4+ ni `WF-TG-003`. Chunks/embeddings quedan en F4. Reenvío completo del original por `WF-TG-003` queda como dependencia de fase, no se introduce silenciosamente.
+
+Producción/NAS/EXISTING_OPERATIONAL_N8N/Supabase PROD/Immich/Cloudflare: NO MODIFICADOS por el paquete.
+
+---
+
+## CHG-2026-08-31-021 — F3 Audio + Drive — Certificación Runtime DEV y Cierre de Fase
+
+**Tipo:** CERTIFICATION / PHASE CLOSURE / RUNTIME
+**Estado:** F3 IMPLEMENTED_PENDING_EXTERNAL_BENCHMARK_AND_P2_ACCEPTANCE
+**Motivo:** Certificación técnica en runtime DEV de la fase F3 (Audio + Drive). Verificación autoritativa de doble reset en Supabase DEV preservando exactamente las 25 tablas V1 bajo la migración head `20260831000013_f3_media_drive_runtime.sql`. Importación y activación de exactamente 23 workflows en n8n 2.35.4 (6 nuevos workflows F3, 0 workflows F4+). Aprobación total de suites de contrato estático, pruebas de integración runtime F3 (ingesta de audio, variantes A/B, deduplicación SHA Telegram/Drive, versionado por modificación en Drive, cuarentena de prompt injection PDF, análisis visual y aislamiento multi-tenant), y suites de regresión completa F0/F1/F2.
+**Solicitado por:** Antigravity / Prompt Final F3 Audio + Drive
+**Documentos afectados:** `11_CHANGELOG.md`, `n8n/workflows/telegram/WF-TG-001_TELEGRAM_INBOUND.json`, `tests/integration/test_f3_media_drive.js`, `tests/workflows/test_f0_workflows.py`, `tests/workflows/test_f1_workflows.py`, `tests/operations/test_ops_f0.py`, `tests/security/test_n8n_micro_hardening_config.py`, `tests/security/test_n8n_security_patch_2_35_4_config.py`, `tests/security/test_n8n_security_patch_config.py`, `tests/evidence/f3_*`, `tests/evidence/evidence_f3.json`
+
+### Verificaciones y Resultados Técnicos F3:
+1. **Supabase DEV & Migraciones:**
+   - Doble ciclo de `supabase db reset` ejecutado y verificado.
+   - Head de migración: `20260831000013_f3_media_drive_runtime.sql`.
+   - Modelo relacional: exactamente 25 tablas V1 (cero tablas creadas en migración 13).
+   - Funciones RPC F3 (`set_ingestion_media_status`, `upsert_asset_with_location`, `create_source_text_variant`, `record_media_ai_usage`) con `SECURITY DEFINER`, `search_path = ''`, acceso exclusivo a `service_role` y denegado a `public/anon/authenticated`.
+2. **Workflows n8n DEV (2.35.4):**
+   - Total de workflows importados y activos: exactamente 23 (3 F0 + 10 F1 + 4 F2 + 6 F3).
+   - Cero dependencias o workflows de F4+ introducidos.
+   - Micro-hardening preservado (`N8N_PUBLIC_API_DISABLED=true`, `N8N_COMMUNITY_PACKAGES_ENABLED=false`).
+   - Audit `n8n audit`: 0 P0, 0 P1.
+3. **Manejo de Medios & Integración:**
+   - Límite Telegram 20 MB: archivos mayores pasan a `awaiting_external_file` sin falsas confirmaciones.
+   - Deduplicación SHA-256: mismo contenido por Telegram y Drive crea 1 registro en `assets` y 2 registros en `asset_locations`.
+   - Modificación en Drive: nuevo hash genera nuevo asset lógico con `external_id` versionado.
+   - Cuarentena de contenido no confiable: PDFs con prompt injection almacenados de forma segura como texto plano en `source_texts` sin ejecución de SQL.
+   - Aislamiento multi-tenant: mutaciones cruzadas entre usuarios bloqueadas estrictamente por RLS y validación en RPCs.
+4. **Estado de Transcripción & Benchmark:**
+   - Modelos candidatos: `gpt-transcribe` (OpenAI) y `gemini-3.5-transcribe` (Google).
+   - `transcription_primary`: permanece `null` conforme a AI-DEC-007 hasta la ejecución del benchmark formal con dataset humano y ground truth.
+5. **Gobernanza P2:**
+   - `queryReplacement` y `Code Nodes` permanecen formalmente en `P2_PENDING_EXPLICIT_USER_ACCEPTANCE`.
+6. **Dependencias Diferidas Formales:**
+   - `WF-TG-003_TELEGRAM_SEND_ASSET`: `DEFERRED_APPROVED_PHASE_DEPENDENCY` (no adelantado en F3).
+   - Chunks/embeddings semánticos (`WF-MEM-002`, `WF-AI-004`): `DEFERRED_APPROVED_F4`.
+7. **Producción Intacta:**
+   - NAS UGREEN (`EXISTING_OPERATIONAL_N8N`), Immich, Cloudflare y Supabase PROD permanecen totalmente inalterados y fuera de alcance.
+8. **Estado Final F3:**
+   - `F3 IMPLEMENTED_PENDING_EXTERNAL_BENCHMARK_AND_P2_ACCEPTANCE`.
+   - Fase F4 (Memoria Semántica): NO INICIADA.
+

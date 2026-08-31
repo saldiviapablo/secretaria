@@ -1,0 +1,14 @@
+F3 DRIVE WATCH EVIDENCE (WF-ING-004)
+Timestamp: 2026-08-31T04:35:09.257582+00:00
+Workflow ID: WF-ING-004
+Trigger Type: Google Drive Trigger (File Created / Updated)
+Root Scope: Exclusive project directory (/SECRETARIA_VIRTUAL)
+DEV Binding: SVIA_DRIVE_ROOT_FOLDER_ID_DEV configured in local runtime environment
+
+Operation:
+- Detects new audio/document files uploaded directly to Drive
+- Downloads binary securely into n8n filesystem binary buffer
+- Computes SHA-256 hash before calling WF-ING-003_PROCESS_MEDIA
+- Preserves raw Drive metadata (file_id, name, mimeType, modifiedTime, rev_id)
+
+Status: PASS

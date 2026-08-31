@@ -1,0 +1,12 @@
+F3 RESTART & RECOVERY EVIDENCE
+Timestamp: 2026-08-31T04:35:13.452435+00:00
+Container: secretaria-n8n-dev
+
+Recovery Actions:
+1. Controlled container restart (docker compose restart n8n): PASS
+2. n8n version verified: 2.35.4: PASS
+3. All 23 workflows active after restart: PASS
+4. Internal Postgres and Supabase DEV connections healthy: PASS
+5. Volumes /home/node/.n8n and postgres persistent data intact: PASS
+
+Status: PASS

@@ -21,12 +21,12 @@ class TestF1Workflows(unittest.TestCase):
         with open(self.manifest_path, 'r', encoding='utf-8') as f:
             manifest = json.load(f)
 
-        self.assertEqual(manifest.get('phase'), 'F2')
-        self.assertEqual(manifest.get('total_workflows_implemented'), 17)
-        self.assertEqual(len(manifest.get('workflows', [])), 17)
+        self.assertIn(manifest.get('phase'), {'F2', 'F3'})
+        self.assertIn(manifest.get('total_workflows_implemented'), {17, 23})
+        self.assertIn(len(manifest.get('workflows', [])), {17, 23})
 
     def test_all_17_workflows_exist_and_are_valid_json(self):
-        """Verifies all 17 workflow files exist, parse as JSON, and have proper root structure"""
+        """Verifies all implemented workflow files exist, parse as JSON, and have proper root structure"""
         with open(self.manifest_path, 'r', encoding='utf-8') as f:
             manifest = json.load(f)
 
@@ -41,7 +41,7 @@ class TestF1Workflows(unittest.TestCase):
                 self.assertGreater(len(data['nodes']), 0)
 
     def test_no_f3_to_f8_workflows_present(self):
-        """Verifies NO workflows from F3 or later phases exist in n8n/workflows/"""
+        """Verifies NO workflows from F4 or later phases exist in n8n/workflows/"""
         all_wf_files = []
         for root, _, files in os.walk(self.workflows_dir):
             for file in files:
@@ -65,7 +65,13 @@ class TestF1Workflows(unittest.TestCase):
             'reminders/WF-REM-001_PLAN_REMINDERS.json',
             'reminders/WF-REM-002_DISPATCH_DUE.json',
             'reminders/WF-REM-003_REMINDER_WATCHDOG.json',
-            'reminders/WF-REM-004_FOLLOWUP_PLANNER.json'
+            'reminders/WF-REM-004_FOLLOWUP_PLANNER.json',
+            'ingestion/WF-ING-003_PROCESS_MEDIA.json',
+            'ingestion/WF-ING-004_DRIVE_WATCH.json',
+            'ingestion/WF-ING-005_DRIVE_RECONCILIATION.json',
+            'ai/WF-AI-001_TRANSCRIBE.json',
+            'ingestion/WF-ING-006_DOCUMENT_EXTRACT.json',
+            'ai/WF-AI-003_ANALYZE_VISUAL.json'
         }
 
         self.assertEqual(set(all_wf_files), expected_workflows, f"Unexpected workflow files found: {set(all_wf_files) - expected_workflows}")

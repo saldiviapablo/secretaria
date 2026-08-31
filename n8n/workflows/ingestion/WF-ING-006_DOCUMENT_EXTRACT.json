@@ -1,0 +1,133 @@
+{
+  "name": "WF-ING-006_DOCUMENT_EXTRACT",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "ing6-trigger",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        120,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const i=$input.first(); const j=i.json; const p=j.payload||j;\nconst n=String(p.original_filename||'').toLowerCase(); const m=String(p.mime_type||'').toLowerCase();\nif(/\\.(exe|com|bat|cmd|ps1|msi|scr|jar|js|vbs|wsf|sh|app|dmg)$/i.test(n) || /(x-msdownload|x-executable|javascript|x-sh)/i.test(m)) {\n  throw new Error('UNSAFE_DOCUMENT_TYPE_QUARANTINED');\n}\nreturn [{json:{...j,document_safe_to_extract:true},binary:i.binary}];"
+      },
+      "id": "ing6-gate",
+      "name": "Document Safety Gate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        340,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "text",
+        "binaryPropertyName": "data",
+        "options": {}
+      },
+      "id": "ing6-extract",
+      "name": "Native Extract From File",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        560,
+        300
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const j=$input.first().json;\nlet text=j.text || j.data || j.extractedText || j.content || '';\nif(typeof text!=='string') text=JSON.stringify(text);\nreturn [{json:{...$('Document Safety Gate').first().json,extracted_text:text,extraction_warnings:[]}}];"
+      },
+      "id": "ing6-normalize",
+      "name": "Normalize Extracted Text",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        780,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT public.create_source_text_variant($1::uuid,$2::uuid,$3::uuid,'document_extract',$4,NULL,'n8n_native_extract','n8n-2.35.4',NULL,true) AS res;",
+        "options": {
+          "queryReplacement": "={{ [$json.user_id,$json.ingestion_id,$json.asset_id,$json.extracted_text] }}"
+        }
+      },
+      "id": "ing6-source",
+      "name": "Persist Literal Extraction",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1000,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "supabase_dev_connection",
+          "name": "Supabase DEV Database"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Document Safety Gate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Document Safety Gate": {
+      "main": [
+        [
+          {
+            "node": "Native Extract From File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Native Extract From File": {
+      "main": [
+        [
+          {
+            "node": "Normalize Extracted Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Extracted Text": {
+      "main": [
+        [
+          {
+            "node": "Persist Literal Extraction",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "id": "WF-ING-006"
+}

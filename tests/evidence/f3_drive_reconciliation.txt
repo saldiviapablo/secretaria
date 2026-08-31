@@ -1,0 +1,13 @@
+F3 DRIVE RECONCILIATION EVIDENCE (WF-ING-005)
+Timestamp: 2026-08-31T04:35:09.257999+00:00
+Workflow ID: WF-ING-005
+Trigger Type: Schedule Trigger (every 15 minutes)
+Schedule Rule: interval[0].minutesInterval = 15
+
+Operation:
+- Scans Drive root folder (/SECRETARIA_VIRTUAL) recursively
+- Queries public.asset_locations for existing drive_file_id and modifiedTime
+- Identifies unindexed or modified files missed by webhook/push triggers
+- Enqueues missed items into WF-ING-003 for ingestion processing
+
+Status: PASS

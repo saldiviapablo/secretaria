@@ -55,7 +55,13 @@ class TestF0Workflows(unittest.TestCase):
             'reminders/WF-REM-001_PLAN_REMINDERS.json',
             'reminders/WF-REM-002_DISPATCH_DUE.json',
             'reminders/WF-REM-003_REMINDER_WATCHDOG.json',
-            'reminders/WF-REM-004_FOLLOWUP_PLANNER.json'
+            'reminders/WF-REM-004_FOLLOWUP_PLANNER.json',
+            'ingestion/WF-ING-003_PROCESS_MEDIA.json',
+            'ingestion/WF-ING-004_DRIVE_WATCH.json',
+            'ingestion/WF-ING-005_DRIVE_RECONCILIATION.json',
+            'ai/WF-AI-001_TRANSCRIBE.json',
+            'ingestion/WF-ING-006_DOCUMENT_EXTRACT.json',
+            'ai/WF-AI-003_ANALYZE_VISUAL.json'
         }
         self.assertEqual(set(all_wf_files), allowed_workflows, f"Unexpected workflow files found: {set(all_wf_files) - allowed_workflows}")
 

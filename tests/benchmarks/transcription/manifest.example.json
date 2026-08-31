@@ -1,0 +1,30 @@
+{
+  "benchmark_version": "1.0",
+  "private_dataset": true,
+  "ground_truth_human": true,
+  "clips": [
+    {
+      "clip_id": "clip-001",
+      "sha256": "<64-hex>",
+      "duration_seconds": 12.5,
+      "conditions": [
+        "clean",
+        "argentine_spanish",
+        "names",
+        "time"
+      ],
+      "ground_truth_private_path": "<OUTSIDE_GIT>",
+      "audio_private_path": "<OUTSIDE_GIT>"
+    }
+  ],
+  "candidates": [
+    {
+      "provider": "openai",
+      "model": "gpt-transcribe"
+    },
+    {
+      "provider": "gemini",
+      "model": "gemini-3.5-transcribe"
+    }
+  ]
+}

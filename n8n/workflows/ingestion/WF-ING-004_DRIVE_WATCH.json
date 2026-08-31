@@ -1,0 +1,254 @@
+{
+  "name": "WF-ING-004_DRIVE_WATCH",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "triggerOn": "specificFolder",
+        "folderToWatch": {
+          "__rl": true,
+          "mode": "id",
+          "value": "SVIA_DRIVE_ROOT_FOLDER_ID_DEV__REQUIRED_BINDING"
+        },
+        "event": "fileCreated",
+        "options": {}
+      },
+      "id": "ing4-created",
+      "name": "Drive Trigger — Created",
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [
+        120,
+        220
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "drive_dev_connection",
+          "name": "SVIA_DRIVE_DEV"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "triggerOn": "specificFolder",
+        "folderToWatch": {
+          "__rl": true,
+          "mode": "id",
+          "value": "SVIA_DRIVE_ROOT_FOLDER_ID_DEV__REQUIRED_BINDING"
+        },
+        "event": "fileUpdated",
+        "options": {}
+      },
+      "id": "ing4-updated",
+      "name": "Drive Trigger — Updated",
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [
+        120,
+        420
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "drive_dev_connection",
+          "name": "SVIA_DRIVE_DEV"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT user_id FROM public.user_settings WHERE user_id IS NOT NULL ORDER BY created_at ASC LIMIT 1;",
+        "options": {}
+      },
+      "id": "ing4-owner",
+      "name": "Resolve DEV Owner",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        360,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "supabase_dev_connection",
+          "name": "Supabase DEV Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const j=$input.first().json;\nconst id=j.id || j.fileId;\nconst modified=j.modifiedTime || j.modified_time || j.version;\nif(!id || !modified) throw new Error('DRIVE_EVENT_REQUIRES_FILE_ID_AND_VERSION');\nreturn [{json:{\n  contract_version:'1.0',\n  correlation_id:'corr_drive_'+crypto.randomUUID(),\n  user_id:j.user_id || null,\n  source_channel:'google_drive',\n  captured_at:j.modifiedTime || new Date().toISOString(),\n  timezone:j.timezone || 'America/Argentina/Buenos_Aires',\n  locale:j.locale || 'es-AR',\n  payload:{\n    drive_file_id:id,drive_version:String(modified),modifiedTime:j.modifiedTime || null,\n    original_filename:j.name || null,mime_type:j.mimeType || null,file_size:j.size ? Number(j.size) : null,\n    media_kind:(j.mimeType||'').startsWith('audio/')?'audio':((j.mimeType||'').startsWith('image/')?'image':'document')\n  },\n  idempotency_key:`drive:${id}:${modified}`\n}}];"
+      },
+      "id": "ing4-normalize",
+      "name": "Normalize Drive Event",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        580,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT public.register_ingestion($1::uuid,'google_drive','drive_file',$2,$3::timestamptz,$4,NULL,NULL,NULL,NULL,NULL,$5,NULL,$6::jsonb) AS res;",
+        "options": {
+          "queryReplacement": "={{ [$json.user_id,$json.idempotency_key,$json.captured_at,$json.idempotency_key,$json.payload.drive_file_id,JSON.stringify({drive_version:$json.payload.drive_version,mime_type:$json.payload.mime_type,original_filename:$json.payload.original_filename,size_bytes:$json.payload.file_size})] }}"
+        }
+      },
+      "id": "ing4-register",
+      "name": "Register Drive Ingestion",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        800,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "supabase_dev_connection",
+          "name": "Supabase DEV Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "operation": "download",
+        "authentication": "oAuth2",
+        "fileId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Normalize Drive Event').first().json.payload.drive_file_id }}"
+        },
+        "options": {
+          "binaryPropertyName": "data"
+        }
+      },
+      "id": "ing4-download",
+      "name": "Download Drive Original",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1020,
+        300
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "drive_dev_connection",
+          "name": "SVIA_DRIVE_DEV"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "WF-ING-003",
+          "mode": "list",
+          "cachedResultName": "WF-ING-003_PROCESS_MEDIA"
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "ing4-process",
+      "name": "WF-ING-003 PROCESS_MEDIA",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1240,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Drive Trigger — Created": {
+      "main": [
+        [
+          {
+            "node": "Resolve DEV Owner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Drive Trigger — Updated": {
+      "main": [
+        [
+          {
+            "node": "Resolve DEV Owner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resolve DEV Owner": {
+      "main": [
+        [
+          {
+            "node": "Normalize Drive Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Drive Event": {
+      "main": [
+        [
+          {
+            "node": "Register Drive Ingestion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Register Drive Ingestion": {
+      "main": [
+        [
+          {
+            "node": "Download Drive Original",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Drive Original": {
+      "main": [
+        [
+          {
+            "node": "WF-ING-003 PROCESS_MEDIA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "WF-SYS-001"
+  },
+  "id": "WF-ING-004"
+}

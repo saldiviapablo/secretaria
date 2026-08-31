@@ -1,0 +1,276 @@
+{
+  "name": "WF-ING-005_DRIVE_RECONCILIATION",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "id": "ing5-schedule",
+      "name": "Schedule 15 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        120,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT user_id FROM public.user_settings WHERE user_id IS NOT NULL ORDER BY created_at ASC LIMIT 1;",
+        "options": {}
+      },
+      "id": "ing5-owner",
+      "name": "Resolve DEV Owner",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        340,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "supabase_dev_connection",
+          "name": "Supabase DEV Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "operation": "search",
+        "authentication": "oAuth2",
+        "returnAll": true,
+        "searchMethod": "query",
+        "queryString": "trashed = false",
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "SVIA_DRIVE_ROOT_FOLDER_ID_DEV__REQUIRED_BINDING"
+          },
+          "whatToSearch": "files"
+        },
+        "options": {
+          "fields": [
+            "id",
+            "name",
+            "mimeType",
+            "modifiedTime",
+            "size"
+          ]
+        }
+      },
+      "id": "ing5-search",
+      "name": "List Root Files",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        560,
+        300
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "drive_dev_connection",
+          "name": "SVIA_DRIVE_DEV"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "jsCode": "const owner=$('Resolve DEV Owner').first().json.user_id;\nreturn $input.all().map(i=>{\n  const f=i.json;\n  const ver=f.modifiedTime || f.version;\n  if(!f.id || !ver) throw new Error('RECONCILIATION_REQUIRES_ID_AND_VERSION');\n  return {json:{\n    user_id:owner,contract_version:'1.0',correlation_id:'corr_recon_'+crypto.randomUUID(),\n    source_channel:'google_drive',captured_at:f.modifiedTime || new Date().toISOString(),\n    idempotency_key:`drive:${f.id}:${ver}`,\n    payload:{drive_file_id:f.id,drive_version:String(ver),modifiedTime:f.modifiedTime || null,\n      original_filename:f.name || null,mime_type:f.mimeType || null,file_size:f.size?Number(f.size):null,\n      media_kind:(f.mimeType||'').startsWith('audio/')?'audio':((f.mimeType||'').startsWith('image/')?'image':'document')}\n  }};\n});"
+      },
+      "id": "ing5-normalize",
+      "name": "Normalize Reconciliation Candidates",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        780,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT public.register_ingestion($1::uuid,'google_drive','drive_reconciliation',$2,$3::timestamptz,$4,NULL,NULL,NULL,NULL,NULL,$5,NULL,$6::jsonb) AS res;",
+        "options": {
+          "queryReplacement": "={{ [$json.user_id,$json.idempotency_key,$json.captured_at,$json.idempotency_key,$json.payload.drive_file_id,JSON.stringify({drive_version:$json.payload.drive_version,reconciled:true,mime_type:$json.payload.mime_type,original_filename:$json.payload.original_filename,size_bytes:$json.payload.file_size})] }}"
+        }
+      },
+      "id": "ing5-register",
+      "name": "Register / Detect Missed Events",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1000,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "supabase_dev_connection",
+          "name": "Supabase DEV Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const r=$input.first().json.res; const x=typeof r==='string'?JSON.parse(r):r; if(x.is_duplicate) return []; const base=$('Normalize Reconciliation Candidates').item.json; return [{json:{...base,ingestion_id:x.ingestion_id}}];"
+      },
+      "id": "ing5-route-new",
+      "name": "Only Newly Registered",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "operation": "download",
+        "authentication": "oAuth2",
+        "fileId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.payload.drive_file_id }}"
+        },
+        "options": {
+          "binaryPropertyName": "data"
+        }
+      },
+      "id": "ing5-download",
+      "name": "Download Missed Original",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1440,
+        300
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "drive_dev_connection",
+          "name": "SVIA_DRIVE_DEV"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "WF-ING-003",
+          "mode": "list",
+          "cachedResultName": "WF-ING-003_PROCESS_MEDIA"
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "ing5-process",
+      "name": "WF-ING-003 PROCESS_MEDIA",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1660,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule 15 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Resolve DEV Owner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resolve DEV Owner": {
+      "main": [
+        [
+          {
+            "node": "List Root Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List Root Files": {
+      "main": [
+        [
+          {
+            "node": "Normalize Reconciliation Candidates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Reconciliation Candidates": {
+      "main": [
+        [
+          {
+            "node": "Register / Detect Missed Events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Register / Detect Missed Events": {
+      "main": [
+        [
+          {
+            "node": "Only Newly Registered",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Only Newly Registered": {
+      "main": [
+        [
+          {
+            "node": "Download Missed Original",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Missed Original": {
+      "main": [
+        [
+          {
+            "node": "WF-ING-003 PROCESS_MEDIA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "WF-SYS-001"
+  },
+  "id": "WF-ING-005"
+}

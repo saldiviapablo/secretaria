@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "baseline": "SVIA-DOCSET-V1-RC1",
-  "last_updated": "2026-08-30",
+  "last_updated": "2026-08-31",
   "routing": {
     "text_routine": {
       "provider": "openai",
@@ -37,7 +37,7 @@
       },
       {
         "provider": "gemini",
-        "model": "gemini-3.7-flash",
+        "model": "gemini-3.5-transcribe",
         "role": "candidate_b"
       }
     ],
@@ -52,7 +52,7 @@
     ]
   },
   "benchmarks_pending": {
-    "transcription_benchmark": "PENDING_F3",
+    "transcription_benchmark": "PENDING_F3_PRIVATE_DATASET_AND_RUNTIME",
     "embedding_benchmark": "PENDING_F4"
   }
 }

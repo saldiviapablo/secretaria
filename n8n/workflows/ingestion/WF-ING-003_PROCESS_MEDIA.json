@@ -1,0 +1,562 @@
+{
+  "name": "WF-ING-003_PROCESS_MEDIA",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "ing3-trigger",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        160,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first();\nconst j = item.json;\nif (!j.user_id || !j.ingestion_id) throw new Error('F3_MEDIA_CONTRACT: user_id and ingestion_id required');\nconst p = j.payload || j;\nconst kind = p.media_kind || p.media?.media_kind;\nconst fileSize = Number(p.file_size ?? p.size_bytes ?? p.media?.file_size ?? 0);\nconst mime = String(p.mime_type || p.media?.mime_type || '').toLowerCase();\nconst name = String(p.original_filename || p.media?.original_filename || '').toLowerCase();\nconst source = j.source_channel || p.source_channel || 'telegram';\nconst max = 20 * 1024 * 1024; // Telegram standard Bot API getFile download limit verified at package build.\nconst forbiddenExt = /\\.(exe|com|bat|cmd|ps1|msi|scr|jar|js|vbs|wsf|sh|app|dmg)$/i;\nconst forbiddenMime = /(x-msdownload|x-msdos-program|x-executable|x-sh|x-bat|javascript)/i;\nlet gate = 'download';\nif (source === 'telegram' && fileSize > max) gate = 'awaiting_external_file';\nif (forbiddenExt.test(name) || forbiddenMime.test(mime)) gate = 'quarantine';\nlet route = 'unsupported';\nif (kind === 'audio' || /^audio\\//.test(mime)) route = 'transcribe';\nelse if (kind === 'image' || /^image\\//.test(mime)) route = 'visual';\nelse if (kind === 'document' || /(pdf|text|word|officedocument|spreadsheet|csv|json|xml)/i.test(mime + ' ' + name)) route = 'document';\nreturn [{json:{...j,payload:{...p,media_kind:kind,file_size:fileSize,mime_type:mime,original_filename:p.original_filename || p.media?.original_filename || null},media_gate:gate,media_route:route},binary:item.binary}];"
+      },
+      "id": "ing3-gate",
+      "name": "Validate / Gate Media",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        360,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT public.set_ingestion_media_status($1::uuid,$2::uuid,$3,NULL,NULL) AS res;",
+        "options": {
+          "queryReplacement": "={{ [$json.user_id,$json.ingestion_id,$json.media_gate === 'awaiting_external_file' ? 'awaiting_external_file' : ($json.media_gate === 'quarantine' ? 'error' : 'processing')] }}"
+        }
+      },
+      "id": "ing3-status-start",
+      "name": "Persist Processing / Fallback Status",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        560,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "supabase_dev_connection",
+          "name": "Supabase DEV Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Validate / Gate Media').first().json.media_gate }}",
+                    "rightValue": "download",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notEquals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "stop"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Validate / Gate Media').first().json.source_channel }}",
+                    "rightValue": "telegram",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "telegram"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Validate / Gate Media').first().json.source_channel }}",
+                    "rightValue": "google_drive",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "drive"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ing3-source-switch",
+      "name": "Source Router",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        760,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "operation": "get",
+        "fileId": "={{ $('Validate / Gate Media').first().json.payload.telegram_file_id || $('Validate / Gate Media').first().json.payload.file_id || $('Validate / Gate Media').first().json.payload.media?.file_id }}",
+        "binaryProperty": "data",
+        "download": true
+      },
+      "id": "ing3-telegram-get",
+      "name": "Telegram Get File",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        980,
+        220
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram_dev_connection",
+          "name": "SVIA_TELEGRAM_DEV"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(i => ({json:i.json,binary:i.binary}));"
+      },
+      "id": "ing3-drive-passthrough",
+      "name": "Drive Binary Passthrough",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        980,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "action": "hash",
+        "type": "SHA256",
+        "binaryData": true,
+        "dataPropertyName": "data",
+        "encoding": "hex",
+        "propertyName": "sha256"
+      },
+      "id": "ing3-hash",
+      "name": "SHA-256 Binary",
+      "type": "n8n-nodes-base.crypto",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "operation": "upload",
+        "authentication": "oAuth2",
+        "inputDataFieldName": "data",
+        "name": "={{ $('Validate / Gate Media').first().json.payload.original_filename || ('svia-' + $('Validate / Gate Media').first().json.ingestion_id) }}",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "SVIA_DRIVE_ROOT_FOLDER_ID_DEV__REQUIRED_BINDING"
+        },
+        "options": {}
+      },
+      "id": "ing3-upload-drive",
+      "name": "Archive Original in Drive",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1420,
+        300
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "drive_dev_connection",
+          "name": "SVIA_DRIVE_DEV"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first();\nconst j = item.json;\nconst p = j.payload || {};\nconst hash = j.sha256 || j.data || j.hash;\nif (!hash || !/^[0-9a-f]{64}$/i.test(hash)) throw new Error('SHA256_REQUIRED');\nconst source = j.source_channel || 'telegram';\nlet externalId;\nif (source === 'telegram') {\n  externalId = `telegram:${p.telegram_chat_id || j.telegram_chat_id}:${p.telegram_message_id || j.message_id}:${p.telegram_file_id || p.file_id || p.media?.file_id}`;\n} else if (source === 'google_drive') {\n  const fileId = p.drive_file_id || p.id;\n  const ver = p.drive_version || p.version || p.modifiedTime;\n  if (!fileId || !ver) throw new Error('DRIVE_VERSIONED_EXTERNAL_ID_REQUIRED');\n  externalId = `drive:${fileId}:${ver}`;\n} else throw new Error('UNSUPPORTED_MEDIA_SOURCE');\nreturn [{json:{...j,sha256:String(hash).toLowerCase(),external_id:externalId},binary:item.binary}];"
+      },
+      "id": "ing3-prepare",
+      "name": "Prepare Asset Identity",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1640,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT public.upsert_asset_with_location($1::uuid,$2::uuid,$3,$4,$5,$6,$7::bigint,$8::bigint,$9,$10,$11,$12,$13::bigint,$14::bigint,$15,$16::jsonb) AS res;",
+        "options": {
+          "queryReplacement": "={{ [$json.user_id,$json.ingestion_id,$json.sha256,$json.payload.media_kind,$json.payload.original_filename,$json.payload.mime_type,$json.payload.file_size || null,$json.payload.duration_ms || null,$json.source_channel === 'google_drive' ? 'drive' : 'telegram',$json.external_id,$json.payload.drive_file_id || null,$json.payload.telegram_file_id || $json.payload.file_id || null,$json.payload.telegram_chat_id || $json.telegram_chat_id || null,$json.payload.telegram_message_id || $json.message_id || null,null,JSON.stringify({correlation_id:$json.correlation_id,source_channel:$json.source_channel})] }}"
+        }
+      },
+      "id": "ing3-upsert",
+      "name": "Upsert Asset + Location RPC",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1860,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "supabase_dev_connection",
+          "name": "Supabase DEV Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Validate / Gate Media').first().json.media_route }}",
+                    "rightValue": "transcribe",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "transcribe"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Validate / Gate Media').first().json.media_route }}",
+                    "rightValue": "visual",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "visual"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Validate / Gate Media').first().json.media_route }}",
+                    "rightValue": "document",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "document"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ing3-route",
+      "name": "Media Type Router",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        2080,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "WF-AI-001",
+          "mode": "list",
+          "cachedResultName": "WF-AI-001_TRANSCRIBE"
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "ing3-ai1",
+      "name": "WF-AI-001 TRANSCRIBE",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        2300,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "WF-AI-003",
+          "mode": "list",
+          "cachedResultName": "WF-AI-003_ANALYZE_VISUAL"
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "ing3-ai3",
+      "name": "WF-AI-003 ANALYZE_VISUAL",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        2300,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "WF-ING-006",
+          "mode": "list",
+          "cachedResultName": "WF-ING-006_DOCUMENT_EXTRACT"
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "ing3-ing6",
+      "name": "WF-ING-006 DOCUMENT_EXTRACT",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        2300,
+        420
+      ]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Validate / Gate Media",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate / Gate Media": {
+      "main": [
+        [
+          {
+            "node": "Persist Processing / Fallback Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Persist Processing / Fallback Status": {
+      "main": [
+        [
+          {
+            "node": "Source Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Source Router": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Telegram Get File",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Drive Binary Passthrough",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Get File": {
+      "main": [
+        [
+          {
+            "node": "SHA-256 Binary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Drive Binary Passthrough": {
+      "main": [
+        [
+          {
+            "node": "SHA-256 Binary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SHA-256 Binary": {
+      "main": [
+        [
+          {
+            "node": "Archive Original in Drive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Archive Original in Drive": {
+      "main": [
+        [
+          {
+            "node": "Prepare Asset Identity",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Asset Identity": {
+      "main": [
+        [
+          {
+            "node": "Upsert Asset + Location RPC",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert Asset + Location RPC": {
+      "main": [
+        [
+          {
+            "node": "Media Type Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Media Type Router": {
+      "main": [
+        [
+          {
+            "node": "WF-AI-001 TRANSCRIBE",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "WF-AI-003 ANALYZE_VISUAL",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "WF-ING-006 DOCUMENT_EXTRACT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "id": "WF-ING-003"
+}

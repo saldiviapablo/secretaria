@@ -1,7 +1,7 @@
-F2 WORKFLOW VALIDATION: PASS
- - manifest phase F2
- - exactly 17 workflows through F2
- - exactly WF-REM-001..004 added for F2
- - schedules 1m / 5m / 30m
- - central error workflow on F2 schedulers
- - no F3+ dependency detected
+F3 WORKFLOW VALIDATION: PASS
+ - manifest phase F3 / exactly 23 workflows
+ - exact six F3 workflow IDs
+ - F2 scheduler regression preserved
+ - Drive reconciliation = 15 minutes
+ - no F4+ dependency / no Execute Command
+ - transcription_primary remains null pending benchmark

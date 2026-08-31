@@ -1,0 +1,14 @@
+F3 DOCUMENT & VISUAL SECURITY EVIDENCE (WF-ING-006 & WF-AI-003)
+Timestamp: 2026-08-31T04:35:09.258782+00:00
+Workflows: WF-ING-006_DOCUMENT_EXTRACT, WF-AI-003_ANALYZE_VISUAL
+
+Security Checks:
+1. Macro / Script / Executable Rejection:
+- Binaries (.exe, .bat, .ps1, .sh, .vbs, macro-enabled formats) rejected or quarantined: PASS
+2. Prompt Injection Resilience (WF-TEST-011 / E2E-TEST-015):
+- PDF containing SQL injection / command injection payload parsed strictly as text in source_texts: PASS
+- Database tables and schema unaltered: PASS
+3. Visual Analysis (WF-AI-003 / E2E-TEST-016):
+- Image inputs processed via vision model (gpt-5.6-luna) with text descriptions saved to source_texts: PASS
+
+Status: PASS

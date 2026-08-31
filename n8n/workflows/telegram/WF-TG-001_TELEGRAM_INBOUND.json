@@ -12,17 +12,23 @@
       "name": "Telegram Webhook Trigger",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [200, 300]
+      "position": [
+        200,
+        300
+      ]
     },
     {
       "parameters": {
-        "jsCode": "// Step 1: Normalize Telegram Update and Validate Webhook Secret Header\nconst input = $input.first().json;\nconst headers = input.headers || {};\nconst body = input.body || input;\n\n// Support secret token check if present in headers\nconst webhookSecret = headers['x-telegram-bot-api-secret-token'];\n\nconst update = body;\nconst updateId = update.update_id || (Date.now() % 1000000000);\n\nlet message = update.message;\nlet isEdited = false;\nlet isCallback = false;\nlet callbackData = null;\n\nif (update.edited_message) {\n  message = update.edited_message;\n  isEdited = true;\n} else if (update.callback_query) {\n  message = update.callback_query.message;\n  isCallback = true;\n  callbackData = update.callback_query.data;\n}\n\nif (!message) {\n  return [{\n    json: {\n      ok: false,\n      status: 'ignored',\n      error: { category: 'validation', code: 'UNSUPPORTED_UPDATE_TYPE', message_safe: 'No actionable message in update' }\n    }\n  }];\n}\n\nconst telegramUserId = update.callback_query ? update.callback_query.from.id : (message.from ? message.from.id : null);\nconst telegramChatId = message.chat ? message.chat.id : null;\nconst messageText = message.text || message.caption || callbackData || '';\nconst messageDate = message.date ? new Date(message.date * 1000).toISOString() : new Date().toISOString();\n\nreturn [{\n  json: {\n    update_id: updateId,\n    telegram_user_id: telegramUserId,\n    telegram_chat_id: telegramChatId,\n    message_id: message.message_id,\n    text: messageText,\n    is_edited: isEdited,\n    is_callback: isCallback,\n    callback_data: callbackData,\n    captured_at: messageDate,\n    webhook_secret: webhookSecret\n  }\n}];"
+        "jsCode": "const input = $input.first().json;\nconst headers = input.headers || {};\nconst update = input.body || input;\n\nif (update.update_id === undefined || update.update_id === null) {\n  throw new Error('TELEGRAM_UPDATE_ID_REQUIRED: no fabricated idempotency key is allowed');\n}\nconst updateId = update.update_id;\nconst webhookSecret = headers['x-telegram-bot-api-secret-token'] || null;\n\nlet message = update.message || null;\nlet isEdited = false;\nlet isCallback = false;\nlet callbackData = null;\nif (update.edited_message) {\n  message = update.edited_message;\n  isEdited = true;\n} else if (update.callback_query) {\n  message = update.callback_query.message || null;\n  isCallback = true;\n  callbackData = update.callback_query.data || null;\n}\nif (!message) {\n  return [{json:{ok:false,status:'ignored',update_id:updateId,error:{\n    category:'validation',code:'UNSUPPORTED_UPDATE_TYPE',message_safe:'No actionable message in update'\n  }}}];\n}\n\nconst telegramUserId = update.callback_query?.from?.id ?? message.from?.id ?? null;\nconst telegramChatId = message.chat?.id ?? null;\nif (telegramUserId === null || telegramChatId === null) {\n  throw new Error('TELEGRAM_IDENTITY_REQUIRED');\n}\n\nconst photos = Array.isArray(message.photo) ? message.photo : [];\nconst photo = photos.length ? photos[photos.length - 1] : null;\nlet media = null;\nif (message.voice) {\n  media = {media_kind:'audio', source_kind:'voice', ...message.voice, original_filename:null, mime_type:message.voice.mime_type || 'audio/ogg'};\n} else if (message.audio) {\n  media = {media_kind:'audio', source_kind:'audio', ...message.audio, original_filename:message.audio.file_name || null, mime_type:message.audio.mime_type || null};\n} else if (message.document) {\n  media = {media_kind:'document', source_kind:'document', ...message.document, original_filename:message.document.file_name || null, mime_type:message.document.mime_type || null};\n} else if (photo) {\n  media = {media_kind:'image', source_kind:'photo', ...photo, original_filename:null, mime_type:'image/jpeg'};\n}\nif (media) {\n  media = {\n    media_kind: media.media_kind,\n    source_kind: media.source_kind,\n    file_id: media.file_id || null,\n    file_unique_id: media.file_unique_id || null,\n    file_size: media.file_size ?? null,\n    mime_type: media.mime_type || null,\n    original_filename: media.original_filename || null,\n    duration_ms: Number.isFinite(Number(media.duration)) ? Math.round(Number(media.duration) * 1000) : null\n  };\n  if (!media.file_id) throw new Error('TELEGRAM_MEDIA_FILE_ID_REQUIRED');\n}\n\nconst text = message.text || message.caption || callbackData || '';\nconst rawDate = message.date || message.edit_date;\nconst capturedAt = rawDate ? new Date(rawDate * 1000).toISOString() : new Date().toISOString();\n\nreturn [{json:{\n  update_id:updateId,\n  telegram_user_id:telegramUserId,\n  telegram_chat_id:telegramChatId,\n  message_id:message.message_id,\n  text,\n  is_edited:isEdited,\n  is_callback:isCallback,\n  callback_data:callbackData,\n  captured_at:capturedAt,\n  webhook_secret:webhookSecret,\n  has_media:!!media,\n  media\n}}];"
       },
       "id": "node-normalize-update-002",
       "name": "Normalize Telegram Update",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [420, 300]
+      "position": [
+        420,
+        300
+      ]
     },
     {
       "parameters": {
@@ -36,7 +42,10 @@
       "name": "Resolve Authorized User",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [640, 300],
+      "position": [
+        640,
+        300
+      ],
       "credentials": {
         "postgres": {
           "id": "supabase_dev_connection",
@@ -46,27 +55,33 @@
     },
     {
       "parameters": {
-        "jsCode": "const userRows = $input.all();\nconst norm = $('Normalize Telegram Update').first().json;\n\nif (!userRows || userRows.length === 0 || !userRows[0].json || !userRows[0].json.user_id) {\n  return [{\n    json: {\n      ok: false,\n      status: 'error',\n      error: {\n        category: 'authorization',\n        code: 'UNAUTHORIZED_USER_OR_CHAT',\n        message_safe: 'Unauthorized Telegram sender or chat'\n      }\n    }\n  }];\n}\n\nconst user = userRows[0].json;\nconst correlationId = 'corr_tg_' + Math.random().toString(36).substring(2, 10) + '_' + Date.now();\n\nreturn [{\n  json: {\n    contract_version: '1.0',\n    correlation_id: correlationId,\n    user_id: user.user_id,\n    source_channel: 'telegram',\n    captured_at: norm.captured_at,\n    timezone: user.timezone || 'America/Argentina/Buenos_Aires',\n    locale: user.locale || 'es-AR',\n    assistant_name: user.assistant_name,\n    update_id: norm.update_id,\n    message_id: norm.message_id,\n    text: norm.text,\n    is_edited: norm.is_edited,\n    is_callback: norm.is_callback,\n    callback_data: norm.callback_data\n  }\n}];"
+        "jsCode": "const rows = $input.all();\nconst norm = $('Normalize Telegram Update').first().json;\nif (!rows.length || !rows[0].json?.user_id) {\n  return [{json:{ok:false,status:'error',error:{\n    category:'authorization',code:'UNAUTHORIZED_USER_OR_CHAT',message_safe:'Unauthorized Telegram sender or chat'\n  }}}];\n}\nconst user = rows[0].json;\nconst correlationId = 'corr_tg_' + crypto.randomUUID();\nreturn [{json:{\n  contract_version:'1.0',\n  correlation_id:correlationId,\n  user_id:user.user_id,\n  source_channel:'telegram',\n  captured_at:norm.captured_at,\n  timezone:user.timezone || 'America/Argentina/Buenos_Aires',\n  locale:user.locale || 'es-AR',\n  assistant_name:user.assistant_name,\n  update_id:norm.update_id,\n  message_id:norm.message_id,\n  telegram_chat_id:norm.telegram_chat_id,\n  telegram_user_id:norm.telegram_user_id,\n  text:norm.text,\n  is_edited:norm.is_edited,\n  is_callback:norm.is_callback,\n  callback_data:norm.callback_data,\n  has_media:norm.has_media,\n  media:norm.media\n}}];"
       },
       "id": "node-validate-auth-004",
       "name": "Validate Auth and Security",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [860, 300]
+      "position": [
+        860,
+        300
+      ]
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT public.register_ingestion($1::uuid, 'telegram', CASE WHEN $2 THEN 'edited_text' ELSE 'text' END, $3, $4::timestamptz, NULL, $5, $6, $7, $8, NULL, NULL, NULL, '{}'::jsonb) as res;",
+        "query": "SELECT public.register_ingestion($1::uuid, 'telegram', $2, $3, $4::timestamptz, $5, $6, $7, $8, $9, $10, NULL, NULL, $11::jsonb) as res;",
         "options": {
-          "queryReplacement": "={{ [$json.user_id, $json.is_edited, 'telegram:primary:' + $json.update_id, $json.captured_at, $json.update_id, $json.message_id, $json.telegram_chat_id, $json.telegram_user_id] }}"
+          "queryReplacement": "={{ [$json.user_id, $json.has_media ? $json.media.source_kind : ($json.is_edited ? 'edited_text' : 'text'), 'telegram:primary:' + $json.update_id, $json.captured_at, 'telegram:' + $json.update_id, $json.update_id, $json.message_id, $json.telegram_chat_id, $json.telegram_user_id, $json.has_media ? $json.media.file_id : null, JSON.stringify($json.has_media ? {file_unique_id:$json.media.file_unique_id,file_size:$json.media.file_size,mime_type:$json.media.mime_type,original_filename:$json.media.original_filename,duration_ms:$json.media.duration_ms,media_kind:$json.media.media_kind} : {})] }}"
         }
       },
       "id": "node-register-ingestion-005",
       "name": "Register Ingestion RPC",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [1080, 300],
+      "position": [
+        1080,
+        300
+      ],
       "credentials": {
         "postgres": {
           "id": "supabase_dev_connection",
@@ -86,7 +101,10 @@
       "name": "Check Active Clarification",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [1300, 300],
+      "position": [
+        1300,
+        300
+      ],
       "credentials": {
         "postgres": {
           "id": "supabase_dev_connection",
@@ -96,13 +114,16 @@
     },
     {
       "parameters": {
-        "jsCode": "const auth = $('Validate Auth and Security').first().json;\nconst ingRaw = $('Register Ingestion RPC').first().json.res;\nconst ing = typeof ingRaw === 'string' ? JSON.parse(ingRaw) : ingRaw;\nconst clarRows = $input.all();\n\nif (ing.is_duplicate) {\n  return [{\n    json: {\n      ok: true,\n      status: 'duplicate',\n      correlation_id: auth.correlation_id,\n      ingestion_id: ing.ingestion_id,\n      message: 'Duplicate update ignored'\n    }\n  }];\n}\n\nlet targetRoute = 'process_text';\nlet pendingClarification = null;\n\nif (clarRows && clarRows.length > 0 && clarRows[0].json && clarRows[0].json.id) {\n  pendingClarification = clarRows[0].json;\n}\n\nconst textTrimmed = (auth.text || '').trim();\n\nif (textTrimmed.startsWith('/start') || textTrimmed.startsWith('/configuracion') || auth.is_callback) {\n  targetRoute = 'onboarding_and_config';\n} else if (pendingClarification && !textTrimmed.startsWith('?') && !textTrimmed.toLowerCase().startsWith('no,') && textTrimmed.length < 100) {\n  targetRoute = 'resolve_clarification';\n}\n\nreturn [{\n  json: {\n    ...auth,\n    ingestion_id: ing.ingestion_id,\n    target_route: targetRoute,\n    pending_clarification: pendingClarification\n  }\n}];"
+        "jsCode": "const auth = $('Validate Auth and Security').first().json;\nconst ingRaw = $('Register Ingestion RPC').first().json.res;\nconst ing = typeof ingRaw === 'string' ? JSON.parse(ingRaw) : ingRaw;\nconst clarRows = $input.all();\nif (ing.is_duplicate) {\n  return [{json:{ok:true,status:'duplicate',correlation_id:auth.correlation_id,ingestion_id:ing.ingestion_id,target_route:'duplicate'}}];\n}\nlet pendingClarification = null;\nif (clarRows.length && clarRows[0].json?.id) pendingClarification = clarRows[0].json;\nlet targetRoute = auth.has_media ? 'process_media' : 'process_text';\nconst t = (auth.text || '').trim();\nif (!auth.has_media && (t.startsWith('/start') || t.startsWith('/configuracion') || auth.is_callback)) {\n  targetRoute = 'onboarding_and_config';\n} else if (!auth.has_media && pendingClarification && !t.startsWith('?') && !t.toLowerCase().startsWith('no,') && t.length < 100) {\n  targetRoute = 'resolve_clarification';\n}\nreturn [{json:{...auth,ingestion_id:ing.ingestion_id,target_route:targetRoute,pending_clarification:pendingClarification}}];"
       },
       "id": "node-route-update-007",
       "name": "Route Inbound Update",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1520, 300]
+      "position": [
+        1520,
+        300
+      ]
     }
   ],
   "connections": {

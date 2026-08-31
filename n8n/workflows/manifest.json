@@ -2,8 +2,8 @@
   "manifest_version": "1.0",
   "project": "Secretaria Virtual con IA",
   "baseline": "SVIA-DOCSET-V1-RC1",
-  "phase": "F2",
-  "total_workflows_implemented": 17,
+  "phase": "F3",
+  "total_workflows_implemented": 23,
   "workflows": [
     {
       "workflow_id": "WF-SYS-001",
@@ -155,6 +155,60 @@
       "file": "reminders/WF-REM-004_FOLLOWUP_PLANNER.json",
       "type": "scheduler",
       "phase": "F2",
+      "status": "implemented",
+      "contract_version": "1.0"
+    },
+    {
+      "workflow_id": "WF-ING-003",
+      "name": "WF-ING-003_PROCESS_MEDIA",
+      "file": "ingestion/WF-ING-003_PROCESS_MEDIA.json",
+      "type": "subworkflow",
+      "phase": "F3",
+      "status": "implemented",
+      "contract_version": "1.0"
+    },
+    {
+      "workflow_id": "WF-ING-004",
+      "name": "WF-ING-004_DRIVE_WATCH",
+      "file": "ingestion/WF-ING-004_DRIVE_WATCH.json",
+      "type": "entry",
+      "phase": "F3",
+      "status": "implemented",
+      "contract_version": "1.0"
+    },
+    {
+      "workflow_id": "WF-ING-005",
+      "name": "WF-ING-005_DRIVE_RECONCILIATION",
+      "file": "ingestion/WF-ING-005_DRIVE_RECONCILIATION.json",
+      "type": "scheduler",
+      "phase": "F3",
+      "status": "implemented",
+      "contract_version": "1.0"
+    },
+    {
+      "workflow_id": "WF-AI-001",
+      "name": "WF-AI-001_TRANSCRIBE",
+      "file": "ai/WF-AI-001_TRANSCRIBE.json",
+      "type": "subworkflow",
+      "phase": "F3",
+      "status": "implemented",
+      "contract_version": "1.0"
+    },
+    {
+      "workflow_id": "WF-ING-006",
+      "name": "WF-ING-006_DOCUMENT_EXTRACT",
+      "file": "ingestion/WF-ING-006_DOCUMENT_EXTRACT.json",
+      "type": "subworkflow",
+      "phase": "F3",
+      "status": "implemented",
+      "contract_version": "1.0"
+    },
+    {
+      "workflow_id": "WF-AI-003",
+      "name": "WF-AI-003_ANALYZE_VISUAL",
+      "file": "ai/WF-AI-003_ANALYZE_VISUAL.json",
+      "type": "subworkflow",
+      "phase": "F3",
       "status": "implemented",
       "contract_version": "1.0"
     }
