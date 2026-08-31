@@ -1313,3 +1313,32 @@ como constitución documental del paquete definitivo para Antigravity/Codex.
 8. **Estado Final:**
    - `F2 DONE`. Fase F3 (`Audio + Drive`) queda como siguiente fase secuencial (NO INICIADA).
 
+---
+
+## CHG-2026-08-30-013 — Corrección Post-Auditoría de Evidence F2: Privilegios de RPC y Clasificación n8n Audit
+
+**Tipo:** SECURITY / AUDIT / EVIDENCE / DOCUMENTATION
+**Estado:** AUDIT_CORRECTED_PASS
+**Motivo:** Corrección factual de evidence sobre privilegios reales de `public.plan_task_reminders` y clasificación formal de advertencias del informe de `n8n audit` conforme a `08_SECURITY.md` y `09_TEST_PLAN.md` (`SEC-TEST-026`), preservando intacta la lógica e implementación funcional de F2.
+**Solicitado por:** Antigravity / Prompt de Corrección Final Post-Auditoría F2
+**Documentos afectados:** `11_CHANGELOG.md`, `tests/evidence/f2_security.txt`, `tests/evidence/evidence_f2.json`, `tests/evidence/f2_n8n_audit_classification.md`
+
+### Acciones Realizadas y Hallazgos Auditados:
+1. **Privilegios Reales de `public.plan_task_reminders(uuid, uuid, jsonb)`:**
+   - Se verificó en PostgreSQL (`has_function_privilege`) que la RPC está estrictamente restringida a `service_role` (ejecución denegada a `PUBLIC`, `anon` y `authenticated`).
+   - Se corrigieron `tests/evidence/f2_security.txt` y `tests/evidence/evidence_f2.json` para reflejar con precisión matemática este principio de mínimo privilegio (`authenticated = DENIED`).
+   - Se confirmó que no se modificaron migraciones SQL para relajar permisos.
+2. **Clasificación Estructurada de `n8n audit` (`SEC-TEST-026`):**
+   - Se creó el artefacto formal `tests/evidence/f2_n8n_audit_classification.md`.
+   - **Database Risk Report:** Los nodos SQL de F2 (`WF-REM-001` a `WF-REM-004`) utilizan parametrización posicional `$1`, `$2` mediante `options.queryReplacement` nativa del driver `pg`, garantizando 0 riesgo de inyección SQL (P2 Aceptado / Mitigado).
+   - **Nodes Risk Report:** Los 23 Code nodes efectúan transformaciones de datos y mapeos JSON puros sin evaluación dinámica de código (`eval`, `Function`), y los nodos de comandos del sistema están explícitamente excluidos en Docker (`no-new-privileges:true`) (P2 Aceptado / Mitigado).
+   - **Instance Risk Report:** Versión `2.33.3` corresponde al pin oficial aprobado en `00_ESPECIFICACION_MAESTRA.md` (P3 Informativo).
+   - **Conclusión de Seguridad:** 0 vulnerabilidades P0/P1 bloqueantes.
+3. **Integridad Funcional:**
+   - Ningún workflow, esquema, prompt, migración SQL o test funcional fue modificado.
+   - La suite completa de 52 unit tests, tests de contratos, integración F2 y regresión F1 mantienen 100% de aprobación (`PASS`).
+4. **Producción Preservada:**
+   - NAS UGREEN (`EXISTING_OPERATIONAL_N8N`), Immich, Cloudflare y Supabase PROD permanecen totalmente inalterados y fuera de alcance.
+5. **Estado:**
+   - Fase F2 confirmada y certificada (`F2 DONE`). Fase F3 (`Audio + Drive`) NO INICIADA.
+

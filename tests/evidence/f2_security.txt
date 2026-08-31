@@ -5,9 +5,10 @@ Baseline: SVIA-DOCSET-V1-RC1 (08_SECURITY.md, 04_DATABASE_SCHEMA.md)
 1. RPC & FUNCTION PRIVILEGES AUDIT:
 - public.plan_task_reminders(uuid, uuid, jsonb):
     * SECURITY DEFINER, search_path = ''
-    * REVOKE ALL FROM PUBLIC, anon
-    * GRANT EXECUTE TO authenticated, service_role
-    * Enforces auth.uid() = p_user_id (cross-user blocked) -> PASS
+    * REVOKE ALL FROM PUBLIC, anon, authenticated
+    * GRANT EXECUTE TO service_role
+    * Authenticated / anon execution returned Permission Denied -> PASS
+    * Enforces internal user_id / task.user_id consistency -> PASS
 - public.claim_due_reminders(integer, interval):
     * SECURITY DEFINER, search_path = ''
     * REVOKE ALL FROM PUBLIC, anon, authenticated

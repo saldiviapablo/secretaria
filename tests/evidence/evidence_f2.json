@@ -58,8 +58,11 @@
   "security": {
     "secret_scan": "PASS",
     "worker_privileges_isolated": true,
+    "plan_task_reminders_role": "service_role_only",
     "cross_user_isolation": true,
-    "unknown_quarantine_demonstrated": true
+    "unknown_quarantine_demonstrated": true,
+    "n8n_audit_classification": "tests/evidence/f2_n8n_audit_classification.md",
+    "n8n_audit_p0_p1_count": 0
   },
   "production_safety": {
     "nas_modified": false,
