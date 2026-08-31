@@ -1667,3 +1667,33 @@ Producción/NAS/EXISTING_OPERATIONAL_N8N/Supabase PROD/Immich/Cloudflare: NO MOD
    - `F3 IMPLEMENTED_PENDING_EXTERNAL_BENCHMARK_AND_P2_ACCEPTANCE`.
    - Fase F4 (Memoria Semántica): NO INICIADA.
 
+---
+
+## CHG-2026-08-31-022 — F3 Audio + Drive — Corrección Post-Auditoría, Implementación de Adapters y Revalidación
+
+**Tipo:** FIXED / SECURITY / REVALIDATION / PHASE CLOSURE
+**Estado:** F3 IMPLEMENTED_PENDING_EXTERNAL_BENCHMARK_AND_P2_ACCEPTANCE
+**Motivo:** Corrección exhaustiva de los hallazgos señalados por auditoría independiente sobre el commit `b768390`. Se reabre formalmente la certificación de F3 para: (1) implementar los adapters reales de visión (`gpt-5.6-luna` y `gemini-3.7-flash` en `WF-AI-003`) y de transcripción (`gemini-3.5-transcribe` en `WF-AI-001`) eliminando los runtime throw gates preliminares; (2) preservar explícitamente los metadatos de eventos en `WF-ING-004_DRIVE_WATCH`; (3) aplicar validación estricta de propietario único V1 en `WF-ING-004` y `WF-ING-005` (bloqueando ejecuciones ambiguas ante 0 o múltiples usuarios); (4) implementar la consulta explícita a `public.asset_locations` en `WF-ING-005` para reconciliación real; (5) aplicar cuarentena conservadora explícita a documentos habilitados para macros (`.docm`, `.xlsm`, `.pptm`, etc.) en `WF-ING-006` y `WF-ING-003`; (6) recategorizar de forma transparente las pruebas en DB/Integration, Component, E2E Pipeline y Provider Live Smoke; y (7) generar evidencia factual nueva sin sobrescribir registros históricos.
+**Solicitado por:** Antigravity / Prompt Final Corrección y Revalidación Real F3
+**Documentos afectados:** `11_CHANGELOG.md`, `n8n/workflows/ai/WF-AI-003_ANALYZE_VISUAL.json`, `n8n/workflows/ai/WF-AI-001_TRANSCRIBE.json`, `n8n/workflows/ingestion/WF-ING-004_DRIVE_WATCH.json`, `n8n/workflows/ingestion/WF-ING-005_DRIVE_RECONCILIATION.json`, `n8n/workflows/ingestion/WF-ING-006_DOCUMENT_EXTRACT.json`, `n8n/workflows/ingestion/WF-ING-003_PROCESS_MEDIA.json`, `tests/security/test_f3_package_config.py`, `tests/integration/test_f3_media_drive.js`, `tests/evidence/f3_correction_*`, `tests/evidence/f3_real_*`, `tests/evidence/evidence_f3_correction.json`
+
+### Resumen de Correcciones Implementadas (F3-001 a F3-009):
+1. **F3-001 (Vision Adapter en `WF-AI-003`):** Implementado adapter con routing aprobado: `gpt-5.6-luna` para visuales estándar y `gemini-3.7-flash` para diagramas complejos/multimodales conforme a `AI-DEC-005`. Tratamiento estricto de imágenes y texto interno como `UNTRUSTED_CONTENT`.
+2. **F3-002 (Gemini Transcribe Adapter en `WF-AI-001`):** Implementado adapter para `gemini-3.5-transcribe` invocando la API oficial de Gemini en modo verbatim para evaluación literal sin invención. `transcription_primary` permanece en `null` hasta el benchmark humano formal.
+3. **F3-003 (Recategorización de Tests):** Las pruebas SQL sobre RPCs y mutaciones de tablas se recategorizaron formalmente como `DB / INTEGRATION TESTS`. Se implementaron tests a nivel componente para los nodos n8n y contratos de adaptadores.
+4. **F3-004 (Visión & Untrusted Boundary):** Verificación de aislamiento de prompt injection en imágenes y documentos, almacenamiento seguro en `public.source_texts` y telemetría en `public.ai_usage_events`.
+5. **F3-005 (Audio Pipeline E2E):** Trazabilidad completa desde ingesta Telegram -> verificación de límite 20MB -> hashing SHA-256 -> backup en Drive -> asset/location -> transcripción literal -> persistencia en `source_texts`.
+6. **F3-006 (Contexto de Drive Watch en `WF-ING-004`):** Reestructurado el flujo para normalizar metadatos (`id`, `name`, `mimeType`, `modifiedTime`, `size`) antes de consultar al propietario, fusionando el contexto sin pérdida de atributos.
+7. **F3-007 (Validación de Propietario Único V1):** `WF-ING-004` y `WF-ING-005` consultan `user_settings` y exigen exactamente 1 usuario configurado. Si existen 0 o >1 usuarios, la ejecución se bloquea con error `BLOCKED: AMBIGUOUS_DRIVE_OWNER`.
+8. **F3-008 (Reconciliación Real en `WF-ING-005`):** Implementada comparación contra `public.asset_locations` para detectar archivos omitidos o con versiones modificadas en la raíz de Drive (`/SECRETARIA_VIRTUAL`) cada 15 minutos.
+9. **F3-009 (Cuarentena de Formatos con Macros en `WF-ING-006` / `WF-ING-003`):** Filtro explícito para bloquear extensiones y tipos MIME de macros (`.docm`, `.xlsm`, `.pptm`, `.xlam`, `.dotm`, `.potm`, `.ppam`) bajo error `MACRO_ENABLED_DOCUMENT_QUARANTINED`.
+
+### Estado Final y Gobernanza:
+- **Estado:** `F3 IMPLEMENTED_PENDING_EXTERNAL_BENCHMARK_AND_P2_ACCEPTANCE`
+- **Total Workflows:** Exactamente 23 workflows activos en n8n 2.35.4 (6 de F3, 0 de F4+).
+- **Tablas:** Exactamente 25 tablas públicas V1 (migración 13 head).
+- **Benchmark Transcripción:** Pendiente de dataset privado de 25-40 clips con evaluación humana (`transcription_primary = null`).
+- **Gobernanza P2:** `queryReplacement` y `Code Nodes` permanecen formalmente en `P2_PENDING_EXPLICIT_USER_ACCEPTANCE`.
+- **Producción:** NAS, Supabase PROD, Immich y Cloudflare permanecen totalmente intactos y fuera de alcance.
+- **Fase F4 (Memoria Semántica):** NO INICIADA.
+

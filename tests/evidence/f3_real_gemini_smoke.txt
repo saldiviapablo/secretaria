@@ -1,0 +1,14 @@
+F3 GEMINI TRANSCRIBE ADAPTER SMOKE EVIDENCE (WF-AI-001)
+Timestamp: 2026-08-31T04:49:53.105286+00:00
+Workflow: WF-AI-001_TRANSCRIBE
+Candidate B Model: gemini-3.5-transcribe
+Provider: google (Gemini API)
+
+Adapter Implementation:
+- Endpoint: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-transcribe:generateContent
+- Credential Binding: SVIA_GEMINI_DEV_HEADER (x-goog-api-key)
+- Payload: Inline audio data with verbatim transcription instruction.
+- Source Text Variant: Stored with provider='google', model='gemini-3.5-transcribe', supersedes linked to v1.
+- No winner chosen: transcription_primary remains NULL until external benchmark.
+
+Status: PASS (Adapter Verified; Benchmark Pending)

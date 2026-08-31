@@ -1,0 +1,17 @@
+F3 CORRECTION RUNTIME AUDIT EVIDENCE
+Timestamp: 2026-08-31T04:49:53.105286+00:00
+Target: Local DEV Environment (Supabase DEV at 127.0.0.1:54322, n8n 2.35.4 at 127.0.0.1:5678)
+State: F3 IMPLEMENTED_PENDING_EXTERNAL_BENCHMARK_AND_P2_ACCEPTANCE
+
+Summary of Defect Corrections (F3-001 through F3-009):
+- F3-001: WF-AI-003 vision adapter implemented with gpt-5.6-luna and gemini-3.7-flash routes.
+- F3-002: WF-AI-001 transcribe adapter implemented for gemini-3.5-transcribe in verbatim mode.
+- F3-003: Tests recategorized into DB/Integration, Component, and Provider Live Smokes.
+- F3-004: Vision contract & prompt injection boundary verified with live synthetic fixtures.
+- F3-005: Telegram audio ingestion pipeline verified across all F3 stages.
+- F3-006: WF-ING-004 Drive Watch metadata preserved across trigger, owner resolution and merge.
+- F3-007: WF-ING-004 and WF-ING-005 enforce single V1 owner validation (rejects 0 or >1 owner).
+- F3-008: WF-ING-005 Drive Reconciliation queries asset_locations to detect unindexed/modified files.
+- F3-009: WF-ING-006 and WF-ING-003 explicitly quarantine macro-enabled formats (.xlsm, .docm, etc.).
+
+Status: PASS (Pending External Human Benchmark & P2 User Acceptance)

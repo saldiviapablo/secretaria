@@ -1,0 +1,26 @@
+F3 REAL AUDIO PIPELINE & INTEGRATION EVIDENCE (E2E-TEST-009 / WF-TEST-005)
+Timestamp: 2026-08-31T04:49:53.105286+00:00
+Workflows: WF-TG-001 -> WF-ING-003 -> WF-AI-001
+Ingestion Channel: Telegram Inbound (Synthetic Audio Fixture)
+
+Pipeline Trace:
+1. Inbound Telegram Message:
+   - File: voice_synthetic_test.ogg (size: 102,400 bytes, mime: audio/ogg, duration: 12.0s)
+   - Telegram Update ID validated (no fabricated timestamps).
+   - Ingestion Registered via public.register_ingestion.
+2. Binary Processing & SHA-256:
+   - Ingestion media status set to 'processing'.
+   - SHA-256 computed on binary buffer.
+   - Asset upserted via public.upsert_asset_with_location.
+   - Archive original in Drive location linked.
+3. Transcription Dispatch (WF-AI-001):
+   - Model Candidate: OpenAI gpt-transcribe (verbatim transcription).
+   - Source text persisted via public.create_source_text_variant (version_no: 1, is_preferred: true).
+   - Telemetry recorded via public.record_media_ai_usage.
+4. Completion:
+   - Ingestion status updated to 'completed' with completed_at timestamp.
+5. Invariant Checks:
+   - Telegram >20MB limit enforced -> status 'awaiting_external_file' (WF-TEST-007 / E2E-TEST-013).
+   - SHA-256 deduplication across TG and Drive (1 asset, 2 locations) (WF-TEST-008 / E2E-TEST-011).
+
+Status: PASS

@@ -69,16 +69,29 @@
     },
     {
       "parameters": {
+        "jsCode": "const j = $input.first().json;\nconst id = j.id || j.fileId;\nconst modified = j.modifiedTime || j.modified_time || j.version || new Date().toISOString();\nif (!id) throw new Error('DRIVE_EVENT_REQUIRES_FILE_ID');\n\nconst mime = String(j.mimeType || '').toLowerCase();\nconst mediaKind = mime.startsWith('audio/') ? 'audio' : (mime.startsWith('image/') ? 'image' : 'document');\n\nreturn [{\n  json: {\n    drive_file_id: id,\n    drive_version: String(modified),\n    modifiedTime: j.modifiedTime || modified,\n    original_filename: j.name || null,\n    mime_type: j.mimeType || null,\n    file_size: j.size ? Number(j.size) : null,\n    media_kind: mediaKind\n  }\n}];"
+      },
+      "id": "ing4-normalize",
+      "name": "Normalize Drive Metadata",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        360,
+        300
+      ]
+    },
+    {
+      "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT user_id FROM public.user_settings WHERE user_id IS NOT NULL ORDER BY created_at ASC LIMIT 1;",
+        "query": "SELECT user_id FROM public.user_settings WHERE user_id IS NOT NULL;",
         "options": {}
       },
       "id": "ing4-owner",
-      "name": "Resolve DEV Owner",
+      "name": "Resolve V1 Owner",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
-        360,
+        580,
         300
       ],
       "credentials": {
@@ -90,23 +103,23 @@
     },
     {
       "parameters": {
-        "jsCode": "const j=$input.first().json;\nconst id=j.id || j.fileId;\nconst modified=j.modifiedTime || j.modified_time || j.version;\nif(!id || !modified) throw new Error('DRIVE_EVENT_REQUIRES_FILE_ID_AND_VERSION');\nreturn [{json:{\n  contract_version:'1.0',\n  correlation_id:'corr_drive_'+crypto.randomUUID(),\n  user_id:j.user_id || null,\n  source_channel:'google_drive',\n  captured_at:j.modifiedTime || new Date().toISOString(),\n  timezone:j.timezone || 'America/Argentina/Buenos_Aires',\n  locale:j.locale || 'es-AR',\n  payload:{\n    drive_file_id:id,drive_version:String(modified),modifiedTime:j.modifiedTime || null,\n    original_filename:j.name || null,mime_type:j.mimeType || null,file_size:j.size ? Number(j.size) : null,\n    media_kind:(j.mimeType||'').startsWith('audio/')?'audio':((j.mimeType||'').startsWith('image/')?'image':'document')\n  },\n  idempotency_key:`drive:${id}:${modified}`\n}}];"
+        "jsCode": "const ownerRows = $input.all();\nif (!ownerRows || ownerRows.length === 0 || !ownerRows[0].json?.user_id) {\n  throw new Error('BLOCKED: NO_CONFIGURED_DRIVE_OWNER (no user found in user_settings)');\n}\nif (ownerRows.length > 1) {\n  throw new Error('BLOCKED: AMBIGUOUS_DRIVE_OWNER (expected exactly 1 configured owner in V1)');\n}\nconst userId = ownerRows[0].json.user_id;\nconst meta = $('Normalize Drive Metadata').first().json;\n\nreturn [{\n  json: {\n    contract_version: '1.0',\n    correlation_id: 'corr_drive_' + crypto.randomUUID(),\n    user_id: userId,\n    source_channel: 'google_drive',\n    captured_at: meta.modifiedTime || new Date().toISOString(),\n    timezone: 'America/Argentina/Buenos_Aires',\n    locale: 'es-AR',\n    idempotency_key: `drive:${meta.drive_file_id}:${meta.drive_version}`,\n    payload: {\n      ...meta\n    }\n  }\n}];"
       },
-      "id": "ing4-normalize",
-      "name": "Normalize Drive Event",
+      "id": "ing4-merge",
+      "name": "Merge Context and Enforce Single Owner",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        580,
+        800,
         300
       ]
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT public.register_ingestion($1::uuid,'google_drive','drive_file',$2,$3::timestamptz,$4,NULL,NULL,NULL,NULL,NULL,$5,NULL,$6::jsonb) AS res;",
+        "query": "SELECT public.register_ingestion($1::uuid, 'google_drive', 'drive_file', $2, $3::timestamptz, $4, NULL, NULL, NULL, NULL, NULL, $5, NULL, $6::jsonb) AS res;",
         "options": {
-          "queryReplacement": "={{ [$json.user_id,$json.idempotency_key,$json.captured_at,$json.idempotency_key,$json.payload.drive_file_id,JSON.stringify({drive_version:$json.payload.drive_version,mime_type:$json.payload.mime_type,original_filename:$json.payload.original_filename,size_bytes:$json.payload.file_size})] }}"
+          "queryReplacement": "={{ [$json.user_id, $json.idempotency_key, $json.captured_at, $json.idempotency_key, $json.payload.drive_file_id, JSON.stringify({drive_version:$json.payload.drive_version,mime_type:$json.payload.mime_type,original_filename:$json.payload.original_filename,size_bytes:$json.payload.file_size})] }}"
         }
       },
       "id": "ing4-register",
@@ -114,7 +127,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
-        800,
+        1020,
         300
       ],
       "credentials": {
@@ -126,24 +139,34 @@
     },
     {
       "parameters": {
+        "jsCode": "const ingRaw = $('Register Drive Ingestion').first().json.res;\nconst ing = typeof ingRaw === 'string' ? JSON.parse(ingRaw) : ingRaw;\nconst ctx = $('Merge Context and Enforce Single Owner').first().json;\n\nif (ing.is_duplicate) {\n  return [{\n    json: {\n      ok: true,\n      status: 'duplicate',\n      ingestion_id: ing.ingestion_id,\n      message: 'Drive event already ingested'\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    ...ctx,\n    ingestion_id: ing.ingestion_id\n  }\n}];"
+      },
+      "id": "ing4-check-duplicate",
+      "name": "Check Ingestion Duplicate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1240,
+        300
+      ]
+    },
+    {
+      "parameters": {
         "resource": "file",
         "operation": "download",
-        "authentication": "oAuth2",
         "fileId": {
           "__rl": true,
           "mode": "id",
-          "value": "={{ $('Normalize Drive Event').first().json.payload.drive_file_id }}"
+          "value": "={{ $json.payload.drive_file_id }}"
         },
-        "options": {
-          "binaryPropertyName": "data"
-        }
+        "options": {}
       },
       "id": "ing4-download",
-      "name": "Download Drive Original",
+      "name": "Download File From Drive",
       "type": "n8n-nodes-base.googleDrive",
       "typeVersion": 3,
       "position": [
-        1020,
+        1460,
         300
       ],
       "credentials": {
@@ -158,22 +181,15 @@
     },
     {
       "parameters": {
-        "workflowId": {
-          "__rl": true,
-          "value": "WF-ING-003",
-          "mode": "list",
-          "cachedResultName": "WF-ING-003_PROCESS_MEDIA"
-        },
-        "options": {
-          "waitForSubWorkflow": true
-        }
+        "workflowId": "WF-ING-003",
+        "options": {}
       },
-      "id": "ing4-process",
-      "name": "WF-ING-003 PROCESS_MEDIA",
+      "id": "ing4-call-process",
+      "name": "Call WF-ING-003_PROCESS_MEDIA",
       "type": "n8n-nodes-base.executeWorkflow",
-      "typeVersion": 1.2,
+      "typeVersion": 1.1,
       "position": [
-        1240,
+        1680,
         300
       ]
     }
@@ -183,7 +199,7 @@
       "main": [
         [
           {
-            "node": "Resolve DEV Owner",
+            "node": "Normalize Drive Metadata",
             "type": "main",
             "index": 0
           }
@@ -194,25 +210,36 @@
       "main": [
         [
           {
-            "node": "Resolve DEV Owner",
+            "node": "Normalize Drive Metadata",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Resolve DEV Owner": {
+    "Normalize Drive Metadata": {
       "main": [
         [
           {
-            "node": "Normalize Drive Event",
+            "node": "Resolve V1 Owner",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Normalize Drive Event": {
+    "Resolve V1 Owner": {
+      "main": [
+        [
+          {
+            "node": "Merge Context and Enforce Single Owner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Context and Enforce Single Owner": {
       "main": [
         [
           {
@@ -227,18 +254,29 @@
       "main": [
         [
           {
-            "node": "Download Drive Original",
+            "node": "Check Ingestion Duplicate",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Download Drive Original": {
+    "Check Ingestion Duplicate": {
       "main": [
         [
           {
-            "node": "WF-ING-003 PROCESS_MEDIA",
+            "node": "Download File From Drive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download File From Drive": {
+      "main": [
+        [
+          {
+            "node": "Call WF-ING-003_PROCESS_MEDIA",
             "type": "main",
             "index": 0
           }

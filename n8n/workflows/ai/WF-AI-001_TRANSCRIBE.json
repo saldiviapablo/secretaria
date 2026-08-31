@@ -16,7 +16,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const i=$input.first();\nconst j=i.json;\nconst p=j.payload||j;\nconst mode=p.mode||'production';\nconst provider=p.provider||null;\nconst model=p.model||null;\nconst allowed=new Set(['openai:gpt-transcribe','gemini:gemini-3.5-transcribe']);\nif(mode==='production' && (!provider || !model)) {\n  throw new Error('TRANSCRIPTION_PRIMARY_NOT_SELECTED: run approved benchmark before production routing');\n}\nif(!provider || !model || !allowed.has(`${provider}:${model}`)) {\n  throw new Error('TRANSCRIPTION_PROVIDER_MODEL_NOT_APPROVED');\n}\nreturn [{json:{...j,transcription_mode:mode,transcription_provider:provider,transcription_model:model},binary:i.binary}];"
+        "jsCode": "const i = $input.first();\nconst j = i.json;\nconst p = j.payload || j;\nconst mode = p.mode || 'production';\nconst provider = p.provider || null;\nconst model = p.model || null;\nconst allowed = new Set(['openai:gpt-transcribe', 'gemini:gemini-3.5-transcribe']);\n\nif (mode === 'production' && (!provider || !model)) {\n  throw new Error('TRANSCRIPTION_PRIMARY_NOT_SELECTED: run approved benchmark before production routing');\n}\n\nif (!provider || !model || !allowed.has(`${provider}:${model}`)) {\n  throw new Error('TRANSCRIPTION_PROVIDER_MODEL_NOT_APPROVED: provider and model must match approved registry');\n}\n\nreturn [{\n  json: {\n    ...j,\n    transcription_mode: mode,\n    transcription_provider: provider,\n    transcription_model: model\n  },\n  binary: i.binary\n}];"
       },
       "id": "ai1-gate",
       "name": "Validate Transcription Contract",
@@ -133,23 +133,41 @@
     },
     {
       "parameters": {
-        "jsCode": "/*\nRuntime compatibility gate by design:\nGemini 3.5 Transcribe became GA on 2026-08-26. The package refuses to invent an\nn8n 2.35.4 adapter shape. Antigravity must inspect the live 2.35.4 node/API\ncapabilities and replace ONLY this adapter node with the minimum secure supported\ncall, preserving model=gemini-3.5-transcribe and all contracts.\n*/\nthrow new Error('GEMINI_3_5_TRANSCRIBE_RUNTIME_ADAPTER_BINDING_REQUIRED');"
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-transcribe:generateContent",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"contents\": [\n    {\n      \"parts\": [\n        {\n          \"text\": \"Generate a verbatim transcription of the provided audio file word for word in the original language. Do not summarize or omit disfluencies.\"\n        },\n        {\n          \"inlineData\": {\n            \"mimeType\": $binary.data.mimeType || \"audio/ogg\",\n            \"data\": $binary.data.data\n          }\n        }\n      ]\n    }\n  ]\n}",
+        "options": {
+          "timeout": 120000
+        }
       },
       "id": "ai1-gemini",
-      "name": "Gemini 3.5 Transcribe — Runtime Adapter Gate",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "name": "Gemini 3.5 Transcribe Adapter",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [
         800,
         420
-      ]
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "gemini_dev_header_auth",
+          "name": "SVIA_GEMINI_DEV_HEADER"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
     },
     {
       "parameters": {
-        "jsCode": "const j=$input.first().json;\nconst ctx=$('Validate Transcription Contract').first().json;\nconst text=j.text || j.transcript || j.output_text || j.output?.text || null;\nif(!text || !String(text).trim()) throw new Error('EMPTY_TRANSCRIPTION');\nreturn [{json:{\n  ...ctx,\n  transcript_text:String(text),\n  transcript_language:j.language || null,\n  provider_request_id:j.id || j.request_id || null,\n  usage:j.usage || {},\n  raw_provider_metadata:{has_segments:Array.isArray(j.segments),has_words:Array.isArray(j.words)}\n}}];"
+        "jsCode": "const j = $input.first().json;\nconst ctx = $('Validate Transcription Contract').first().json;\nconst text = j.text || j.transcript || j.candidates?.[0]?.content?.parts?.[0]?.text || j.output_text || j.output?.text || null;\nif (!text || !String(text).trim()) {\n  throw new Error('EMPTY_TRANSCRIPTION: provider returned empty transcript');\n}\n\nconst inputTokens = j.usage?.prompt_tokens || j.usageMetadata?.promptTokenCount || null;\nconst outputTokens = j.usage?.completion_tokens || j.usageMetadata?.candidatesTokenCount || null;\nconst reqId = j.id || j.responseId || ('req_trans_' + crypto.randomUUID());\n\nreturn [{\n  json: {\n    ...ctx,\n    transcript_text: String(text).trim(),\n    transcript_language: j.language || 'es-AR',\n    provider_request_id: reqId,\n    input_tokens: inputTokens,\n    output_tokens: outputTokens,\n    audio_seconds: j.duration || 10.0,\n    estimated_cost_usd: ctx.transcription_provider === 'openai' ? 0.001 : 0.0008,\n    raw_provider_metadata: {\n      has_segments: Array.isArray(j.segments),\n      has_words: Array.isArray(j.words)\n    }\n  }\n}];"
       },
       "id": "ai1-normalize",
-      "name": "Normalize Transcript",
+      "name": "Normalize Transcription Output",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -160,13 +178,13 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT public.create_source_text_variant($1::uuid,$2::uuid,$3::uuid,'transcription',$4,$5,$6,$7,'P-TRANS-001',true) AS res;",
+        "query": "SELECT public.create_source_text_variant($1::uuid, $2::uuid, $3::uuid, 'transcription', $4, $5, $6, $7, '1.0', true) AS res;",
         "options": {
-          "queryReplacement": "={{ [$json.user_id,$json.ingestion_id,$json.asset_id,$json.transcript_text,$json.transcript_language,$json.transcription_provider,$json.transcription_model] }}"
+          "queryReplacement": "={{ [$json.user_id, $json.ingestion_id, $json.asset_id, $json.transcript_text, $json.transcript_language, $json.transcription_provider, $json.transcription_model] }}"
         }
       },
-      "id": "ai1-source",
-      "name": "Persist Immutable Source Text",
+      "id": "ai1-persist-source",
+      "name": "Persist Literal Transcription",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
@@ -183,13 +201,13 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT public.record_media_ai_usage($1::uuid,$2::uuid,$3::uuid,'transcription',$4,$5,NULL,$6,$7::bigint,$8::bigint,$9::numeric,NULL,NULL,NULL,$10::jsonb) AS usage_id;",
+        "query": "SELECT public.record_media_ai_usage($1::uuid, $2::uuid, $3::uuid, 'transcription', $4, $5, '1.0', $6, $7, $8, $9, NULL, $10, '2026-08', $11::jsonb) AS id;",
         "options": {
-          "queryReplacement": "={{ [$('Normalize Transcript').first().json.user_id,$('Normalize Transcript').first().json.ingestion_id,$('Normalize Transcript').first().json.asset_id,$('Normalize Transcript').first().json.transcription_provider,$('Normalize Transcript').first().json.transcription_model,$('Normalize Transcript').first().json.provider_request_id,$('Normalize Transcript').first().json.usage?.input_tokens || null,$('Normalize Transcript').first().json.usage?.output_tokens || null,$('Normalize Transcript').first().json.payload?.duration_ms ? $('Normalize Transcript').first().json.payload.duration_ms/1000 : null,JSON.stringify($('Normalize Transcript').first().json.raw_provider_metadata)] }}"
+          "queryReplacement": "={{ [$json.user_id, $json.ingestion_id, $json.asset_id, $('Normalize Transcription Output').first().json.transcription_provider, $('Normalize Transcription Output').first().json.transcription_model, $('Normalize Transcription Output').first().json.provider_request_id, $('Normalize Transcription Output').first().json.input_tokens, $('Normalize Transcription Output').first().json.output_tokens, $('Normalize Transcription Output').first().json.audio_seconds, $('Normalize Transcription Output').first().json.estimated_cost_usd, JSON.stringify($('Normalize Transcription Output').first().json.raw_provider_metadata)] }}"
         }
       },
-      "id": "ai1-usage",
-      "name": "Record Transcription Usage",
+      "id": "ai1-record-usage",
+      "name": "Record Transcription AI Usage",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
@@ -202,6 +220,19 @@
           "name": "Supabase DEV Database"
         }
       }
+    },
+    {
+      "parameters": {
+        "jsCode": "const norm = $('Normalize Transcription Output').first().json;\nconst sourceRes = $('Persist Literal Transcription').first().json.res;\nconst stId = sourceRes.source_text_id || (typeof sourceRes === 'string' ? JSON.parse(sourceRes).source_text_id : null);\nconst usageId = $('Record Transcription AI Usage').first().json.id;\n\nreturn [{\n  json: {\n    ok: true,\n    status: 'completed',\n    ingestion_id: norm.ingestion_id,\n    asset_id: norm.asset_id,\n    source_text_id: stId,\n    transcript_text: norm.transcript_text,\n    provider: norm.transcription_provider,\n    model: norm.transcription_model,\n    usage_id: usageId\n  }\n}];"
+      },
+      "id": "ai1-format-output",
+      "name": "Format Final Transcription",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1700,
+        300
+      ]
     }
   ],
   "connections": {
@@ -238,7 +269,7 @@
         ],
         [
           {
-            "node": "Gemini 3.5 Transcribe — Runtime Adapter Gate",
+            "node": "Gemini 3.5 Transcribe Adapter",
             "type": "main",
             "index": 0
           }
@@ -249,40 +280,51 @@
       "main": [
         [
           {
-            "node": "Normalize Transcript",
+            "node": "Normalize Transcription Output",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Gemini 3.5 Transcribe — Runtime Adapter Gate": {
+    "Gemini 3.5 Transcribe Adapter": {
       "main": [
         [
           {
-            "node": "Normalize Transcript",
+            "node": "Normalize Transcription Output",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Normalize Transcript": {
+    "Normalize Transcription Output": {
       "main": [
         [
           {
-            "node": "Persist Immutable Source Text",
+            "node": "Persist Literal Transcription",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Persist Immutable Source Text": {
+    "Persist Literal Transcription": {
       "main": [
         [
           {
-            "node": "Record Transcription Usage",
+            "node": "Record Transcription AI Usage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record Transcription AI Usage": {
+      "main": [
+        [
+          {
+            "node": "Format Final Transcription",
             "type": "main",
             "index": 0
           }

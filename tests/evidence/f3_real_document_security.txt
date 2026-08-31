@@ -1,0 +1,15 @@
+F3 DOCUMENT EXTRACTION & SECURITY EVIDENCE (WF-ING-006)
+Timestamp: 2026-08-31T04:49:53.105286+00:00
+Workflow: WF-ING-006_DOCUMENT_EXTRACT
+
+Security Invariants:
+1. Executable / Script Rejection:
+   - .exe, .bat, .ps1, .sh, .vbs, .js blocked with UNSAFE_DOCUMENT_TYPE_QUARANTINED.
+2. Macro-Enabled Document Quarantine:
+   - .docm, .xlsm, .pptm, .xlam, .dotm, .potm, .ppam quarantined with MACRO_ENABLED_DOCUMENT_QUARANTINED.
+3. Prompt Injection Defense (WF-TEST-011 / E2E-TEST-015):
+   - PDF containing SQL injection ('DROP TABLE public.ingestions') and instruction override parsed purely as text.
+   - Persisted into public.source_texts as raw literal text.
+   - Zero SQL execution, zero admin tools invoked.
+
+Status: PASS

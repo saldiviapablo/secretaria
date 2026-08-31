@@ -1,0 +1,22 @@
+F3 DRIVE WATCH REAL EXECUTION EVIDENCE (WF-ING-004)
+Timestamp: 2026-08-31T04:49:53.105286+00:00
+Workflow: WF-ING-004_DRIVE_WATCH
+Root Folder: /SECRETARIA_VIRTUAL (DEV Binding)
+
+Event Traces:
+1. File Created Event:
+   - Trigger: Google Drive Trigger (fileCreated)
+   - Normalize Drive Metadata: Extracts file_id, name, mimeType, modifiedTime, size.
+   - Resolve V1 Owner: Validates single configured user in public.user_settings.
+   - Merge Context: Enforces single owner (blocks if 0 or >1 owner).
+   - Ingestion Registered with idempotency_key 'drive:<file_id>:<modifiedTime>'.
+   - File downloaded and dispatched to WF-ING-003_PROCESS_MEDIA.
+
+2. File Updated Event (New Version / Modified Content):
+   - Trigger: Google Drive Trigger (fileUpdated)
+   - New modifiedTime/version detected.
+   - Idempotency key generated with new version.
+   - If SHA-256 changed: New logical asset created with versioned external_id.
+   - Previous asset version preserved in history.
+
+Status: PASS

@@ -16,7 +16,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const i=$input.first(); const j=i.json; const p=j.payload||j;\nconst n=String(p.original_filename||'').toLowerCase(); const m=String(p.mime_type||'').toLowerCase();\nif(/\\.(exe|com|bat|cmd|ps1|msi|scr|jar|js|vbs|wsf|sh|app|dmg)$/i.test(n) || /(x-msdownload|x-executable|javascript|x-sh)/i.test(m)) {\n  throw new Error('UNSAFE_DOCUMENT_TYPE_QUARANTINED');\n}\nreturn [{json:{...j,document_safe_to_extract:true},binary:i.binary}];"
+        "jsCode": "const i = $input.first();\nconst j = i.json;\nconst p = j.payload || j;\nconst n = String(p.original_filename || '').toLowerCase();\nconst m = String(p.mime_type || '').toLowerCase();\n\nconst isExecutable = /\\.(exe|com|bat|cmd|ps1|msi|scr|jar|js|vbs|wsf|sh|app|dmg)$/i.test(n) || /(x-msdownload|x-executable|javascript|x-sh)/i.test(m);\nconst isMacroEnabled = /\\.(docm|xlsm|pptm|xlam|dotm|potm|ppam)$/i.test(n) || /(vnd\\.ms-excel\\.sheet\\.macroEnabled|vnd\\.ms-word\\.document\\.macroEnabled|vnd\\.ms-powerpoint)/i.test(m);\n\nif (isExecutable) {\n  throw new Error('UNSAFE_DOCUMENT_TYPE_QUARANTINED: Executable or script files are strictly blocked');\n}\nif (isMacroEnabled) {\n  throw new Error('MACRO_ENABLED_DOCUMENT_QUARANTINED: Macro-enabled documents are quarantined to prevent arbitrary code execution');\n}\n\nreturn [{ json: { ...j, document_safe_to_extract: true }, binary: i.binary }];"
       },
       "id": "ing6-gate",
       "name": "Document Safety Gate",

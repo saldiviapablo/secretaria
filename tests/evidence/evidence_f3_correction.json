@@ -1,0 +1,85 @@
+{
+  "phase": "F3",
+  "certification_stage": "POST_AUDIT_CORRECTION_AND_REVALIDATION",
+  "timestamp": "2026-08-31T04:49:53.105286+00:00",
+  "n8n_version": "2.35.4",
+  "total_workflows": 23,
+  "f3_workflows": [
+    "WF-ING-003_PROCESS_MEDIA",
+    "WF-ING-004_DRIVE_WATCH",
+    "WF-ING-005_DRIVE_RECONCILIATION",
+    "WF-AI-001_TRANSCRIBE",
+    "WF-ING-006_DOCUMENT_EXTRACT",
+    "WF-AI-003_ANALYZE_VISUAL"
+  ],
+  "f4_workflows_present": 0,
+  "defects_corrected": {
+    "F3-001": "Vision adapter implemented with gpt-5.6-luna and gemini-3.7-flash routes without placeholder throw gate",
+    "F3-002": "Gemini transcribe adapter implemented for gemini-3.5-transcribe in verbatim mode without placeholder throw gate",
+    "F3-003": "Tests categorized accurately into DB/Integration, Component, and AI Provider Smoke",
+    "F3-004": "Vision contract and untrusted boundary verified with structured prompts and UNTRUSTED_CONTENT tagging",
+    "F3-005": "Audio Telegram pipeline verified with binary SHA, Drive backup, and source_texts persistence",
+    "F3-006": "Drive Watch metadata context preserved before owner resolution",
+    "F3-007": "Single V1 owner resolution enforced across WF-ING-004 and WF-ING-005 (rejects 0 or >1 owner)",
+    "F3-008": "Drive Reconciliation queries public.asset_locations to detect unindexed or modified files",
+    "F3-009": "Macro-enabled formats (.xlsm, .docm, etc.) explicitly quarantined in WF-ING-006 and WF-ING-003"
+  },
+  "test_classification": {
+    "db_integration": [
+      "SHA dedupe",
+      "source_texts versioning",
+      "replay idempotency",
+      "drive versioned external_id",
+      "RLS tenant isolation"
+    ],
+    "component": [
+      "macro quarantine",
+      "drive watch context & single owner",
+      "drive reconciliation filter",
+      "vision untrusted boundary"
+    ],
+    "e2e_pipeline": [
+      "Telegram audio cycle",
+      "PDF untrusted text extraction",
+      "Visual diagram extraction"
+    ],
+    "ai_provider_live": [
+      "gpt-transcribe",
+      "gemini-3.5-transcribe",
+      "gpt-5.6-luna",
+      "gemini-3.7-flash"
+    ]
+  },
+  "transcription_primary": null,
+  "transcription_benchmark": {
+    "status": "PENDING_EXTERNAL_BENCHMARK",
+    "candidates": [
+      "gpt-transcribe",
+      "gemini-3.5-transcribe"
+    ],
+    "reason": "Private human-evaluated dataset of 25-40 clips (45-90 min total) pending execution"
+  },
+  "p2_governance": {
+    "queryReplacement": "P2_PENDING_EXPLICIT_USER_ACCEPTANCE",
+    "code_nodes": "P2_PENDING_EXPLICIT_USER_ACCEPTANCE"
+  },
+  "n8n_audit_findings": {
+    "p0": 0,
+    "p1": 0,
+    "p2": 2,
+    "p3": 3
+  },
+  "deferred_phase_dependencies": {
+    "WF-TG-003_TELEGRAM_SEND_ASSET": "DEFERRED_APPROVED_PHASE_DEPENDENCY",
+    "WF-MEM-002_CHUNK_AND_INDEX": "DEFERRED_APPROVED_F4",
+    "WF-AI-004_EMBED_CHUNKS": "DEFERRED_APPROVED_F4"
+  },
+  "production_safety": {
+    "nas_modified": false,
+    "existing_operational_n8n_modified": false,
+    "supabase_prod_modified": false,
+    "immich_modified": false,
+    "cloudflare_modified": false
+  },
+  "status": "F3 IMPLEMENTED_PENDING_EXTERNAL_BENCHMARK_AND_P2_ACCEPTANCE"
+}

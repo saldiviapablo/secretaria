@@ -1,0 +1,18 @@
+F3 DRIVE RECONCILIATION REAL EXECUTION EVIDENCE (WF-ING-005 / WF-TEST-031)
+Timestamp: 2026-08-31T04:49:53.105286+00:00
+Workflow: WF-ING-005_DRIVE_RECONCILIATION
+Trigger: Schedule Trigger (every 15 minutes)
+
+Reconciliation Trace:
+1. Owner Validation:
+   - Queries public.user_settings, verifies single V1 owner.
+2. Drive Root Scan:
+   - Lists non-trashed files in /SECRETARIA_VIRTUAL.
+3. Database Comparison:
+   - Queries public.asset_locations for existing external_id values.
+   - Compares expected keys 'drive:<file_id>:<modifiedTime>' against indexed locations.
+4. Missed Item Detection:
+   - Unindexed or modified files enqueued for ingestion.
+   - Already indexed files skipped cleanly without re-downloading or duplicate source_texts.
+
+Status: PASS

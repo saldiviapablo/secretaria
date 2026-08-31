@@ -24,11 +24,11 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT user_id FROM public.user_settings WHERE user_id IS NOT NULL ORDER BY created_at ASC LIMIT 1;",
+        "query": "SELECT user_id FROM public.user_settings WHERE user_id IS NOT NULL;",
         "options": {}
       },
       "id": "ing5-owner",
-      "name": "Resolve DEV Owner",
+      "name": "Resolve V1 Owner",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
@@ -41,6 +41,19 @@
           "name": "Supabase DEV Database"
         }
       }
+    },
+    {
+      "parameters": {
+        "jsCode": "const ownerRows = $input.all();\nif (!ownerRows || ownerRows.length === 0 || !ownerRows[0].json?.user_id) {\n  throw new Error('BLOCKED: NO_CONFIGURED_DRIVE_OWNER (no user found in user_settings)');\n}\nif (ownerRows.length > 1) {\n  throw new Error('BLOCKED: AMBIGUOUS_DRIVE_OWNER (expected exactly 1 configured owner in V1)');\n}\nreturn [{json:{user_id:ownerRows[0].json.user_id}}];"
+      },
+      "id": "ing5-validate-owner",
+      "name": "Validate Single V1 Owner",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        560,
+        300
+      ]
     },
     {
       "parameters": {
@@ -73,7 +86,7 @@
       "type": "n8n-nodes-base.googleDrive",
       "typeVersion": 3,
       "position": [
-        560,
+        780,
         300
       ],
       "credentials": {
@@ -88,27 +101,14 @@
     },
     {
       "parameters": {
-        "jsCode": "const owner=$('Resolve DEV Owner').first().json.user_id;\nreturn $input.all().map(i=>{\n  const f=i.json;\n  const ver=f.modifiedTime || f.version;\n  if(!f.id || !ver) throw new Error('RECONCILIATION_REQUIRES_ID_AND_VERSION');\n  return {json:{\n    user_id:owner,contract_version:'1.0',correlation_id:'corr_recon_'+crypto.randomUUID(),\n    source_channel:'google_drive',captured_at:f.modifiedTime || new Date().toISOString(),\n    idempotency_key:`drive:${f.id}:${ver}`,\n    payload:{drive_file_id:f.id,drive_version:String(ver),modifiedTime:f.modifiedTime || null,\n      original_filename:f.name || null,mime_type:f.mimeType || null,file_size:f.size?Number(f.size):null,\n      media_kind:(f.mimeType||'').startsWith('audio/')?'audio':((f.mimeType||'').startsWith('image/')?'image':'document')}\n  }};\n});"
-      },
-      "id": "ing5-normalize",
-      "name": "Normalize Reconciliation Candidates",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        780,
-        300
-      ]
-    },
-    {
-      "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT public.register_ingestion($1::uuid,'google_drive','drive_reconciliation',$2,$3::timestamptz,$4,NULL,NULL,NULL,NULL,NULL,$5,NULL,$6::jsonb) AS res;",
+        "query": "SELECT external_id, drive_file_id, last_verified_at FROM public.asset_locations WHERE user_id = $1::uuid AND location_type = 'drive';",
         "options": {
-          "queryReplacement": "={{ [$json.user_id,$json.idempotency_key,$json.captured_at,$json.idempotency_key,$json.payload.drive_file_id,JSON.stringify({drive_version:$json.payload.drive_version,reconciled:true,mime_type:$json.payload.mime_type,original_filename:$json.payload.original_filename,size_bytes:$json.payload.file_size})] }}"
+          "queryReplacement": "={{ [$('Validate Single V1 Owner').first().json.user_id] }}"
         }
       },
-      "id": "ing5-register",
-      "name": "Register / Detect Missed Events",
+      "id": "ing5-query-locations",
+      "name": "Query Existing Asset Locations",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
@@ -124,10 +124,10 @@
     },
     {
       "parameters": {
-        "jsCode": "const r=$input.first().json.res; const x=typeof r==='string'?JSON.parse(r):r; if(x.is_duplicate) return []; const base=$('Normalize Reconciliation Candidates').item.json; return [{json:{...base,ingestion_id:x.ingestion_id}}];"
+        "jsCode": "const owner = $('Validate Single V1 Owner').first().json.user_id;\nconst files = $('List Root Files').all().map(i => i.json);\nconst existingLocRows = $input.all().map(i => i.json);\nconst knownKeys = new Set(existingLocRows.map(r => r.external_id));\n\nconst candidates = [];\nfor (const f of files) {\n  if (!f.id) continue;\n  const ver = f.modifiedTime || f.version || '1';\n  const expectedKey = `drive:${f.id}:${ver}`;\n  if (!knownKeys.has(expectedKey)) {\n    const mime = String(f.mimeType || '').toLowerCase();\n    const mediaKind = mime.startsWith('audio/') ? 'audio' : (mime.startsWith('image/') ? 'image' : 'document');\n    candidates.push({\n      json: {\n        contract_version: '1.0',\n        correlation_id: 'corr_recon_' + crypto.randomUUID(),\n        user_id: owner,\n        source_channel: 'google_drive',\n        captured_at: f.modifiedTime || new Date().toISOString(),\n        idempotency_key: expectedKey,\n        payload: {\n          drive_file_id: f.id,\n          drive_version: String(ver),\n          modifiedTime: f.modifiedTime || null,\n          original_filename: f.name || null,\n          mime_type: f.mimeType || null,\n          file_size: f.size ? Number(f.size) : null,\n          media_kind: mediaKind,\n          reconciled: true\n        }\n      }\n    });\n  }\n}\n\nreturn candidates;"
       },
-      "id": "ing5-route-new",
-      "name": "Only Newly Registered",
+      "id": "ing5-reconcile-filter",
+      "name": "Filter Unindexed or Modified Files",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -137,24 +137,44 @@
     },
     {
       "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT public.register_ingestion($1::uuid, 'google_drive', 'drive_reconciliation', $2, $3::timestamptz, $4, NULL, NULL, NULL, NULL, NULL, $5, NULL, $6::jsonb) AS res;",
+        "options": {
+          "queryReplacement": "={{ [$json.user_id, $json.idempotency_key, $json.captured_at, $json.idempotency_key, $json.payload.drive_file_id, JSON.stringify({drive_version:$json.payload.drive_version,reconciled:true,mime_type:$json.payload.mime_type,original_filename:$json.payload.original_filename,size_bytes:$json.payload.file_size})] }}"
+        }
+      },
+      "id": "ing5-register",
+      "name": "Register Reconciled Ingestion",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1440,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "supabase_dev_connection",
+          "name": "Supabase DEV Database"
+        }
+      }
+    },
+    {
+      "parameters": {
         "resource": "file",
         "operation": "download",
-        "authentication": "oAuth2",
         "fileId": {
           "__rl": true,
           "mode": "id",
           "value": "={{ $json.payload.drive_file_id }}"
         },
-        "options": {
-          "binaryPropertyName": "data"
-        }
+        "options": {}
       },
       "id": "ing5-download",
-      "name": "Download Missed Original",
+      "name": "Download Missed File",
       "type": "n8n-nodes-base.googleDrive",
       "typeVersion": 3,
       "position": [
-        1440,
+        1660,
         300
       ],
       "credentials": {
@@ -169,22 +189,15 @@
     },
     {
       "parameters": {
-        "workflowId": {
-          "__rl": true,
-          "value": "WF-ING-003",
-          "mode": "list",
-          "cachedResultName": "WF-ING-003_PROCESS_MEDIA"
-        },
-        "options": {
-          "waitForSubWorkflow": true
-        }
+        "workflowId": "WF-ING-003",
+        "options": {}
       },
-      "id": "ing5-process",
-      "name": "WF-ING-003 PROCESS_MEDIA",
+      "id": "ing5-call-process",
+      "name": "Call WF-ING-003_PROCESS_MEDIA",
       "type": "n8n-nodes-base.executeWorkflow",
-      "typeVersion": 1.2,
+      "typeVersion": 1.1,
       "position": [
-        1660,
+        1880,
         300
       ]
     }
@@ -194,14 +207,25 @@
       "main": [
         [
           {
-            "node": "Resolve DEV Owner",
+            "node": "Resolve V1 Owner",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Resolve DEV Owner": {
+    "Resolve V1 Owner": {
+      "main": [
+        [
+          {
+            "node": "Validate Single V1 Owner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Single V1 Owner": {
       "main": [
         [
           {
@@ -216,51 +240,51 @@
       "main": [
         [
           {
-            "node": "Normalize Reconciliation Candidates",
+            "node": "Query Existing Asset Locations",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Normalize Reconciliation Candidates": {
+    "Query Existing Asset Locations": {
       "main": [
         [
           {
-            "node": "Register / Detect Missed Events",
+            "node": "Filter Unindexed or Modified Files",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Register / Detect Missed Events": {
+    "Filter Unindexed or Modified Files": {
       "main": [
         [
           {
-            "node": "Only Newly Registered",
+            "node": "Register Reconciled Ingestion",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Only Newly Registered": {
+    "Register Reconciled Ingestion": {
       "main": [
         [
           {
-            "node": "Download Missed Original",
+            "node": "Download Missed File",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Download Missed Original": {
+    "Download Missed File": {
       "main": [
         [
           {
-            "node": "WF-ING-003 PROCESS_MEDIA",
+            "node": "Call WF-ING-003_PROCESS_MEDIA",
             "type": "main",
             "index": 0
           }

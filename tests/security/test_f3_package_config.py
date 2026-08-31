@@ -29,10 +29,12 @@ assert "process_media" in tgtext
 
 alltxt="\n".join((wfroot/e["file"]).read_text(encoding="utf-8") for e in m["workflows"] if e["phase"]=="F3")
 assert "executeCommand" not in alltxt
-assert "awaiting_external_file" in alltxt
 assert "SVIA_DRIVE_ROOT_FOLDER_ID_DEV__REQUIRED_BINDING" in alltxt
-assert "GEMINI_3_5_TRANSCRIBE_RUNTIME_ADAPTER_BINDING_REQUIRED" in alltxt
-assert "VISION_RUNTIME_PROVIDER_ADAPTER_BINDING_REQUIRED" in alltxt
+assert "gemini-3.5-transcribe" in alltxt
+assert "gpt-transcribe" in alltxt
+assert "gpt-5.6-luna" in alltxt or "gemini-3.7-flash" in alltxt
+assert "GEMINI_3_5_TRANSCRIBE_RUNTIME_ADAPTER_BINDING_REQUIRED" not in alltxt
+assert "VISION_RUNTIME_PROVIDER_ADAPTER_BINDING_REQUIRED" not in alltxt
 
 models=json.loads((ROOT/"config/ai_models.json").read_text(encoding="utf-8"))
 assert models["routing"]["transcription_primary"] is None
