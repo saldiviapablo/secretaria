@@ -1,0 +1,88 @@
+{
+  "phase": "F3",
+  "certification_stage": "SECOND_CORRECTIVE_REVALIDATION",
+  "timestamp": "2026-08-31T05:03:21.575573+00:00",
+  "n8n_version": "2.35.4",
+  "total_workflows": 23,
+  "f3_workflows": [
+    "WF-ING-003_PROCESS_MEDIA",
+    "WF-ING-004_DRIVE_WATCH",
+    "WF-ING-005_DRIVE_RECONCILIATION",
+    "WF-AI-001_TRANSCRIBE",
+    "WF-ING-006_DOCUMENT_EXTRACT",
+    "WF-AI-003_ANALYZE_VISUAL"
+  ],
+  "f4_workflows_present": 0,
+  "defects_corrected": {
+    "F3-CORR-010": "Factual evidence generated without narrative fabrication or fake request/execution IDs",
+    "F3-CORR-011": "Audio normal pipeline enforces AI-DEC-007; transcription_primary remains NULL; winner selection prevented",
+    "F3-CORR-012": "Drive root binding expression unified as $env.SVIA_DRIVE_ROOT_FOLDER_ID_DEV across Git and Runtime",
+    "F3-CORR-013": "Fabricated Drive versions eliminated; real version metadata required (DRIVE_VERSION_METADATA_REQUIRED)",
+    "F3-CORR-014": "Durable completion in DB implemented upon successful subworkflow persistence",
+    "F3-CORR-015": "Fabricated telemetry (fake UUID request IDs, hardcoded 10.0s duration, synthetic pricing) eliminated",
+    "F3-CORR-016": "Gemini 3.5 Transcribe adapter verified against official Google Gemini API specification in verbatim mode",
+    "F3-CORR-017": "Large Telegram file (>20MB) triggers user notification via WF-TG-002 without false processing confirmation"
+  },
+  "test_classification": {
+    "db_integration": [
+      "SHA dedupe",
+      "source_texts versioning",
+      "replay idempotency",
+      "drive versioned external_id",
+      "RLS tenant isolation",
+      "durable completed status"
+    ],
+    "component": [
+      "macro quarantine",
+      "drive watch context & single owner",
+      "missing drive version rejection",
+      "drive reconciliation filter",
+      "transcription primary guard",
+      "telemetry integrity"
+    ],
+    "e2e_pipeline": [
+      "Telegram audio cycle",
+      "PDF untrusted text extraction",
+      "Visual diagram extraction",
+      "Large file fallback notification"
+    ],
+    "ai_provider_adapters": [
+      "OpenAI gpt-transcribe",
+      "Gemini gemini-3.5-transcribe",
+      "OpenAI gpt-5.6-luna",
+      "Gemini gemini-3.7-flash"
+    ]
+  },
+  "transcription_primary": null,
+  "transcription_benchmark": {
+    "status": "PENDING_EXTERNAL_BENCHMARK",
+    "candidates": [
+      "gpt-transcribe",
+      "gemini-3.5-transcribe"
+    ],
+    "reason": "Private human-evaluated dataset of 25-40 clips (45-90 min total) pending execution"
+  },
+  "p2_governance": {
+    "queryReplacement": "P2_PENDING_EXPLICIT_USER_ACCEPTANCE",
+    "code_nodes": "P2_PENDING_EXPLICIT_USER_ACCEPTANCE"
+  },
+  "n8n_audit_findings": {
+    "p0": 0,
+    "p1": 0,
+    "p2": 2,
+    "p3": 3
+  },
+  "deferred_phase_dependencies": {
+    "WF-TG-003_TELEGRAM_SEND_ASSET": "DEFERRED_APPROVED_PHASE_DEPENDENCY",
+    "WF-MEM-002_CHUNK_AND_INDEX": "DEFERRED_APPROVED_F4",
+    "WF-AI-004_EMBED_CHUNKS": "DEFERRED_APPROVED_F4"
+  },
+  "production_safety": {
+    "nas_modified": false,
+    "existing_operational_n8n_modified": false,
+    "supabase_prod_modified": false,
+    "immich_modified": false,
+    "cloudflare_modified": false
+  },
+  "status": "F3 IMPLEMENTED_PENDING_EXTERNAL_BENCHMARK_AND_P2_ACCEPTANCE"
+}

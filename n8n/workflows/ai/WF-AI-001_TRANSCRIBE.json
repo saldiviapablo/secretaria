@@ -16,7 +16,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const i = $input.first();\nconst j = i.json;\nconst p = j.payload || j;\nconst mode = p.mode || 'production';\nconst provider = p.provider || null;\nconst model = p.model || null;\nconst allowed = new Set(['openai:gpt-transcribe', 'gemini:gemini-3.5-transcribe']);\n\nif (mode === 'production' && (!provider || !model)) {\n  throw new Error('TRANSCRIPTION_PRIMARY_NOT_SELECTED: run approved benchmark before production routing');\n}\n\nif (!provider || !model || !allowed.has(`${provider}:${model}`)) {\n  throw new Error('TRANSCRIPTION_PROVIDER_MODEL_NOT_APPROVED: provider and model must match approved registry');\n}\n\nreturn [{\n  json: {\n    ...j,\n    transcription_mode: mode,\n    transcription_provider: provider,\n    transcription_model: model\n  },\n  binary: i.binary\n}];"
+        "jsCode": "const i = $input.first();\nconst j = i.json;\nconst p = j.payload || j;\nconst mode = p.mode || j.transcription_mode || 'production';\nconst provider = p.provider || j.transcription_provider || null;\nconst model = p.model || j.transcription_model || null;\nconst allowed = new Set(['openai:gpt-transcribe', 'gemini:gemini-3.5-transcribe']);\n\nif (mode === 'production' && (!provider || !model)) {\n  throw new Error('TRANSCRIPTION_PRIMARY_NOT_SELECTED: run approved benchmark before production routing (AI-DEC-007)');\n}\n\nif (!provider || !model || !allowed.has(`${provider}:${model}`)) {\n  throw new Error('TRANSCRIPTION_PROVIDER_MODEL_NOT_APPROVED: provider and model must match approved registry');\n}\n\nreturn [{\n  json: {\n    ...j,\n    transcription_mode: mode,\n    transcription_provider: provider,\n    transcription_model: model\n  },\n  binary: i.binary\n}];"
       },
       "id": "ai1-gate",
       "name": "Validate Transcription Contract",
@@ -139,7 +139,7 @@
         "nodeCredentialType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"contents\": [\n    {\n      \"parts\": [\n        {\n          \"text\": \"Generate a verbatim transcription of the provided audio file word for word in the original language. Do not summarize or omit disfluencies.\"\n        },\n        {\n          \"inlineData\": {\n            \"mimeType\": $binary.data.mimeType || \"audio/ogg\",\n            \"data\": $binary.data.data\n          }\n        }\n      ]\n    }\n  ]\n}",
+        "jsonBody": "={\n  \"contents\": [\n    {\n      \"parts\": [\n        {\n          \"text\": \"Generate a verbatim transcript of the audio, word for word. Do not summarize.\"\n        },\n        {\n          \"inlineData\": {\n            \"mimeType\": $binary.data.mimeType || \"audio/ogg\",\n            \"data\": $binary.data.data\n          }\n        }\n      ]\n    }\n  ]\n}",
         "options": {
           "timeout": 120000
         }
@@ -164,7 +164,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const j = $input.first().json;\nconst ctx = $('Validate Transcription Contract').first().json;\nconst text = j.text || j.transcript || j.candidates?.[0]?.content?.parts?.[0]?.text || j.output_text || j.output?.text || null;\nif (!text || !String(text).trim()) {\n  throw new Error('EMPTY_TRANSCRIPTION: provider returned empty transcript');\n}\n\nconst inputTokens = j.usage?.prompt_tokens || j.usageMetadata?.promptTokenCount || null;\nconst outputTokens = j.usage?.completion_tokens || j.usageMetadata?.candidatesTokenCount || null;\nconst reqId = j.id || j.responseId || ('req_trans_' + crypto.randomUUID());\n\nreturn [{\n  json: {\n    ...ctx,\n    transcript_text: String(text).trim(),\n    transcript_language: j.language || 'es-AR',\n    provider_request_id: reqId,\n    input_tokens: inputTokens,\n    output_tokens: outputTokens,\n    audio_seconds: j.duration || 10.0,\n    estimated_cost_usd: ctx.transcription_provider === 'openai' ? 0.001 : 0.0008,\n    raw_provider_metadata: {\n      has_segments: Array.isArray(j.segments),\n      has_words: Array.isArray(j.words)\n    }\n  }\n}];"
+        "jsCode": "const j = $input.first().json;\nconst ctx = $('Validate Transcription Contract').first().json;\nconst text = j.text || j.transcript || j.candidates?.[0]?.content?.parts?.[0]?.text || j.output_text || j.output?.text || null;\nif (!text || !String(text).trim()) {\n  throw new Error('EMPTY_TRANSCRIPTION: provider returned empty transcript');\n}\n\nconst inputTokens = j.usage?.prompt_tokens ?? j.usageMetadata?.promptTokenCount ?? null;\nconst outputTokens = j.usage?.completion_tokens ?? j.usageMetadata?.candidatesTokenCount ?? null;\nconst reqId = j.id || j.responseId || null;\nconst durationMs = ctx.payload?.duration_ms || ctx.duration_ms || null;\nconst audioSec = durationMs ? Number((durationMs / 1000).toFixed(2)) : (j.duration ? Number(j.duration) : null);\n\nreturn [{\n  json: {\n    ...ctx,\n    transcript_text: String(text).trim(),\n    transcript_language: j.language || 'es-AR',\n    provider_request_id: reqId,\n    input_tokens: inputTokens,\n    output_tokens: outputTokens,\n    audio_seconds: audioSec,\n    estimated_cost_usd: null,\n    pricing_version: null,\n    raw_provider_metadata: {\n      has_segments: Array.isArray(j.segments),\n      has_words: Array.isArray(j.words)\n    }\n  }\n}];"
       },
       "id": "ai1-normalize",
       "name": "Normalize Transcription Output",
@@ -201,9 +201,9 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT public.record_media_ai_usage($1::uuid, $2::uuid, $3::uuid, 'transcription', $4, $5, '1.0', $6, $7, $8, $9, NULL, $10, '2026-08', $11::jsonb) AS id;",
+        "query": "SELECT public.record_media_ai_usage($1::uuid, $2::uuid, $3::uuid, 'transcription', $4, $5, '1.0', $6, $7, $8, $9, NULL, $10, $11, $12::jsonb) AS id;",
         "options": {
-          "queryReplacement": "={{ [$json.user_id, $json.ingestion_id, $json.asset_id, $('Normalize Transcription Output').first().json.transcription_provider, $('Normalize Transcription Output').first().json.transcription_model, $('Normalize Transcription Output').first().json.provider_request_id, $('Normalize Transcription Output').first().json.input_tokens, $('Normalize Transcription Output').first().json.output_tokens, $('Normalize Transcription Output').first().json.audio_seconds, $('Normalize Transcription Output').first().json.estimated_cost_usd, JSON.stringify($('Normalize Transcription Output').first().json.raw_provider_metadata)] }}"
+          "queryReplacement": "={{ [$json.user_id, $json.ingestion_id, $json.asset_id, $('Normalize Transcription Output').first().json.transcription_provider, $('Normalize Transcription Output').first().json.transcription_model, $('Normalize Transcription Output').first().json.provider_request_id, $('Normalize Transcription Output').first().json.input_tokens, $('Normalize Transcription Output').first().json.output_tokens, $('Normalize Transcription Output').first().json.audio_seconds, $('Normalize Transcription Output').first().json.estimated_cost_usd, $('Normalize Transcription Output').first().json.pricing_version, JSON.stringify($('Normalize Transcription Output').first().json.raw_provider_metadata)] }}"
         }
       },
       "id": "ai1-record-usage",

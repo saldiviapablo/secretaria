@@ -1,0 +1,20 @@
+F3 DRIVE BINDING & VERSION METADATA EVIDENCE (WF-ING-004 & WF-ING-005)
+Timestamp: 2026-08-31T05:03:21.575573+00:00
+Root Binding: $env.SVIA_DRIVE_ROOT_FOLDER_ID_DEV
+Folder Name: /SECRETARIA_VIRTUAL
+
+Factual Invariants Verified:
+1. Trigger Metadata Preservation:
+   - File metadata (id, name, mimeType, modifiedTime, size) normalized before DB owner query.
+   - Idempotency key: drive:<drive_file_id>:<drive_version>.
+2. Real Version Metadata Required:
+   - Missing version or modifiedTime throws DRIVE_VERSION_METADATA_REQUIRED.
+   - Zero fallback to current timestamp or '1'.
+3. Single V1 Owner Enforcement:
+   - Exactly 1 user in public.user_settings required.
+   - 0 or >1 users throws BLOCKED: AMBIGUOUS_DRIVE_OWNER.
+4. Reconciliation Logic (WF-ING-005):
+   - Queries public.asset_locations to check existing drive:<id>:<ver> keys.
+   - Enqueues solely unindexed or modified files.
+
+Status: PASS

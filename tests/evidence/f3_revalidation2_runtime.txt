@@ -1,0 +1,16 @@
+F3 SECOND REVALIDATION RUNTIME AUDIT EVIDENCE
+Timestamp: 2026-08-31T05:03:21.575573+00:00
+Target: Local DEV Environment (Supabase DEV at 127.0.0.1:54322, n8n 2.35.4 at 127.0.0.1:5678)
+State: F3 IMPLEMENTED_PENDING_EXTERNAL_BENCHMARK_AND_P2_ACCEPTANCE
+
+Factual Corrections (F3-CORR-010 through F3-CORR-017):
+- F3-CORR-010: Evidence contains factual runtime markings without fabricated identifiers.
+- F3-CORR-011: Audio production pipeline enforces AI-DEC-007; transcription_primary remains NULL; no winner chosen.
+- F3-CORR-012: Drive root folder binding unified across Git and Runtime via environment expression $env.SVIA_DRIVE_ROOT_FOLDER_ID_DEV.
+- F3-CORR-013: Fabricated Drive versions (new Date(), '1') eliminated. Real version metadata strictly required (DRIVE_VERSION_METADATA_REQUIRED).
+- F3-CORR-014: Durable completion in DB implemented; public.set_ingestion_media_status called upon subworkflow completion.
+- F3-CORR-015: Fabricated telemetry (fake UUID request IDs, hardcoded 10.0s, static pricing) eliminated; real values or NULL recorded.
+- F3-CORR-016: Gemini 3.5 Transcribe adapter verified against official Google Gemini API specification in verbatim mode.
+- F3-CORR-017: Large Telegram file (>20MB) notifies user via WF-TG-002 without falsely confirming processing.
+
+Status: PASS (Pending External Human Benchmark & P2 User Acceptance)

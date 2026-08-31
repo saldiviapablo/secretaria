@@ -152,7 +152,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const j = $input.first().json;\nconst ctx = $('Validate Visual Contract + Untrusted Boundary').first().json;\nconst rawText = j.choices?.[0]?.message?.content || j.candidates?.[0]?.content?.parts?.[0]?.text || j.output_text || j.text || '';\nif (!String(rawText).trim()) {\n  throw new Error('EMPTY_VISION_ANALYSIS: No content returned by vision provider');\n}\nconst inputTokens = j.usage?.prompt_tokens || j.usageMetadata?.promptTokenCount || null;\nconst outputTokens = j.usage?.completion_tokens || j.usageMetadata?.candidatesTokenCount || null;\nconst reqId = j.id || j.responseId || ('req_vis_' + crypto.randomUUID());\n\nreturn [{\n  json: {\n    ...ctx,\n    visual_text: String(rawText).trim(),\n    provider_request_id: reqId,\n    input_tokens: inputTokens,\n    output_tokens: outputTokens,\n    estimated_cost_usd: ctx.vision_provider === 'openai' ? 0.002 : 0.0005\n  }\n}];"
+        "jsCode": "const j = $input.first().json;\nconst ctx = $('Validate Visual Contract + Untrusted Boundary').first().json;\nconst rawText = j.choices?.[0]?.message?.content || j.candidates?.[0]?.content?.parts?.[0]?.text || j.output_text || j.text || '';\nif (!String(rawText).trim()) {\n  throw new Error('EMPTY_VISION_ANALYSIS: No content returned by vision provider');\n}\nconst inputTokens = j.usage?.prompt_tokens ?? j.usageMetadata?.promptTokenCount ?? null;\nconst outputTokens = j.usage?.completion_tokens ?? j.usageMetadata?.candidatesTokenCount ?? null;\nconst reqId = j.id || j.responseId || null;\n\nreturn [{\n  json: {\n    ...ctx,\n    visual_text: String(rawText).trim(),\n    provider_request_id: reqId,\n    input_tokens: inputTokens,\n    output_tokens: outputTokens,\n    estimated_cost_usd: null,\n    pricing_version: null\n  }\n}];"
       },
       "id": "ai3-normalize",
       "name": "Normalize Vision Output",
@@ -189,9 +189,9 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT public.record_media_ai_usage($1::uuid, $2::uuid, $3::uuid, 'visual_analysis', $4, $5, '1.0', $6, $7, $8, NULL, 1, $9, '2026-08', '{\"untrusted_content\":true}'::jsonb) AS id;",
+        "query": "SELECT public.record_media_ai_usage($1::uuid, $2::uuid, $3::uuid, 'visual_analysis', $4, $5, '1.0', $6, $7, $8, NULL, 1, $9, $10, '{\"untrusted_content\":true}'::jsonb) AS id;",
         "options": {
-          "queryReplacement": "={{ [$json.user_id, $json.ingestion_id, $json.asset_id, $('Normalize Vision Output').first().json.vision_provider, $('Normalize Vision Output').first().json.vision_model, $('Normalize Vision Output').first().json.provider_request_id, $('Normalize Vision Output').first().json.input_tokens, $('Normalize Vision Output').first().json.output_tokens, $('Normalize Vision Output').first().json.estimated_cost_usd] }}"
+          "queryReplacement": "={{ [$json.user_id, $json.ingestion_id, $json.asset_id, $('Normalize Vision Output').first().json.vision_provider, $('Normalize Vision Output').first().json.vision_model, $('Normalize Vision Output').first().json.provider_request_id, $('Normalize Vision Output').first().json.input_tokens, $('Normalize Vision Output').first().json.output_tokens, $('Normalize Vision Output').first().json.estimated_cost_usd, $('Normalize Vision Output').first().json.pricing_version] }}"
         }
       },
       "id": "ai3-record-usage",

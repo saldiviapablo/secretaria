@@ -14,7 +14,7 @@
         "folderToWatch": {
           "__rl": true,
           "mode": "id",
-          "value": "SVIA_DRIVE_ROOT_FOLDER_ID_DEV__REQUIRED_BINDING"
+          "value": "={{ $env.SVIA_DRIVE_ROOT_FOLDER_ID_DEV || 'SVIA_DRIVE_ROOT_FOLDER_ID_DEV' }}"
         },
         "event": "fileCreated",
         "options": {}
@@ -47,7 +47,7 @@
         "folderToWatch": {
           "__rl": true,
           "mode": "id",
-          "value": "SVIA_DRIVE_ROOT_FOLDER_ID_DEV__REQUIRED_BINDING"
+          "value": "={{ $env.SVIA_DRIVE_ROOT_FOLDER_ID_DEV || 'SVIA_DRIVE_ROOT_FOLDER_ID_DEV' }}"
         },
         "event": "fileUpdated",
         "options": {}
@@ -69,7 +69,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const j = $input.first().json;\nconst id = j.id || j.fileId;\nconst modified = j.modifiedTime || j.modified_time || j.version || new Date().toISOString();\nif (!id) throw new Error('DRIVE_EVENT_REQUIRES_FILE_ID');\n\nconst mime = String(j.mimeType || '').toLowerCase();\nconst mediaKind = mime.startsWith('audio/') ? 'audio' : (mime.startsWith('image/') ? 'image' : 'document');\n\nreturn [{\n  json: {\n    drive_file_id: id,\n    drive_version: String(modified),\n    modifiedTime: j.modifiedTime || modified,\n    original_filename: j.name || null,\n    mime_type: j.mimeType || null,\n    file_size: j.size ? Number(j.size) : null,\n    media_kind: mediaKind\n  }\n}];"
+        "jsCode": "const j = $input.first().json;\nconst id = j.id || j.fileId;\nconst modified = j.modifiedTime || j.modified_time || j.version || j.drive_version;\nif (!id) throw new Error('DRIVE_EVENT_REQUIRES_FILE_ID');\nif (!modified) throw new Error('DRIVE_VERSION_METADATA_REQUIRED: Real drive version or modifiedTime is required');\n\nconst mime = String(j.mimeType || '').toLowerCase();\nconst mediaKind = mime.startsWith('audio/') ? 'audio' : (mime.startsWith('image/') ? 'image' : 'document');\n\nreturn [{\n  json: {\n    drive_file_id: id,\n    drive_version: String(modified),\n    modifiedTime: j.modifiedTime || modified,\n    original_filename: j.name || null,\n    mime_type: j.mimeType || null,\n    file_size: j.size ? Number(j.size) : null,\n    media_kind: mediaKind\n  }\n}];"
       },
       "id": "ing4-normalize",
       "name": "Normalize Drive Metadata",
@@ -103,7 +103,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const ownerRows = $input.all();\nif (!ownerRows || ownerRows.length === 0 || !ownerRows[0].json?.user_id) {\n  throw new Error('BLOCKED: NO_CONFIGURED_DRIVE_OWNER (no user found in user_settings)');\n}\nif (ownerRows.length > 1) {\n  throw new Error('BLOCKED: AMBIGUOUS_DRIVE_OWNER (expected exactly 1 configured owner in V1)');\n}\nconst userId = ownerRows[0].json.user_id;\nconst meta = $('Normalize Drive Metadata').first().json;\n\nreturn [{\n  json: {\n    contract_version: '1.0',\n    correlation_id: 'corr_drive_' + crypto.randomUUID(),\n    user_id: userId,\n    source_channel: 'google_drive',\n    captured_at: meta.modifiedTime || new Date().toISOString(),\n    timezone: 'America/Argentina/Buenos_Aires',\n    locale: 'es-AR',\n    idempotency_key: `drive:${meta.drive_file_id}:${meta.drive_version}`,\n    payload: {\n      ...meta\n    }\n  }\n}];"
+        "jsCode": "const ownerRows = $input.all();\nif (!ownerRows || ownerRows.length === 0 || !ownerRows[0].json?.user_id) {\n  throw new Error('BLOCKED: NO_CONFIGURED_DRIVE_OWNER (no user found in user_settings)');\n}\nif (ownerRows.length > 1) {\n  throw new Error('BLOCKED: AMBIGUOUS_DRIVE_OWNER (expected exactly 1 configured owner in V1)');\n}\nconst userId = ownerRows[0].json.user_id;\nconst meta = $('Normalize Drive Metadata').first().json;\n\nreturn [{\n  json: {\n    contract_version: '1.0',\n    correlation_id: 'corr_drive_' + crypto.randomUUID(),\n    user_id: userId,\n    source_channel: 'google_drive',\n    captured_at: meta.modifiedTime,\n    timezone: 'America/Argentina/Buenos_Aires',\n    locale: 'es-AR',\n    idempotency_key: `drive:${meta.drive_file_id}:${meta.drive_version}`,\n    payload: {\n      ...meta\n    }\n  }\n}];"
       },
       "id": "ing4-merge",
       "name": "Merge Context and Enforce Single Owner",

@@ -1,0 +1,18 @@
+F3 GEMINI 3.5 TRANSCRIBE ADAPTER CONTRACT & SMOKE EVIDENCE (WF-AI-001)
+Timestamp: 2026-08-31T05:03:21.575573+00:00
+Workflow: WF-AI-001_TRANSCRIBE
+Candidate: gemini:gemini-3.5-transcribe
+Endpoint: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-transcribe:generateContent
+Credential: SVIA_GEMINI_DEV_HEADER
+
+Verification:
+- Inline audio base64 payload with verbatim transcription instruction.
+- Real Telemetry Contract:
+  * provider_request_id: response ID or NULL (no fake UUIDs).
+  * audio_seconds: duration_ms / 1000 from payload or NULL.
+  * estimated_cost_usd: NULL.
+  * pricing_version: NULL.
+- Source Text Variant: Persisted via public.create_source_text_variant with provider='google', model='gemini-3.5-transcribe'.
+- Production Routing Guard: Fails with TRANSCRIPTION_PRIMARY_NOT_SELECTED if called in production without explicit provider/model.
+
+Status: PASS (Adapter Contract Verified; Human Benchmark Pending)

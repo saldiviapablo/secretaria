@@ -1,0 +1,12 @@
+F3 LARGE FILE FALLBACK & NOTIFICATION EVIDENCE (WF-ING-003 / WF-TG-002)
+Timestamp: 2026-08-31T05:03:21.575573+00:00
+Workflow: WF-ING-003_PROCESS_MEDIA -> WF-TG-002_TELEGRAM_SEND_MESSAGE
+Threshold: 20 * 1024 * 1024 bytes (20 MB Telegram Bot API download limit)
+
+Verification:
+1. Detection: Files > 20 MB set media_gate = 'awaiting_external_file'.
+2. Status: public.set_ingestion_media_status sets status = 'awaiting_external_file'.
+3. Notification: Calls WF-TG-002 to send informative Telegram message to upload original to Drive.
+4. Safety: No false completion confirmation; status remains 'awaiting_external_file'.
+
+Status: PASS

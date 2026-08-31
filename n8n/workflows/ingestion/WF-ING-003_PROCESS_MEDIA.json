@@ -135,6 +135,20 @@
     },
     {
       "parameters": {
+        "workflowId": "WF-TG-002",
+        "options": {}
+      },
+      "id": "ing3-notify-large",
+      "name": "Notify Telegram Large File",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        980,
+        100
+      ]
+    },
+    {
+      "parameters": {
         "resource": "file",
         "operation": "get",
         "fileId": "={{ $('Validate / Gate Media').first().json.payload.telegram_file_id || $('Validate / Gate Media').first().json.payload.file_id || $('Validate / Gate Media').first().json.payload.media?.file_id }}",
@@ -147,7 +161,7 @@
       "typeVersion": 1.2,
       "position": [
         980,
-        220
+        250
       ],
       "credentials": {
         "telegramApi": {
@@ -205,7 +219,7 @@
         "folderId": {
           "__rl": true,
           "mode": "id",
-          "value": "SVIA_DRIVE_ROOT_FOLDER_ID_DEV__REQUIRED_BINDING"
+          "value": "={{ $env.SVIA_DRIVE_ROOT_FOLDER_ID_DEV || 'SVIA_DRIVE_ROOT_FOLDER_ID_DEV' }}"
         },
         "options": {}
       },
@@ -229,7 +243,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const item = $input.first();\nconst j = item.json;\nconst p = j.payload || {};\nconst hash = j.sha256 || j.data || j.hash;\nif (!hash || !/^[0-9a-f]{64}$/i.test(hash)) throw new Error('SHA256_REQUIRED');\nconst source = j.source_channel || 'telegram';\nlet externalId;\nif (source === 'telegram') {\n  externalId = `telegram:${p.telegram_chat_id || j.telegram_chat_id}:${p.telegram_message_id || j.message_id}:${p.telegram_file_id || p.file_id || p.media?.file_id}`;\n} else if (source === 'google_drive') {\n  const fileId = p.drive_file_id || p.id;\n  const ver = p.drive_version || p.version || p.modifiedTime;\n  if (!fileId || !ver) throw new Error('DRIVE_VERSIONED_EXTERNAL_ID_REQUIRED');\n  externalId = `drive:${fileId}:${ver}`;\n} else throw new Error('UNSUPPORTED_MEDIA_SOURCE');\nreturn [{json:{...j,sha256:String(hash).toLowerCase(),external_id:externalId},binary:item.binary}];"
+        "jsCode": "const item = $input.first();\nconst j = item.json;\nconst p = j.payload || {};\nconst hash = j.sha256 || j.data || j.hash;\nif (!hash || !/^[0-9a-f]{64}$/i.test(hash)) throw new Error('SHA256_REQUIRED');\nconst source = j.source_channel || 'telegram';\nlet externalId;\nif (source === 'telegram') {\n  externalId = `telegram:${p.telegram_chat_id || j.telegram_chat_id}:${p.telegram_message_id || j.message_id}:${p.telegram_file_id || p.file_id || p.media?.file_id}`;\n} else if (source === 'google_drive') {\n  const fileId = p.drive_file_id || p.id;\n  const ver = p.drive_version || p.version || p.modifiedTime;\n  if (!fileId || !ver) throw new Error('DRIVE_VERSIONED_EXTERNAL_ID_REQUIRED');\n  externalId = `drive:${fileId}:${ver}`;\n} else throw new Error('UNSUPPORTED_MEDIA_SOURCE');\nreturn [{json:{...j,sha256:String(hash).toLowerCase(),external_id:externalId,asset_id:j.asset_id || null},binary:item.binary}];"
       },
       "id": "ing3-prepare",
       "name": "Prepare Asset Identity",
@@ -262,6 +276,19 @@
           "name": "Supabase DEV Database"
         }
       }
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first();\nconst j = item.json;\nconst upsertRaw = j.res;\nconst upsert = typeof upsertRaw === 'string' ? JSON.parse(upsertRaw) : upsertRaw;\nconst prev = $('Prepare Asset Identity').first().json;\n\nreturn [{\n  json: {\n    ...prev,\n    asset_id: upsert.asset_id,\n    location_id: upsert.location_id\n  },\n  binary: item.binary\n}];"
+      },
+      "id": "ing3-attach-asset-id",
+      "name": "Attach Asset ID to Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1980,
+        300
+      ]
     },
     {
       "parameters": {
@@ -342,7 +369,7 @@
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.2,
       "position": [
-        2080,
+        2120,
         300
       ]
     },
@@ -363,7 +390,7 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
-        2300,
+        2340,
         180
       ]
     },
@@ -384,7 +411,7 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
-        2300,
+        2340,
         300
       ]
     },
@@ -405,9 +432,32 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
-        2300,
+        2340,
         420
       ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT public.set_ingestion_media_status($1::uuid,$2::uuid,'completed',NULL,NULL) AS res;",
+        "options": {
+          "queryReplacement": "={{ [$json.user_id || $('Validate / Gate Media').first().json.user_id, $json.ingestion_id || $('Validate / Gate Media').first().json.ingestion_id] }}"
+        }
+      },
+      "id": "ing3-status-completed",
+      "name": "Persist Completed Media Status",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        2580,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "supabase_dev_connection",
+          "name": "Supabase DEV Database"
+        }
+      }
     }
   ],
   "connections": {
@@ -446,7 +496,13 @@
     },
     "Source Router": {
       "main": [
-        [],
+        [
+          {
+            "node": "Notify Telegram Large File",
+            "type": "main",
+            "index": 0
+          }
+        ],
         [
           {
             "node": "Telegram Get File",
@@ -522,6 +578,17 @@
       "main": [
         [
           {
+            "node": "Attach Asset ID to Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Attach Asset ID to Payload": {
+      "main": [
+        [
+          {
             "node": "Media Type Router",
             "type": "main",
             "index": 0
@@ -553,10 +620,44 @@
           }
         ]
       ]
+    },
+    "WF-AI-001 TRANSCRIBE": {
+      "main": [
+        [
+          {
+            "node": "Persist Completed Media Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WF-AI-003 ANALYZE_VISUAL": {
+      "main": [
+        [
+          {
+            "node": "Persist Completed Media Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WF-ING-006 DOCUMENT_EXTRACT": {
+      "main": [
+        [
+          {
+            "node": "Persist Completed Media Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "errorWorkflow": "WF-SYS-001"
   },
   "id": "WF-ING-003"
 }

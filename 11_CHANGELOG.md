@@ -1697,3 +1697,32 @@ Producción/NAS/EXISTING_OPERATIONAL_N8N/Supabase PROD/Immich/Cloudflare: NO MOD
 - **Producción:** NAS, Supabase PROD, Immich y Cloudflare permanecen totalmente intactos y fuera de alcance.
 - **Fase F4 (Memoria Semántica):** NO INICIADA.
 
+---
+
+## CHG-2026-08-31-023 — F3 Audio + Drive — Segunda Revalidación Correctiva, Alineación de Entorno y Telemetría Factual
+
+**Tipo:** FIXED / RUNTIME / REVALIDATION / OPERATIONS
+**Estado:** F3 IMPLEMENTED_PENDING_EXTERNAL_BENCHMARK_AND_P2_ACCEPTANCE
+**Motivo:** Segunda revalidación correctiva exhaustiva tras la auditoría del commit `800da82`. Se aplicaron las siguientes correcciones definitivas: (1) eliminación de sentinels estáticos de Drive y unificación de la raíz de Drive mediante la expresión de entorno `$env.SVIA_DRIVE_ROOT_FOLDER_ID_DEV` garantizando sincronización exacta `Runtime == Git`; (2) eliminación estricta de versiones artificiales (`new Date().toISOString()`, `'1'`), exigiendo metadatos reales del proveedor (`DRIVE_VERSION_METADATA_REQUIRED`); (3) persistencia durable del estado `completed` en `public.ingestions` mediante el nodo `Persist Completed Media Status` en `WF-ING-003`; (4) eliminación total de telemetría inventada (`req_trans_<uuid>`, `req_vis_<uuid>`, duración artificial de 10.0s, pricing sintético fijo) en `WF-AI-001` y `WF-AI-003`, registrando únicamente valores reales o `NULL`; (5) implementación de la notificación informativa en Telegram (`WF-TG-002`) para archivos mayores a 20 MB sin falsas confirmaciones de procesamiento; (6) mantenimiento del bloqueo de enrutamiento en producción cuando `transcription_primary = null` conforme a `AI-DEC-007`; y (7) generación de evidencia factual estructurada con categorización estricta.
+**Solicitado por:** Antigravity / Prompt Final Segunda Revalidación Correctiva F3
+**Documentos afectados:** `11_CHANGELOG.md`, `n8n/workflows/ai/WF-AI-001_TRANSCRIBE.json`, `n8n/workflows/ai/WF-AI-003_ANALYZE_VISUAL.json`, `n8n/workflows/ingestion/WF-ING-003_PROCESS_MEDIA.json`, `n8n/workflows/ingestion/WF-ING-004_DRIVE_WATCH.json`, `n8n/workflows/ingestion/WF-ING-005_DRIVE_RECONCILIATION.json`, `tests/security/test_f3_package_config.py`, `tests/integration/test_f3_media_drive.js`, `tests/evidence/f3_revalidation2_*`, `tests/evidence/evidence_f3_revalidation2.json`
+
+### Factual Runtime Invariants & Verification:
+1. **F3-CORR-010 (Evidencia Factual):** Toda la evidencia runtime generada registra identificadores reales o estados `NOT_EXECUTED` / `BLOCKED_EXTERNAL_PRECONDITION`, sin historias narrativas simuladas.
+2. **F3-CORR-011 (Enrutamiento de Audio sin Ganador):** `WF-AI-001` exige explícitamente proveedor y modelo en modo benchmark y bloquea la ejecución de producción mientras `transcription_primary = null`.
+3. **F3-CORR-012 (Drive Root Binding):** `WF-ING-003`, `WF-ING-004` y `WF-ING-005` utilizan `$env.SVIA_DRIVE_ROOT_FOLDER_ID_DEV` sin versionar credenciales ni IDs en Git (`Runtime == Git`).
+4. **F3-CORR-013 (Metadatos de Versión Reales):** La ausencia de versión o fecha de modificación en Google Drive lanza error `DRIVE_VERSION_METADATA_REQUIRED` impidiendo la creación de claves de idempotencia falsas.
+5. **F3-CORR-014 (Completitud Durable en DB):** La finalización exitosa de los subworkflows de extracción y transcripción persiste `status = 'completed'` y `completed_at` en `public.ingestions`.
+6. **F3-CORR-015 (Telemetría sin Valores Fabricados):** Nulos explícitos en `provider_request_id`, `estimated_cost_usd` y `pricing_version` cuando no son provistos por la API o el motor de costos; duración calculada del payload real.
+7. **F3-CORR-016 (Gemini 3.5 Transcribe):** Adaptador validado contra la especificación oficial de Google Gemini API en modo verbatim.
+8. **F3-CORR-017 (Notificación de Archivo Grande):** Mensaje Telegram reactivo informativo despachado al usuario vía `WF-TG-002` ante archivos >20MB sin alterar el estado `awaiting_external_file`.
+
+### Gobernanza y Estado del Sistema:
+- **Estado de Fase:** `F3 IMPLEMENTED_PENDING_EXTERNAL_BENCHMARK_AND_P2_ACCEPTANCE`
+- **Workflows en Runtime:** Exactamente 23 workflows activos en n8n 2.35.4 (6 F3, 0 F4+).
+- **Tablas en DB:** Exactamente 25 tablas públicas V1 en Supabase DEV (migración 13 head).
+- **Benchmark Transcripción:** `transcription_primary = null` (Pendiente de dataset privado con evaluación humana según `AI-DEC-007`).
+- **Gobernanza P2:** `queryReplacement` y `Code Nodes` en `P2_PENDING_EXPLICIT_USER_ACCEPTANCE`.
+- **Producción:** NAS UGREEN, Supabase PROD, Immich y Cloudflare permanecen totalmente intactos y fuera de alcance.
+- **Fase F4 (Memoria Semántica):** NO INICIADA.
+

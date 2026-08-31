@@ -67,7 +67,7 @@
           "folderId": {
             "__rl": true,
             "mode": "id",
-            "value": "SVIA_DRIVE_ROOT_FOLDER_ID_DEV__REQUIRED_BINDING"
+            "value": "={{ $env.SVIA_DRIVE_ROOT_FOLDER_ID_DEV || 'SVIA_DRIVE_ROOT_FOLDER_ID_DEV' }}"
           },
           "whatToSearch": "files"
         },
@@ -124,7 +124,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const owner = $('Validate Single V1 Owner').first().json.user_id;\nconst files = $('List Root Files').all().map(i => i.json);\nconst existingLocRows = $input.all().map(i => i.json);\nconst knownKeys = new Set(existingLocRows.map(r => r.external_id));\n\nconst candidates = [];\nfor (const f of files) {\n  if (!f.id) continue;\n  const ver = f.modifiedTime || f.version || '1';\n  const expectedKey = `drive:${f.id}:${ver}`;\n  if (!knownKeys.has(expectedKey)) {\n    const mime = String(f.mimeType || '').toLowerCase();\n    const mediaKind = mime.startsWith('audio/') ? 'audio' : (mime.startsWith('image/') ? 'image' : 'document');\n    candidates.push({\n      json: {\n        contract_version: '1.0',\n        correlation_id: 'corr_recon_' + crypto.randomUUID(),\n        user_id: owner,\n        source_channel: 'google_drive',\n        captured_at: f.modifiedTime || new Date().toISOString(),\n        idempotency_key: expectedKey,\n        payload: {\n          drive_file_id: f.id,\n          drive_version: String(ver),\n          modifiedTime: f.modifiedTime || null,\n          original_filename: f.name || null,\n          mime_type: f.mimeType || null,\n          file_size: f.size ? Number(f.size) : null,\n          media_kind: mediaKind,\n          reconciled: true\n        }\n      }\n    });\n  }\n}\n\nreturn candidates;"
+        "jsCode": "const owner = $('Validate Single V1 Owner').first().json.user_id;\nconst files = $('List Root Files').all().map(i => i.json);\nconst existingLocRows = $input.all().map(i => i.json);\nconst knownKeys = new Set(existingLocRows.map(r => r.external_id));\n\nconst candidates = [];\nfor (const f of files) {\n  if (!f.id) continue;\n  const ver = f.modifiedTime || f.version || f.drive_version;\n  if (!ver) {\n    throw new Error(`DRIVE_VERSION_METADATA_REQUIRED: Missing real version metadata for file ${f.id}`);\n  }\n  const expectedKey = `drive:${f.id}:${ver}`;\n  if (!knownKeys.has(expectedKey)) {\n    const mime = String(f.mimeType || '').toLowerCase();\n    const mediaKind = mime.startsWith('audio/') ? 'audio' : (mime.startsWith('image/') ? 'image' : 'document');\n    candidates.push({\n      json: {\n        contract_version: '1.0',\n        correlation_id: 'corr_recon_' + crypto.randomUUID(),\n        user_id: owner,\n        source_channel: 'google_drive',\n        captured_at: f.modifiedTime,\n        idempotency_key: expectedKey,\n        payload: {\n          drive_file_id: f.id,\n          drive_version: String(ver),\n          modifiedTime: f.modifiedTime || null,\n          original_filename: f.name || null,\n          mime_type: f.mimeType || null,\n          file_size: f.size ? Number(f.size) : null,\n          media_kind: mediaKind,\n          reconciled: true\n        }\n      }\n    });\n  }\n}\n\nreturn candidates;"
       },
       "id": "ing5-reconcile-filter",
       "name": "Filter Unindexed or Modified Files",

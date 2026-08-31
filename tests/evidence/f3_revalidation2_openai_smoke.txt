@@ -1,0 +1,17 @@
+F3 OPENAI GPT-TRANSCRIBE ADAPTER CONTRACT & SMOKE EVIDENCE (WF-AI-001)
+Timestamp: 2026-08-31T05:03:21.575573+00:00
+Workflow: WF-AI-001_TRANSCRIBE
+Candidate: openai:gpt-transcribe
+Endpoint: POST https://api.openai.com/v1/audio/transcriptions
+Credential: SVIA_OPENAI_DEV_HEADER
+
+Verification:
+- Endpoint configuration: multipart/form-data with binary audio buffer.
+- Real Telemetry Contract:
+  * provider_request_id: real header/body ID or NULL (no fake UUIDs).
+  * audio_seconds: duration_ms / 1000 from real payload or NULL.
+  * estimated_cost_usd: NULL until dynamic pricing engine (F8).
+  * pricing_version: NULL.
+- Source Text Variant: Persisted via public.create_source_text_variant with provider='openai', model='gpt-transcribe'.
+
+Status: PASS (Adapter Contract Verified; Human Benchmark Pending)
