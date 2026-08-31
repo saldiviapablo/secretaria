@@ -1,0 +1,22 @@
+N8N 2.33.4 SECURITY PATCH RUNTIME VERIFICATION EVIDENCE
+Timestamp: 2026-08-31T02:34:14.704141+00:00
+Advisory Addressed: GHSA-c9c6-rq46-h25v (https://github.com/n8n-io/n8n/security/advisories/GHSA-c9c6-rq46-h25v)
+Release: https://github.com/n8n-io/n8n/releases/tag/n8n@2.33.4
+
+1. Version Verification:
+- Command: docker exec secretaria-n8n-dev n8n --version
+- Output Version: 2.33.4
+- Expected: 2.33.4
+- Status: PASS
+
+2. Container Services Status:
+NAME                          IMAGE                            COMMAND                  SERVICE        CREATED              STATUS                 PORTS
+secretaria-n8n-dev            docker.n8n.io/n8nio/n8n:2.33.4   "tini -- /docker-entâ€¦"   n8n            About a minute ago   Up About a minute      127.0.0.1:5678->5678/tcp
+secretaria-n8n-postgres-dev   postgres:16-alpine               "docker-entrypoint.sâ€¦"   n8n-postgres   8 hours ago          Up 8 hours (healthy)   5432/tcp
+
+3. Persistence & Rehearsal Restart:
+- Controlled restart without volume pruning: PASS
+- Internal PostgreSQL connectivity: PASS
+- Volume data intact (/home/node/.n8n and /var/lib/postgresql/data): PASS
+
+Result: RUNTIME VERIFICATION PASS

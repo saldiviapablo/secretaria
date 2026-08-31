@@ -17,9 +17,8 @@ services:
       timeout: 5s
       retries: 5
     # No port mapping: Postgres is strictly isolated within the internal Docker network.
-
   n8n:
-    image: ${N8N_IMAGE:-docker.n8n.io/n8nio/n8n:2.33.3}
+    image: ${N8N_IMAGE:-docker.n8n.io/n8nio/n8n:2.33.4}
     container_name: secretaria-n8n-dev
     restart: unless-stopped
     ports:
@@ -52,7 +51,6 @@ services:
         condition: service_healthy
     security_opt:
       - no-new-privileges:true
-
 networks:
   n8n_internal_network:
     driver: bridge

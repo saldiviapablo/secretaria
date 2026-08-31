@@ -29,7 +29,7 @@ class TestOperationsF0(unittest.TestCase):
 
         with open(compose_path, 'r', encoding='utf-8') as f:
             content = f.read()
-            self.assertIn('docker.n8n.io/n8nio/n8n:2.33.3', content)
+            self.assertIn('docker.n8n.io/n8nio/n8n:2.33.4', content)
             self.assertIn('postgres:16-alpine', content)
             self.assertIn('EXECUTIONS_DATA_PRUNE', content)
             self.assertIn('N8N_DEFAULT_BINARY_DATA_MODE', content)

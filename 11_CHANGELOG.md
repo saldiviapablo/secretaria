@@ -1342,3 +1342,69 @@ como constitución documental del paquete definitivo para Antigravity/Codex.
 5. **Estado:**
    - Fase F2 confirmada y certificada (`F2 DONE`). Fase F3 (`Audio + Drive`) NO INICIADA.
 
+---
+## CHG-2026-08-30-014 — Revisión Controlada de Seguridad: n8n `2.33.3` → `2.33.4`
+
+**Tipo:** SECURITY / OPERATIONS
+**Estado:** APPROVED_PENDING_RUNTIME_CERTIFICATION
+**Motivo:** Después del cierre F2 se verificó el advisory oficial `GHSA-c9c6-rq46-h25v`, que afecta n8n `< 2.33.4` y está corregido en `2.33.4`. El proyecto usa Code Nodes, por lo que mantener `2.33.3` no se acepta como simple hallazgo informativo.
+**Decisión actual supersedida:** `DEP-DEC-002` fijaba `2.33.3` como pin inicial salvo nueva decisión después de tests.
+**Nueva decisión aprobada:** adoptar `2.33.4` como pin vigente únicamente después de backup, rehearsal DEV, regresión F0/F1/F2, `n8n audit`, security gate y evidence.
+**Documentos/artefactos afectados:** `10_DEPLOYMENT.md`, `infra/docker/compose.dev.yml`, `infra/docker/.env.example`, `infra/docker/README.md`, tests/evidence del security patch.
+**Compatibilidad:** patch mínimo dentro de la rama `2.33`; no autoriza upgrade automático ni salto a `2.34+`.
+**Migraciones de producto:** ninguna.
+**Workflows:** ninguno agregado/modificado por este cambio. El total debe permanecer en 17 (F0+F1+F2).
+**Fases:** F2 permanece funcionalmente cerrada; F3 continúa `NO INICIADA` hasta certificar este cambio.
+**Producción:** NAS, `EXISTING_OPERATIONAL_N8N` y Supabase PROD permanecen fuera de alcance.
+
+### Gates obligatorios antes de cerrar esta revisión
+- backup/restore point del PostgreSQL interno DEV de n8n + key/config;
+- export de workflows;
+- runtime real `n8n --version = 2.33.4`;
+- exactamente 17 workflows importados;
+- regresión F0/F1/F2;
+- `SEC-TEST-026` / `n8n audit`;
+- restart/recovery;
+- secret scan;
+- 0 P0 y 0 P1;
+- P2 tratado conforme a `09_TEST_PLAN.md`;
+- evidence + commit + push reales.
+
+Este CHG no declara el parche certificado hasta que exista evidencia runtime.
+
+---
+
+## CHG-2026-08-30-015 — Certificación y Cierre de Revisión de Seguridad: n8n `2.33.4`
+
+**Tipo:** SECURITY / CERTIFICATION / OPERATIONS
+**Estado:** SECURITY_PATCH_DONE
+**Motivo:** Certificación runtime exitosa del micro-parche de seguridad n8n `2.33.4` (advisory oficial `GHSA-c9c6-rq46-h25v`), validación de backup pre-upgrade, verificación de 17 workflows intactos, rehearsal de reinicio con persistencia de datos y aprobación total de suites de regresión F0/F1/F2.
+**Solicitado por:** Antigravity / Prompt Final de Revisión de Seguridad n8n 2.33.4
+**Documentos afectados:** `11_CHANGELOG.md`, `10_DEPLOYMENT.md`, `infra/docker/`, `tests/evidence/evidence_security_patch_n8n_2_33_4.json`, `tests/evidence/security_patch_*`
+
+### Verificaciones y Resultados del Security Patch:
+1. **Backup Pre-Upgrade Verificado:**
+   - Volcado completo de la base PostgreSQL interna de n8n exportado y verificado (SHA256: `cd3e1d1a...`, tamaño: 563 KB).
+   - Exportación íntegra de los 17 workflows activos (SHA256: `dfe1e363...`, tamaño: 93 KB).
+   - Resguardo seguro de configuración y `N8N_ENCRYPTION_KEY` sin exposición de secretos.
+2. **Runtime y Versión Certificada:**
+   - Imagen actualizada: `docker.n8n.io/n8nio/n8n:2.33.4`.
+   - Ejecución de `n8n --version` devuelve exactamente `2.33.4`.
+   - Rehearsal de reinicio de contenedor completado con éxito, manteniendo volúmenes y persistencia intactos.
+3. **Integridad de Workflows:**
+   - Exactamente 17 workflows verificados en runtime (3 F0 + 10 F1 + 4 F2; 0 F3+).
+   - Sin modificaciones de contratos JSON ni afectación de nodos de negocio.
+4. **Auditoría de Seguridad y n8n Audit (`SEC-TEST-026`):**
+   - `n8n audit` ejecutado sobre la instancia `2.33.4`: 0 vulnerabilidades críticas/P0/P1.
+   - P2 (Code nodes y `queryReplacement`) mitigados y controlados conforme a política.
+   - Secret scan ejecutado con 0 secretos detectados.
+5. **Regresión Completa:**
+   - 52/52 tests unitarios en Python aprobados (`PASS`).
+   - Suite de integración y resiliencia de recordatorios F2 (`test_f2_reminders.js`): 9/9 escenarios `PASS`.
+   - Suite end-to-end F1 (`test_f1_e2e.js`): 100% `PASS`.
+6. **Producción Preservada:**
+   - NAS UGREEN (`EXISTING_OPERATIONAL_N8N`), Immich, Cloudflare y Supabase PROD permanecen totalmente inalterados y fuera de alcance.
+7. **Estado:**
+   - Micro-parche n8n `2.33.4` certificado y cerrado (`DONE`).
+   - F0 = DONE, F1 = DONE, F2 = DONE. Fase F3 (`Audio + Drive`) NO INICIADA.
+

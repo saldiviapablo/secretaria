@@ -1,0 +1,24 @@
+PRE-UPGRADE BACKUP EVIDENCE — n8n 2.33.3 -> 2.33.4
+Timestamp: 2026-08-31T02:30:46.703075+00:00
+Target Services:
+- n8n container: secretaria-n8n-dev
+- n8n Postgres container: secretaria-n8n-postgres-dev
+
+1. Internal PostgreSQL DB Backup:
+- Status: SUCCESS (pg_dump executed without errors)
+- Backup Path (external to repo): <APP_DATA_DIR>/backups/pre_upgrade_2_33_4/n8n_internal_db_pre_2_33_4.sql
+- File Size: 563012 bytes
+- SHA256 Checksum: cd3e1d1a9db5e544a0024c6a10572c24063d44021e013f1b9a3f5207321280f0
+
+2. Workflows State Export:
+- Status: SUCCESS (n8n export:workflow --all)
+- Backup Path (external to repo): <APP_DATA_DIR>/backups/pre_upgrade_2_33_4/workflows/all_workflows.json
+- File Size: 93497 bytes
+- SHA256 Checksum: dfe1e3639d303bde496c4c613ed535d72646f5c5c06445d8c9618588354f5a99
+- Workflows Exported: 17 workflows (F0: 3, F1: 10, F2: 4)
+
+3. Configuration & Encryption Key Safety:
+- N8N_ENCRYPTION_KEY preserved in runtime environment configuration.
+- Zero secrets, plain keys, or credentials stored inside repository.
+
+Result: PRE-UPGRADE BACKUP VERIFIED (PASS)

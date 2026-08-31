@@ -121,6 +121,56 @@ Proceso:
 → nueva versión pinneada
 ```
 
+## 1.2 Supersesión de seguridad aprobada — 2026-08-30
+
+El pin inicial `2.33.3` se conserva como hecho histórico del snapshot del 2026-08-29.
+
+Una revisión de seguridad posterior identificó el advisory oficial:
+
+```text
+GHSA-c9c6-rq46-h25v
+Sandbox Escape in JavaScript Code Node via Prototype Pollution
+```
+
+Rango relevante:
+
+```text
+2.x afectado: < 2.33.4
+patch:        >= 2.33.4
+```
+
+Decisión controlada aprobada:
+
+```text
+2.33.3
+→ 2.33.4
+```
+
+La actualización es un patch mínimo dentro de la misma rama `2.33` y no autoriza saltos automáticos a `2.34+`.
+
+Antes de considerar vigente el nuevo pin en el proyecto:
+
+```text
+backup n8n DB + key/config
+→ export workflows
+→ DEV rehearsal 2.33.4
+→ importar los mismos workflows
+→ regresión F0/F1/F2
+→ security suite
+→ n8n audit
+→ evidence
+→ commit/push
+```
+
+Si cualquiera de esos gates falla, el cambio queda `NOT DONE`/`BLOCKED` y no se inicia F3.
+
+Referencias oficiales verificadas al aprobar la revisión:
+
+```text
+https://github.com/n8n-io/n8n/security/advisories/GHSA-c9c6-rq46-h25v
+https://github.com/n8n-io/n8n/releases/tag/n8n@2.33.4
+```
+
 ---
 
 # 2. PostgreSQL interno de n8n
@@ -455,7 +505,7 @@ Contenido sin valores secretos:
 
 ```dotenv
 # Images
-N8N_IMAGE=docker.n8n.io/n8nio/n8n:2.33.3
+N8N_IMAGE=docker.n8n.io/n8nio/n8n:2.33.4
 POSTGRES_IMAGE=postgres:16-alpine
 CLOUDFLARED_IMAGE=cloudflare/cloudflared:<PINNED_VERSION_OR_DIGEST>
 
@@ -495,7 +545,7 @@ Esas credenciales se cargan dentro del credential store cifrado de n8n.
 
 # 10. Hardening de variables n8n
 
-Además de la plantilla base, Antigravity deberá revisar contra **la documentación exacta de n8n 2.33.3** qué variables de hardening están disponibles.
+Además de la plantilla base, Antigravity deberá revisar contra **la documentación exacta de n8n 2.33.4** qué variables de hardening están disponibles.
 
 Se preferirá activar, cuando sean compatibles:
 
@@ -509,7 +559,7 @@ Se preferirá activar, cuando sean compatibles:
 
 ## Regla
 
-No se copiarán variables de una guía vieja sin comprobar que existan en 2.33.3.
+No se copiarán variables de una guía vieja sin comprobar que existan en 2.33.4.
 
 Cada variable adicional deberá quedar documentada en:
 
@@ -1548,7 +1598,7 @@ Ejemplo:
 {
   "release": "v1.0.0-rc1",
   "git_commit": "abc123",
-  "n8n_image": "docker.n8n.io/n8nio/n8n:2.33.3",
+  "n8n_image": "docker.n8n.io/n8nio/n8n:2.33.4",
   "postgres_image": "postgres:16-alpine@sha256:...",
   "supabase_migration_head": "20260829...",
   "model_registry_version": "2026-08-29",
@@ -2401,7 +2451,7 @@ No se deben crear secrets dentro del repo.
 n8n se desplegará self-hosted en el NAS mediante Docker Compose.
 
 ### DEP-DEC-002
-El pin inicial de n8n será `2.33.3`, salvo nueva decisión después de tests.
+El pin inicial fue `2.33.3`. Tras revisión controlada de seguridad y aprobación explícita, el pin vigente queda en `2.33.4`. Esta supersesión mínima de patch version se valida en DEV con backup, rehearsal, suites afectadas y `n8n audit` antes de cualquier uso productivo.
 
 ### DEP-DEC-003
 Producción no utilizará `latest`.
@@ -2573,7 +2623,7 @@ Antes de cerrar este documento se comprobó:
 
 # 87. Checklist de aceptación
 
-- [ ] n8n 2.33.3 pinneado;
+- [ ] n8n 2.33.4 pinneado;
 - [ ] Postgres pin/digest validado;
 - [ ] no `latest`;
 - [ ] Compose reproducible;

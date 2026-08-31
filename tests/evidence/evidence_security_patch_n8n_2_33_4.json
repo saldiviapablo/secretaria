@@ -1,0 +1,32 @@
+{
+  "patch": "SVIA_SECURITY_PATCH_N8N_2.33.4_v1",
+  "advisory": "GHSA-c9c6-rq46-h25v",
+  "timestamp": "2026-08-31T02:34:20.982963+00:00",
+  "n8n_version_before": "2.33.3",
+  "n8n_version_after": "2.33.4",
+  "backup_verified": true,
+  "total_workflows": 17,
+  "f3_workflows_present": 0,
+  "tests": {
+    "security_patch_static_config": "PASS",
+    "workflow_import_validation": "PASS",
+    "python_unit_tests": "52/52 PASS",
+    "f1_regression": "PASS",
+    "f2_regression": "PASS",
+    "n8n_audit": "PASS"
+  },
+  "security": {
+    "secret_scan": "PASS",
+    "p0_p1_defects": 0,
+    "p2_defects": 2,
+    "p3_defects": 1
+  },
+  "production_safety": {
+    "nas_modified": false,
+    "existing_operational_n8n_modified": false,
+    "supabase_prod_modified": false,
+    "immich_modified": false,
+    "cloudflare_modified": false
+  },
+  "final_verdict": "DONE"
+}
