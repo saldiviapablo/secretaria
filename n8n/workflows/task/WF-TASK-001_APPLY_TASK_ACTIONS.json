@@ -2,14 +2,28 @@
   "name": "WF-TASK-001_APPLY_TASK_ACTIONS",
   "nodes": [
     {
+      "parameters": {},
+      "id": "node-trigger-f2-000",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        300
+      ]
+    },
+    {
       "parameters": {
-        "jsCode": "// Step 1: Validate Task Candidates and Resolve Idempotency Key\nconst input = $input.first().json;\n\nconst userId = input.user_id;\nconst ingestionId = input.ingestion_id;\nconst taskCandidates = input.tasks || (input.interpretation && input.interpretation.tasks) || [];\n\nif (!taskCandidates || taskCandidates.length === 0) {\n  return [{\n    json: {\n      ok: false,\n      status: 'no_op',\n      message: 'No task candidates provided'\n    }\n  }];\n}\n\nconst validProcessedTasks = [];\nconst validationErrors = [];\n\nfor (const t of taskCandidates) {\n  const timeKnown = Boolean(t.time_known);\n  let dueTime = null;\n  let dueDate = null;\n\n  // Validate Date: YYYY-MM-DD\n  if (t.resolved_date_candidate) {\n    const dateStr = String(t.resolved_date_candidate).trim();\n    if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(dateStr) || isNaN(Date.parse(dateStr))) {\n      validationErrors.push(`Invalid resolved_date_candidate format: ${dateStr}. Expected YYYY-MM-DD.`);\n      continue;\n    }\n    dueDate = dateStr;\n  }\n\n  // Validate Time according to time_known rule\n  if (timeKnown) {\n    if (!t.time_candidate) {\n      validationErrors.push('time_known is true but time_candidate is null or empty');\n      continue;\n    }\n    const timeStr = String(t.time_candidate).trim();\n    if (timeStr.includes('T') || timeStr.includes('/') || timeStr.length > 8) {\n      validationErrors.push(`Invalid time_candidate format: ${timeStr}. Expected HH:MM:SS, got datetime/offset.`);\n      continue;\n    }\n    const timeMatch = timeStr.match(/^([01]\\d|2[0-3]):([0-5]\\d)(?::([0-5]\\d))?$/);\n    if (!timeMatch) {\n      validationErrors.push(`Invalid time_candidate format: ${timeStr}. Expected HH:MM:SS.`);\n      continue;\n    }\n    dueTime = timeMatch[3] ? `${timeMatch[1]}:${timeMatch[2]}:${timeMatch[3]}` : `${timeMatch[1]}:${timeMatch[2]}:00`;\n  } else {\n    if (t.time_candidate !== null && t.time_candidate !== undefined && String(t.time_candidate).trim() !== '') {\n      validationErrors.push(`time_known is false but time_candidate was provided: ${t.time_candidate}`);\n      continue;\n    }\n    dueTime = null;\n  }\n\n  const candidateStr = `${t.title}_${dueDate}_${dueTime}_${timeKnown}_${(t.person_mentions || []).join(',')}`;\n  let hash = 0;\n  for (let i = 0; i < candidateStr.length; i++) {\n    hash = ((hash << 5) - hash) + candidateStr.charCodeAt(i);\n    hash |= 0;\n  }\n  const candidateHash = Math.abs(hash).toString(16);\n  const idempotencyKey = `task:auto:${ingestionId}:${candidateHash}`;\n\n  validProcessedTasks.push({\n    operation: t.operation || 'create',\n    title: t.title,\n    description: t.description || null,\n    resolved_date_candidate: dueDate,\n    due_date: dueDate,\n    due_time: dueTime,\n    time_candidate: dueTime,\n    time_known: timeKnown,\n    priority: t.priority || 'normal',\n    priority_source: t.priority_source || 'ai',\n    status: t.status_candidate || 'pending',\n    status_candidate: t.status_candidate || 'pending',\n    person_mentions: t.person_mentions || [],\n    idempotency_key: idempotencyKey,\n    requires_clarification: Boolean(t.requires_clarification)\n  });\n}\n\nif (validProcessedTasks.length === 0) {\n  return [{\n    json: {\n      ok: false,\n      status: 'validation_error',\n      errors: validationErrors,\n      message: 'All task candidates failed deterministic temporal validation'\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    ...input,\n    user_id: userId,\n    ingestion_id: ingestionId,\n    processed_tasks: validProcessedTasks\n  }\n}];"
+        "jsCode": "// Step 1: Validate Task Candidates and Resolve Idempotency Key\nconst input = $input.first().json;\n\nconst userId = input.user_id;\nconst ingestionId = input.ingestion_id;\nconst taskCandidates = input.tasks || (input.interpretation && input.interpretation.tasks) || [];\n\nif (!taskCandidates || taskCandidates.length === 0) {\n  return [{\n    json: {\n      ok: false,\n      status: 'no_op',\n      message: 'No task candidates provided'\n    }\n  }];\n}\n\nconst validProcessedTasks = [];\nconst validationErrors = [];\n\nfor (const t of taskCandidates) {\n  const timeKnown = Boolean(t.time_known);\n  let dueTime = null;\n  let dueDate = null;\n\n  if (t.resolved_date_candidate) {\n    const dateStr = String(t.resolved_date_candidate).trim();\n    if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(dateStr) || isNaN(Date.parse(dateStr))) {\n      validationErrors.push(`Invalid resolved_date_candidate format: ${dateStr}. Expected YYYY-MM-DD.`);\n      continue;\n    }\n    dueDate = dateStr;\n  }\n\n  if (timeKnown) {\n    if (!t.time_candidate) {\n      validationErrors.push('time_known is true but time_candidate is null or empty');\n      continue;\n    }\n    const timeStr = String(t.time_candidate).trim();\n    if (timeStr.includes('T') || timeStr.includes('/') || timeStr.length > 8) {\n      validationErrors.push(`Invalid time_candidate format: ${timeStr}. Expected HH:MM:SS, got datetime/offset.`);\n      continue;\n    }\n    const timeMatch = timeStr.match(/^([01]\\d|2[0-3]):([0-5]\\d)(?::([0-5]\\d))?$/);\n    if (!timeMatch) {\n      validationErrors.push(`Invalid time_candidate format: ${timeStr}. Expected HH:MM:SS.`);\n      continue;\n    }\n    dueTime = timeMatch[3]\n      ? `${timeMatch[1]}:${timeMatch[2]}:${timeMatch[3]}`\n      : `${timeMatch[1]}:${timeMatch[2]}:00`;\n  } else {\n    if (t.time_candidate !== null && t.time_candidate !== undefined && String(t.time_candidate).trim() !== '') {\n      validationErrors.push(`time_known is false but time_candidate was provided: ${t.time_candidate}`);\n      continue;\n    }\n    dueTime = null;\n  }\n\n  const candidateStr = `${t.title}_${dueDate}_${dueTime}_${timeKnown}_${(t.person_mentions || []).join(',')}`;\n  let hash = 0;\n  for (let i = 0; i < candidateStr.length; i++) {\n    hash = ((hash << 5) - hash) + candidateStr.charCodeAt(i);\n    hash |= 0;\n  }\n  const candidateHash = Math.abs(hash).toString(16);\n  const idempotencyKey = `task:auto:${ingestionId}:${candidateHash}`;\n\n  validProcessedTasks.push({\n    operation: t.operation || 'create',\n    title: t.title,\n    description: t.description || null,\n    resolved_date_candidate: dueDate,\n    due_date: dueDate,\n    due_time: dueTime,\n    time_candidate: dueTime,\n    time_known: timeKnown,\n    priority: t.priority || 'normal',\n    priority_source: t.priority_source || 'ai',\n    status: t.status_candidate || 'pending',\n    status_candidate: t.status_candidate || 'pending',\n    person_mentions: t.person_mentions || [],\n    idempotency_key: idempotencyKey,\n    requires_clarification: Boolean(t.requires_clarification)\n  });\n}\n\nif (validProcessedTasks.length === 0) {\n  return [{\n    json: {\n      ok: false,\n      status: 'validation_error',\n      errors: validationErrors,\n      message: 'All task candidates failed deterministic temporal validation'\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    ...input,\n    user_id: userId,\n    ingestion_id: ingestionId,\n    processed_tasks: validProcessedTasks\n  }\n}];"
       },
       "id": "node-validate-tasks-001",
       "name": "Validate Task Candidates",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [200, 300]
+      "position": [
+        220,
+        300
+      ]
     },
     {
       "parameters": {
@@ -23,7 +37,10 @@
       "name": "Persist Task via Bundle RPC",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [420, 300],
+      "position": [
+        440,
+        300
+      ],
       "credentials": {
         "postgres": {
           "id": "supabase_dev_connection",
@@ -33,16 +50,72 @@
     },
     {
       "parameters": {
-        "jsCode": "const req = $('Validate Task Candidates').first().json;\nconst resRaw = $input.first().json.res;\nconst res = typeof resRaw === 'string' ? JSON.parse(resRaw) : resRaw;\n\nreturn [{\n  json: {\n    ok: true,\n    status: 'completed',\n    correlation_id: req.correlation_id,\n    data: {\n      ...res,\n      task_count: (res.task_ids || []).length,\n      reminder_status: 'DEFERRED_PHASE_DEPENDENCY_F2'\n    }\n  }\n}];"
+        "jsCode": "const req=$('Validate Task Candidates').first().json;\nconst raw=$input.first().json.res;\nconst persisted=typeof raw==='string'?JSON.parse(raw):raw;\nconst taskIds=persisted?.task_ids||[];\nreturn [{json:{\n  ...req,\n  task_persistence_result:persisted,\n  task_ids:taskIds,\n  payload:{...(req.payload||{}),task_ids:taskIds,additional_reminders:req.payload?.additional_reminders||[]}\n}}];"
       },
-      "id": "node-format-apply-task-003",
+      "id": "node-prepare-reminders-003",
+      "name": "Prepare F2 Reminder Planning",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "WF-REM-001",
+          "mode": "list",
+          "cachedResultName": "WF-REM-001_PLAN_REMINDERS"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "node-call-reminders-004",
+      "name": "Call WF-REM-001 Plan Reminders",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        880,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const req=$('Prepare F2 Reminder Planning').first().json;\nconst persisted=req.task_persistence_result||{};\nconst planning=$input.first().json||{};\nreturn [{json:{\n  ok:true,status:'completed',correlation_id:req.correlation_id,\n  data:{...persisted,task_count:(persisted.task_ids||[]).length,reminder_status:'F2_PLANNED_OR_SAFE_NOOP',reminder_planning:planning.data||planning}\n}}];"
+      },
+      "id": "node-format-apply-task-005",
       "name": "Format Apply Task Output",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [640, 300]
+      "position": [
+        1100,
+        300
+      ]
     }
   ],
   "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Validate Task Candidates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "Validate Task Candidates": {
       "main": [
         [
@@ -55,6 +128,28 @@
       ]
     },
     "Persist Task via Bundle RPC": {
+      "main": [
+        [
+          {
+            "node": "Prepare F2 Reminder Planning",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare F2 Reminder Planning": {
+      "main": [
+        [
+          {
+            "node": "Call WF-REM-001 Plan Reminders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call WF-REM-001 Plan Reminders": {
       "main": [
         [
           {

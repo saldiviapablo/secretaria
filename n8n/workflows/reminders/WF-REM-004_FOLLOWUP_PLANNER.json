@@ -1,0 +1,137 @@
+{
+  "id": "WF-REM-004",
+  "name": "WF-REM-004_FOLLOWUP_PLANNER",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 30
+            }
+          ]
+        }
+      },
+      "id": "rem004-schedule",
+      "name": "Every 30 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        180,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM public.list_followup_candidates();",
+        "options": {}
+      },
+      "id": "rem004-candidates",
+      "name": "List Follow-up Candidates",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        420,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "supabase_dev_connection",
+          "name": "Supabase DEV Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Rules first. Deterministic overdue/waiting-confirmation cases do not require an LLM.\nconst capturedAt=new Date().toISOString();\nreturn $input.all().map((item)=>{\n  const t=item.json;\n  const reason=t.candidate_reason==='waiting_confirmation'?'followup_waiting_confirmation':'followup_overdue_task';\n  return {json:{user_id:t.user_id,task_id:t.task_id,additional_json:JSON.stringify([{kind:'followup',planned_at:capturedAt,reason}])}};\n});"
+      },
+      "id": "rem004-rules",
+      "name": "Build Deterministic Follow-up Proposal",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT public.plan_task_reminders($1::uuid, $2::uuid, $3::jsonb) AS res;",
+        "options": {
+          "queryReplacement": "={{ [$json.user_id, $json.task_id, $json.additional_json] }}"
+        }
+      },
+      "id": "rem004-plan",
+      "name": "Persist Follow-up Reminder",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        900,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "supabase_dev_connection",
+          "name": "Supabase DEV Database"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Every 30 Minutes": {
+      "main": [
+        [
+          {
+            "node": "List Follow-up Candidates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List Follow-up Candidates": {
+      "main": [
+        [
+          {
+            "node": "Build Deterministic Follow-up Proposal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Deterministic Follow-up Proposal": {
+      "main": [
+        [
+          {
+            "node": "Persist Follow-up Reminder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "WF-SYS-001"
+  },
+  "tags": [
+    {
+      "name": "rem"
+    },
+    {
+      "name": "scheduler"
+    },
+    {
+      "name": "standard"
+    },
+    {
+      "name": "f2"
+    }
+  ]
+}

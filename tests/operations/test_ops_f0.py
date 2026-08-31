@@ -45,19 +45,19 @@ class TestOperationsF0(unittest.TestCase):
                     self.assertEqual(val, "", "Secret variable in .env.example must have empty value")
 
     def test_ops_test_003_workflow_manifest_audit(self):
-        """OPS-TEST-003: Exactly the 13 approved workflows exist in their approved directories"""
+        """OPS-TEST-003: Exactly the 17 approved workflows exist in their approved directories (F2 phase)"""
         manifest_path = os.path.join(self.workflows_dir, 'manifest.json')
         self.assertTrue(os.path.exists(manifest_path))
         with open(manifest_path, 'r', encoding='utf-8') as f:
             manifest = json.load(f)
-        self.assertEqual(len(manifest['workflows']), 13)
+        self.assertEqual(len(manifest['workflows']), 17)
 
     def test_ops_test_004_db_migrations_reproducibility(self):
-        """OPS-TEST-004: Exactly 11 migration files exist in logical sequence (F1 phase)"""
+        """OPS-TEST-004: Exactly 12 migration files exist in logical sequence (F2 phase)"""
         migrations = sorted([f for f in os.listdir(self.migrations_dir) if f.endswith('.sql')])
-        self.assertEqual(len(migrations), 11, f"Expected 11 migrations, found {len(migrations)}")
+        self.assertEqual(len(migrations), 12, f"Expected 12 migrations, found {len(migrations)}")
         self.assertTrue(migrations[0].endswith('000001_extensions_and_schemas.sql'))
-        self.assertTrue(migrations[-1].endswith('000011_f1_helpers.sql'))
+        self.assertTrue(migrations[-1].endswith('000012_f2_reminder_runtime.sql'))
 
     def test_ops_test_005_rls_regression(self):
         """OPS-TEST-005: RLS policies present for all public user tables"""

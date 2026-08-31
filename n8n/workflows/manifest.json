@@ -2,8 +2,8 @@
   "manifest_version": "1.0",
   "project": "Secretaria Virtual con IA",
   "baseline": "SVIA-DOCSET-V1-RC1",
-  "phase": "F1",
-  "total_workflows_implemented": 13,
+  "phase": "F2",
+  "total_workflows_implemented": 17,
   "workflows": [
     {
       "workflow_id": "WF-SYS-001",
@@ -119,6 +119,42 @@
       "file": "task/WF-TASK-004_QUERY_TASKS.json",
       "type": "subworkflow",
       "phase": "F1",
+      "status": "implemented",
+      "contract_version": "1.0"
+    },
+    {
+      "workflow_id": "WF-REM-001",
+      "name": "WF-REM-001_PLAN_REMINDERS",
+      "file": "reminders/WF-REM-001_PLAN_REMINDERS.json",
+      "type": "subworkflow",
+      "phase": "F2",
+      "status": "implemented",
+      "contract_version": "1.0"
+    },
+    {
+      "workflow_id": "WF-REM-002",
+      "name": "WF-REM-002_DISPATCH_DUE",
+      "file": "reminders/WF-REM-002_DISPATCH_DUE.json",
+      "type": "scheduler",
+      "phase": "F2",
+      "status": "implemented",
+      "contract_version": "1.0"
+    },
+    {
+      "workflow_id": "WF-REM-003",
+      "name": "WF-REM-003_REMINDER_WATCHDOG",
+      "file": "reminders/WF-REM-003_REMINDER_WATCHDOG.json",
+      "type": "scheduler",
+      "phase": "F2",
+      "status": "implemented",
+      "contract_version": "1.0"
+    },
+    {
+      "workflow_id": "WF-REM-004",
+      "name": "WF-REM-004_FOLLOWUP_PLANNER",
+      "file": "reminders/WF-REM-004_FOLLOWUP_PLANNER.json",
+      "type": "scheduler",
+      "phase": "F2",
       "status": "implemented",
       "contract_version": "1.0"
     }

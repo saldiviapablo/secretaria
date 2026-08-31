@@ -1,0 +1,43 @@
+F2 SECURITY & LEAST PRIVILEGE AUDIT EVIDENCE
+Timestamp: 2026-08-31T01:52:32.868909+00:00
+Baseline: SVIA-DOCSET-V1-RC1 (08_SECURITY.md, 04_DATABASE_SCHEMA.md)
+
+1. RPC & FUNCTION PRIVILEGES AUDIT:
+- public.plan_task_reminders(uuid, uuid, jsonb):
+    * SECURITY DEFINER, search_path = ''
+    * REVOKE ALL FROM PUBLIC, anon
+    * GRANT EXECUTE TO authenticated, service_role
+    * Enforces auth.uid() = p_user_id (cross-user blocked) -> PASS
+- public.claim_due_reminders(integer, interval):
+    * SECURITY DEFINER, search_path = ''
+    * REVOKE ALL FROM PUBLIC, anon, authenticated
+    * GRANT EXECUTE TO service_role only
+    * Authenticated execution attempt returned Permission Denied -> PASS
+- public.record_notification_result(...):
+    * SECURITY DEFINER, search_path = ''
+    * REVOKE ALL FROM PUBLIC, anon, authenticated
+    * GRANT EXECUTE TO service_role only -> PASS
+- public.release_expired_reminder_leases():
+    * SECURITY DEFINER, search_path = ''
+    * REVOKE ALL FROM PUBLIC, anon, authenticated
+    * GRANT EXECUTE TO service_role only -> PASS
+- public.list_followup_candidates(integer):
+    * SECURITY DEFINER, search_path = ''
+    * REVOKE ALL FROM PUBLIC, anon, authenticated
+    * GRANT EXECUTE TO service_role only -> PASS
+
+2. CROSS-USER ISOLATION:
+- User B cannot plan reminders for User A task -> PASS (Rejected with Unauthorized error)
+- Cross-user delivery claims isolated via DB multi-tenant constraints -> PASS
+
+3. LEASE & DELIVERY SAFETY:
+- Unknown delivery quarantine: sending -> crash mid-attempt -> UNKNOWN quarantine (never re-claimed blindly) -> PASS
+- Pre-attempt crash recovery: sending -> crash before attempt -> retry (safely re-claimable) -> PASS
+- Successful delivery: sending -> sent -> permanently completed (never re-claimed) -> PASS
+
+4. SILENCE & DND POLICIES:
+- Normal reminder during quiet hours -> Suppressed until quiet window ends -> PASS
+- Critical reminder with user setting critical_can_break_silence=false -> Suppressed -> PASS
+- Critical reminder with user setting critical_can_break_silence=true -> Double authorization passed -> PASS
+
+Status: ALL SECURITY GATES PASS

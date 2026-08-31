@@ -1,0 +1,41 @@
+======================================================================
+STARTING REAL F1 E2E & CANONICAL TESTS SUITE:
+Target: Real Supabase DEV PostgreSQL at 127.0.0.1:54322
+======================================================================
+
+[SETUP] Synthetic User A & Settings initialized in Supabase DEV
+
+1. RUNNING E2E-A / WF-TEST-002 (Canonical Task Creation):
+   [PASS] E2E-A / WF-TEST-002: Tarea Ãºnica persistida (b083aa4c-6902-4687-b8f7-56d77ab2e9df) con vencimiento Tue Sep 01 2026 00:00:00 GMT-0300 (hora estÃ¡ndar de Argentina) 15:00:00 y entidad vinculada
+
+2. RUNNING E2E-B / WF-TEST-004 (Task without Time - DATE-* Rule):
+   [PASS] E2E-B / WF-TEST-004: Tarea creada con due_date=Thu Sep 03 2026 00:00:00 GMT-0300 (hora estÃ¡ndar de Argentina), time_known=false, due_time=NULL, due_at=NULL (sin 00:00 inventado)
+
+3. RUNNING E2E-C / WF-TEST-003 (Ambiguous Person & Clarification):
+   [PASS] E2E-C Step 1: Clarification creada pendiente (7f1ed4b4-5e38-459a-b691-9b3721301ce9) sin mutaciÃ³n errÃ³nea de tarea
+   [PASS] E2E-C / WF-TEST-003 Step 2: Clarification resuelta con Ã©xito -> Juan PÃ©rez asignado inequÃ­vocamente
+
+4. RUNNING E2E-D (Interleaved Query with Active Clarification):
+   [PASS] E2E-D: Clarification previa preservada en status=pending mientras la consulta se procesÃ³ independientemente
+
+5. RUNNING E2E-E / WF-TEST-010 (Edited Message Versioning):
+   [PASS] E2E-E / WF-TEST-010: Versionado auditado verificado (v1 histÃ³rica intacta, v2 activa con supersedes_source_text_id)
+
+6. RUNNING E2E-F / WF-TEST-033 (Onboarding & Secretary Name Config):
+   [PASS] E2E-F / WF-TEST-033: Nombre de asistente configurado como "Aura", historial Ãºnico preservado sin duplicaciÃ³n
+
+7. RUNNING CANONICAL SECURITY TESTS (SEC-TEST-001/002/003):
+   [PASS] SEC-TEST-001: Webhook secret header capturado e inspeccionado en el borde
+   [PASS] SEC-TEST-002: Sender no autorizado (id: 666666) rechazado estrictamente con cero efectos persistentes
+   [PASS] SEC-TEST-003 / WF-TEST-001: Replay de update_id 10001 retornÃ³ is_duplicate=true con 1 solo efecto lÃ³gico
+
+8. RUNNING WF-TASK-004 (Deterministic Query Tasks):
+   [PASS] WF-TASK-004: 2 tareas recuperadas determinÃ­sticamente y formateadas para respuesta Telegram
+
+9. RUNNING F1-COMP-AI-USAGE-PERSISTENCE & WF-TEST-034:
+   [PASS] F1-COMP-AI-USAGE-PERSISTENCE: TelemetrÃ­a de uso y costo de IA registrada en ai_usage_events (count=1)
+   [DEFERRED_APPROVED] WF-TEST-034: Monitor acumulativo de costos diferido formalmente a F8 (WF-SYS-004_AI_COST_MONITOR)
+
+======================================================================
+ALL F1 E2E & CANONICAL TESTS PASSED WITH 100% SUCCESS
+======================================================================

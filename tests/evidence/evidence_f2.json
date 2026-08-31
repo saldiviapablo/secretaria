@@ -1,0 +1,70 @@
+{
+  "phase": "F2",
+  "status": "F2 DONE",
+  "timestamp": "2026-08-31T01:52:32.989508+00:00",
+  "git_base_commit": "69d2bfd",
+  "migrations": {
+    "count": 12,
+    "head": "20260830000012_f2_reminder_runtime.sql",
+    "resets_passed": 2,
+    "tables_verified": 25
+  },
+  "workflows": {
+    "count": 17,
+    "f0_count": 3,
+    "f1_count": 10,
+    "f2_count": 4,
+    "f2_list": [
+      "WF-REM-001_PLAN_REMINDERS",
+      "WF-REM-002_DISPATCH_DUE",
+      "WF-REM-003_REMINDER_WATCHDOG",
+      "WF-REM-004_FOLLOWUP_PLANNER"
+    ],
+    "schedules": {
+      "WF-REM-002": "1m",
+      "WF-REM-003": "5m",
+      "WF-REM-004": "30m"
+    },
+    "central_error_handler": "WF-SYS-001",
+    "n8n_version": "2.33.3",
+    "import_runtime_status": "PASS",
+    "n8n_audit_status": "PASS"
+  },
+  "tests": {
+    "REM-001": "PASS",
+    "REM-002": "PASS",
+    "REM-003": "PASS",
+    "REM-004": "PASS",
+    "REM-005": "PASS",
+    "REM-006": "PASS",
+    "REM-007": "PASS",
+    "REM-008": "PASS",
+    "REM-009": "PASS",
+    "REM-010": "PASS",
+    "REM-011": "PASS",
+    "REM-012": "PASS",
+    "DB-TEST-014": "PASS",
+    "DB-TEST-015": "PASS",
+    "DB-TEST-016": "PASS",
+    "DB-TEST-016B": "PASS",
+    "WF-TEST-013": "PASS",
+    "WF-TEST-014": "PASS",
+    "WF-TEST-015": "PASS",
+    "WF-TEST-016": "PASS",
+    "WF-TEST-017": "PASS",
+    "f1_regression": "PASS",
+    "python_unit_tests": "52/52 PASS"
+  },
+  "security": {
+    "secret_scan": "PASS",
+    "worker_privileges_isolated": true,
+    "cross_user_isolation": true,
+    "unknown_quarantine_demonstrated": true
+  },
+  "production_safety": {
+    "nas_modified": false,
+    "existing_operational_n8n_modified": false,
+    "supabase_prod_modified": false
+  },
+  "final_verdict": "F2 DONE"
+}

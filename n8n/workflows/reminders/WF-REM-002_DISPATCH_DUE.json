@@ -1,0 +1,379 @@
+{
+  "id": "WF-REM-002",
+  "name": "WF-REM-002_DISPATCH_DUE",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "rem002-schedule",
+      "name": "Every 1 Minute",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM public.claim_due_reminders();",
+        "options": {}
+      },
+      "id": "rem002-claim",
+      "name": "Claim Due Reminders",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        320,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "supabase_dev_connection",
+          "name": "Supabase DEV Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT public.evaluate_reminder_delivery_policy($1::uuid, $2::uuid) AS policy;",
+        "options": {
+          "queryReplacement": "={{ [$json.id, $json.lease_token] }}"
+        }
+      },
+      "id": "rem002-policy",
+      "name": "Revalidate Task and Delivery Policy",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        540,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "supabase_dev_connection",
+          "name": "Supabase DEV Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const claims = $('Claim Due Reminders').all();\nreturn $input.all().map((item,i)=>{\n  const claim=claims[i]?.json||{};\n  const raw=item.json.policy;\n  const policy=typeof raw==='string'?JSON.parse(raw):raw;\n  return {json:{...claim,policy,should_send:policy?.action==='send'}};\n});"
+      },
+      "id": "rem002-normalize",
+      "name": "Normalize Dispatch Policy",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        760,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.should_send }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "rem002-if",
+      "name": "Should Send?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        980,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT public.apply_reminder_dispatch_decision($1::uuid, $2::uuid, $3::text, $4::timestamptz, $5::text) AS res;",
+        "options": {
+          "queryReplacement": "={{ [$json.id, $json.lease_token, $json.policy.action, $json.policy.suppressed_until || null, $json.policy.reason || null] }}"
+        }
+      },
+      "id": "rem002-hold",
+      "name": "Apply Non-Send Decision",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1210,
+        460
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "supabase_dev_connection",
+          "name": "Supabase DEV Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const row=$input.first().json;\nconst p=row.policy||{};\nconst title=p.task_title||'Tarea pendiente';\nlet due='';\nif(p.due_date){\n  due=p.time_known&&p.due_time\n    ? `\\nVence: ${p.due_date} ${String(p.due_time).slice(0,8)} (${p.timezone})`\n    : `\\nFecha: ${p.due_date}`;\n}\nconst isCritical=Boolean(p.critical_authorized);\nconst attempt=Number(p.attempt_number||row.attempt_number||1);\nconst deliveryKey=`delivery:${row.id}:${attempt}`;\nreturn [{json:{\n  reminder_id:row.id,lease_token:row.lease_token,user_id:row.user_id,\n  attempt_number:attempt,delivery_key:deliveryKey,\n  correlation_id:`reminder:${row.id}:${attempt}`,\n  contract_version:'1.0',source_channel:'system',captured_at:new Date().toISOString(),\n  timezone:p.timezone||'UTC',locale:'es-AR',\n  payload:{\n    text:`⏰ Recordatorio: ${title}${due}`,\n    delivery_class:isCritical?'proactive_critical':'proactive_normal',\n    is_critical:isCritical,\n    idempotency_context:deliveryKey\n  }\n}}];"
+      },
+      "id": "rem002-envelope",
+      "name": "Prepare Telegram Reminder Envelope",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1210,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT public.record_notification_result($1::uuid, $2::uuid, 'telegram', $3::integer, $4::text, 'attempting', NULL, NULL, NULL, '{}'::jsonb, NULL, $5::uuid) AS res;",
+        "options": {
+          "queryReplacement": "={{ [$json.reminder_id, $json.user_id, $json.attempt_number, $json.delivery_key, $json.lease_token] }}"
+        }
+      },
+      "id": "rem002-attempt",
+      "name": "Record Delivery Attempt Start",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1430,
+        160
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "supabase_dev_connection",
+          "name": "Supabase DEV Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:$('Prepare Telegram Reminder Envelope').first().json}];"
+      },
+      "id": "rem002-restore",
+      "name": "Restore Telegram Envelope",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1650,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "WF-TG-002",
+          "mode": "list",
+          "cachedResultName": "WF-TG-002_TELEGRAM_SEND_MESSAGE"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "rem002-calltg",
+      "name": "Call WF-TG-002",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1870,
+        160
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const ctx=$('Restore Telegram Envelope').first().json;\nconst result=$input.first().json||{};\nlet finalStatus='unknown', providerMessageId=null, errorCode=null, errorMessage=null;\nif(result.ok===true && result.status==='completed' && result.data?.delivered===true){\n  finalStatus='sent'; providerMessageId=result.data.provider_message_id||null;\n}else if(result.ok===true && result.status==='suppressed'){\n  finalStatus='failed';\n  errorCode='SUPPRESSED_AFTER_POLICY_RECHECK';\n  errorMessage=result.data?.reason||'Delivery suppressed by WF-TG-002';\n}else{\n  finalStatus='unknown';\n  errorCode=result.error?.code||result.errorCode||'CHILD_WORKFLOW_RESULT_UNKNOWN';\n  errorMessage=result.error?.message_safe||result.error?.message||result.message||'External delivery outcome could not be confirmed';\n}\nreturn [{json:{...ctx,final_status:finalStatus,provider_message_id:providerMessageId,error_code:errorCode,error_message:errorMessage,response_metadata:{child_status:result.status||null,delivered:result.data?.delivered??null}}}];"
+      },
+      "id": "rem002-result",
+      "name": "Normalize Telegram Delivery Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2090,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT public.record_notification_result($1::uuid, $2::uuid, 'telegram', $3::integer, $4::text, $5::text, $6::text, $7::text, $8::text, $9::jsonb, NULL, $10::uuid) AS res;",
+        "options": {
+          "queryReplacement": "={{ [$json.reminder_id, $json.user_id, $json.attempt_number, $json.delivery_key, $json.final_status, $json.provider_message_id, $json.error_code, $json.error_message, JSON.stringify($json.response_metadata || {}), $json.lease_token] }}"
+        }
+      },
+      "id": "rem002-final",
+      "name": "Persist Final Delivery Result",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        2310,
+        160
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "supabase_dev_connection",
+          "name": "Supabase DEV Database"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Every 1 Minute": {
+      "main": [
+        [
+          {
+            "node": "Claim Due Reminders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claim Due Reminders": {
+      "main": [
+        [
+          {
+            "node": "Revalidate Task and Delivery Policy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Revalidate Task and Delivery Policy": {
+      "main": [
+        [
+          {
+            "node": "Normalize Dispatch Policy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Dispatch Policy": {
+      "main": [
+        [
+          {
+            "node": "Should Send?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Should Send?": {
+      "main": [
+        [
+          {
+            "node": "Prepare Telegram Reminder Envelope",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Apply Non-Send Decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Telegram Reminder Envelope": {
+      "main": [
+        [
+          {
+            "node": "Record Delivery Attempt Start",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record Delivery Attempt Start": {
+      "main": [
+        [
+          {
+            "node": "Restore Telegram Envelope",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Restore Telegram Envelope": {
+      "main": [
+        [
+          {
+            "node": "Call WF-TG-002",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call WF-TG-002": {
+      "main": [
+        [
+          {
+            "node": "Normalize Telegram Delivery Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Telegram Delivery Result": {
+      "main": [
+        [
+          {
+            "node": "Persist Final Delivery Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "WF-SYS-001"
+  },
+  "tags": [
+    {
+      "name": "rem"
+    },
+    {
+      "name": "scheduler"
+    },
+    {
+      "name": "critical"
+    },
+    {
+      "name": "f2"
+    }
+  ]
+}

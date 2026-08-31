@@ -16,17 +16,17 @@ class TestF1Workflows(unittest.TestCase):
         cls.manifest_path = os.path.join(cls.workflows_dir, 'manifest.json')
 
     def test_manifest_structure_and_count(self):
-        """Verifies manifest.json contains exactly the 13 implemented workflows"""
+        """Verifies manifest.json contains exactly the 17 implemented workflows through F2"""
         self.assertTrue(os.path.exists(self.manifest_path), "manifest.json missing")
         with open(self.manifest_path, 'r', encoding='utf-8') as f:
             manifest = json.load(f)
 
-        self.assertEqual(manifest.get('phase'), 'F1')
-        self.assertEqual(manifest.get('total_workflows_implemented'), 13)
-        self.assertEqual(len(manifest.get('workflows', [])), 13)
+        self.assertEqual(manifest.get('phase'), 'F2')
+        self.assertEqual(manifest.get('total_workflows_implemented'), 17)
+        self.assertEqual(len(manifest.get('workflows', [])), 17)
 
-    def test_all_13_workflows_exist_and_are_valid_json(self):
-        """Verifies all 13 workflow files exist, parse as JSON, and have proper root structure"""
+    def test_all_17_workflows_exist_and_are_valid_json(self):
+        """Verifies all 17 workflow files exist, parse as JSON, and have proper root structure"""
         with open(self.manifest_path, 'r', encoding='utf-8') as f:
             manifest = json.load(f)
 
@@ -40,8 +40,8 @@ class TestF1Workflows(unittest.TestCase):
                 self.assertIn('connections', data)
                 self.assertGreater(len(data['nodes']), 0)
 
-    def test_no_f2_to_f8_workflows_present(self):
-        """Verifies NO workflows from F2 or later phases exist in n8n/workflows/"""
+    def test_no_f3_to_f8_workflows_present(self):
+        """Verifies NO workflows from F3 or later phases exist in n8n/workflows/"""
         all_wf_files = []
         for root, _, files in os.walk(self.workflows_dir):
             for file in files:
@@ -61,7 +61,11 @@ class TestF1Workflows(unittest.TestCase):
             'task/WF-TASK-001_APPLY_TASK_ACTIONS.json',
             'task/WF-TASK-002_MUTATE_TASK.json',
             'task/WF-TASK-003_CLARIFICATION_MANAGER.json',
-            'task/WF-TASK-004_QUERY_TASKS.json'
+            'task/WF-TASK-004_QUERY_TASKS.json',
+            'reminders/WF-REM-001_PLAN_REMINDERS.json',
+            'reminders/WF-REM-002_DISPATCH_DUE.json',
+            'reminders/WF-REM-003_REMINDER_WATCHDOG.json',
+            'reminders/WF-REM-004_FOLLOWUP_PLANNER.json'
         }
 
         self.assertEqual(set(all_wf_files), expected_workflows, f"Unexpected workflow files found: {set(all_wf_files) - expected_workflows}")

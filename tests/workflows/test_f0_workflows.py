@@ -30,8 +30,8 @@ class TestF0Workflows(unittest.TestCase):
                 self.assertIn('connections', data)
                 self.assertGreater(len(data['nodes']), 0)
 
-    def test_no_f2_workflows_present(self):
-        """Verify no workflows from F2 or later phases exist in n8n/workflows/"""
+    def test_no_f3_workflows_present(self):
+        """Verify no workflows from F3 or later phases exist in n8n/workflows/"""
         all_wf_files = []
         for root, _, files in os.walk(self.workflows_dir):
             for file in files:
@@ -51,7 +51,11 @@ class TestF0Workflows(unittest.TestCase):
             'task/WF-TASK-001_APPLY_TASK_ACTIONS.json',
             'task/WF-TASK-002_MUTATE_TASK.json',
             'task/WF-TASK-003_CLARIFICATION_MANAGER.json',
-            'task/WF-TASK-004_QUERY_TASKS.json'
+            'task/WF-TASK-004_QUERY_TASKS.json',
+            'reminders/WF-REM-001_PLAN_REMINDERS.json',
+            'reminders/WF-REM-002_DISPATCH_DUE.json',
+            'reminders/WF-REM-003_REMINDER_WATCHDOG.json',
+            'reminders/WF-REM-004_FOLLOWUP_PLANNER.json'
         }
         self.assertEqual(set(all_wf_files), allowed_workflows, f"Unexpected workflow files found: {set(all_wf_files) - allowed_workflows}")
 

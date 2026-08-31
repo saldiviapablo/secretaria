@@ -1,0 +1,135 @@
+{
+  "id": "WF-REM-003",
+  "name": "WF-REM-003_REMINDER_WATCHDOG",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      },
+      "id": "rem003-schedule",
+      "name": "Every 5 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        180,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT public.release_expired_reminder_leases() AS recovery;",
+        "options": {}
+      },
+      "id": "rem003-recover",
+      "name": "Recover Expired Reminder Leases",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        420,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "supabase_dev_connection",
+          "name": "Supabase DEV Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT public.reminder_watchdog_snapshot() AS snapshot;",
+        "options": {}
+      },
+      "id": "rem003-snapshot",
+      "name": "Inspect Reminder Health",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        660,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "supabase_dev_connection",
+          "name": "Supabase DEV Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rr=$('Recover Expired Reminder Leases').first().json.recovery;\nconst sr=$input.first().json.snapshot;\nconst recovery=typeof rr==='string'?JSON.parse(rr):rr;\nconst snapshot=typeof sr==='string'?JSON.parse(sr):sr;\nreturn [{json:{ok:true,status:'completed',correlation_id:`reminder-watchdog:${new Date().toISOString()}`,data:{recovery,snapshot},warnings:Number(snapshot?.unknown_quarantined||0)>0?['UNKNOWN deliveries are quarantined; no blind resend was performed.']:[]}}];"
+      },
+      "id": "rem003-format",
+      "name": "Format Watchdog Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        900,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Every 5 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Recover Expired Reminder Leases",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recover Expired Reminder Leases": {
+      "main": [
+        [
+          {
+            "node": "Inspect Reminder Health",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Inspect Reminder Health": {
+      "main": [
+        [
+          {
+            "node": "Format Watchdog Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "WF-SYS-001"
+  },
+  "tags": [
+    {
+      "name": "rem"
+    },
+    {
+      "name": "scheduler"
+    },
+    {
+      "name": "critical"
+    },
+    {
+      "name": "f2"
+    }
+  ]
+}

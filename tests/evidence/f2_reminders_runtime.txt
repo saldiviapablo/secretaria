@@ -1,0 +1,35 @@
+======================================================================
+F2 REMINDERS â€” INTEGRATION + RESILIENCE
+Target: 127.0.0.1:54322 / Supabase Local DEV
+======================================================================
+[PASS] REM-001/002 + DB-TEST-014
+[PASS] temporal rule: no invented time
+[PASS] REM-003/004/005 capability + REM-008 authority boundary
+[PASS] cross-user planning blocked
+[PASS] WF-TEST-013 + DB-TEST-015 + REM-009/011
+[PASS] WF-TEST-014 + DB-TEST-016
+[PASS] WF-TEST-015 + DB-TEST-016B
+[PASS] mid-attempt crash -> UNKNOWN quarantine
+[PASS] WF-TEST-016 / REM-007
+[PASS] WF-TEST-017 / REM-008
+[PASS] REM-006 + follow-up anti-spam
+[PASS] worker RPCs denied to authenticated
+[INFO] watchdog snapshot: {
+  retry_due: 0,
+  overdue_pending: 1,
+  failed_deliveries: 0,
+  unknown_quarantined: 8,
+  expired_sending_leases: 0
+}
+======================================================================
+F2 REMINDER SUITE: PASS
+DB-TEST-014 PASS
+DB-TEST-015 PASS
+DB-TEST-016 PASS
+DB-TEST-016B PASS
+WF-TEST-013 PASS
+WF-TEST-014 PASS
+WF-TEST-015 PASS
+WF-TEST-016 PASS
+WF-TEST-017 PASS
+======================================================================

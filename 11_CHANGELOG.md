@@ -1247,3 +1247,69 @@ como constitución documental del paquete definitivo para Antigravity/Codex.
 4. **Infraestructura Productiva Preservada:**
    - NAS UGREEN (`EXISTING_OPERATIONAL_N8N`), Immich, Cloudflare y Supabase PROD permanecen totalmente inalterados y fuera de alcance.
 
+
+---
+## CHG-2026-08-30-011 — Implementación Controlada de F2: Recordatorios Persistentes y Recuperables
+
+**Tipo:** ADDED / RELIABILITY / SECURITY / TEST
+**Estado:** IMPLEMENTED_PENDING_RUNTIME_CERTIFICATION
+**Motivo:** Aplicación del paquete auditado F2 para habilitar planificación persistente, despacho periódico, leases, registro de deliveries, tratamiento conservador de resultados `unknown`, watchdog y follow-up determinista conforme a `SVIA-DOCSET-V1-RC1`.
+**Solicitado por:** Usuario / metodología de paquetes por fase
+**Documentos afectados:** `11_CHANGELOG.md`, `supabase/migrations/20260830000012_f2_reminder_runtime.sql`, `n8n/workflows/manifest.json`, `n8n/workflows/task/WF-TASK-001_APPLY_TASK_ACTIONS.json`, `n8n/workflows/reminders/`, `tests/`
+
+### Alcance aplicado
+1. Se agregan exclusivamente `WF-REM-001` a `WF-REM-004`; no se implementa F3 ni fases posteriores.
+2. Se integra `WF-TASK-001` con `WF-REM-001` para resolver la dependencia explícitamente diferida desde F1.
+3. Se conservan las 25 tablas V1; el cambio de base es una migración versionada aditiva sobre funciones e índices.
+4. `notification_deliveries.status = unknown` queda en cuarentena conservadora: no existe reenvío automático ciego.
+5. Un lease vencido sin intento externo registrado puede recuperarse; un lease vencido después de iniciar un intento se clasifica como `unknown`.
+6. Los reminders normales respetan quiet hours/rest; un bypass crítico requiere autorización server-side y configuración del usuario.
+7. La IA puede proponer reminders adicionales, pero no puede autoautorizar `can_break_silence`.
+8. No se congela una nueva política definitiva de retry/backoff ni una nueva duración definitiva de lease. Los valores pendientes del baseline continúan pendientes de revisión controlada.
+9. Este registro NO declara `F2 DONE`: falta certificación runtime real en Supabase local + n8n DEV, evidence, secret scan y cierre Git.
+
+### Producción
+`NAS = NO MODIFICADO`
+`EXISTING_OPERATIONAL_N8N = NO MODIFICADO`
+`SUPABASE PROD = NO MODIFICADO`
+
+---
+
+---
+
+## CHG-2026-08-30-012 — Cierre y Certificación Definitiva de Fase F2: Recordatorios
+
+**Tipo:** CLOSURE / CERTIFICATION / SECURITY / RELIABILITY
+**Estado:** F2 DONE
+**Motivo:** Certificación runtime exitosa de la fase F2 (Recordatorios) en Supabase DEV local y n8n DEV 2.33.3 real, validación de todos los gates de seguridad, leasing, cuarentena de deliveries desconocidos, regresión F1 y generación de evidencia reproducible.
+**Solicitado por:** Antigravity / Metodología de Paquete Auditado F2
+**Documentos afectados:** `11_CHANGELOG.md`, `tests/evidence/evidence_f2.json`, `tests/evidence/f2_*`
+
+### Verificaciones y Resultados de Certificación F2:
+1. **Base de Datos y Migraciones (Supabase DEV Local):**
+   - Migración `20260830000012_f2_reminder_runtime.sql` aplicada y verificada exitosamente en dos ciclos completos de `supabase db reset`.
+   - Se mantienen exactamente las 25 tablas V1 canónicas del modelo de datos sin alteraciones estructurales destructivas.
+2. **Seguridad, Privilegios y Aislamiento Multi-Tenant:**
+   - Funciones worker de ejecución periódica (`claim_due_reminders`, `record_notification_result`, `release_expired_reminder_leases`, `list_followup_candidates`) restringidas exclusivamente a `service_role` (revocadas de `PUBLIC`, `anon` y `authenticated`).
+   - `plan_task_reminders` requiere coincidencia estricta `auth.uid() = p_user_id`; intentos cross-user son bloqueados.
+   - 0 secretos expuestos en working tree, diffs ni logs de evidencia.
+3. **Resiliencia de Leases y Cuarentena de Despacho:**
+   - **Cuarentena UNKNOWN:** Si un worker experimenta caída o timeout tras iniciar un intento de entrega externo, el estado pasa a `unknown` y entra en cuarentena permanente (sin reintento ciego ni re-claim).
+   - **Recuperación Pre-Intento:** Si un worker cae antes de registrar un intento externo, el lease expirado se libera ordenadamente a estado `retry` para recuperación por watchdog.
+   - **Despacho Exitoso:** Registrado como `sent` con `sent_at`, eliminando el lease y previniendo claims posteriores.
+4. **Políticas de Silencio (DND) y Bypass Crítico:**
+   - Notificaciones estándar durante horas de silencio o modo descanso son suprimidas hasta la reapertura de la ventana.
+   - Bypass crítico requiere doble autorización (marca en reminder + `critical_can_break_silence = true` en configuración de usuario).
+5. **Workflows n8n (Instancia DEV 2.33.3):**
+   - Exactamente 17 workflows importados y verificados en runtime (3 F0 + 10 F1 + 4 F2: `WF-REM-001` a `WF-REM-004`).
+   - Schedulers configurados: `WF-REM-002` (1 min), `WF-REM-003` (5 min), `WF-REM-004` (30 min), todos con `WF-SYS-001` como manejador central de errores.
+   - `n8n audit` ejecutado en el contenedor con 0 vulnerabilidades críticas/P0/P1.
+6. **Regresión y Suites de Tests:**
+   - 9 escenarios canónicos F2 ejecutados y aprobados (`DB-TEST-014/015/016/016B`, `WF-TEST-013/014/015/016/017`).
+   - Regresión F1 completa ejecutada con 100% de éxito.
+   - Suite Python unitaria ejecutada con 52/52 tests PASS.
+7. **Producción Preservada:**
+   - NAS UGREEN (`EXISTING_OPERATIONAL_N8N`), Immich, Cloudflare y Supabase PROD permanecen totalmente inalterados y fuera de alcance.
+8. **Estado Final:**
+   - `F2 DONE`. Fase F3 (`Audio + Drive`) queda como siguiente fase secuencial (NO INICIADA).
+

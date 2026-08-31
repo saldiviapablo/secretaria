@@ -1,0 +1,116 @@
+{
+  "id": "WF-REM-001",
+  "name": "WF-REM-001_PLAN_REMINDERS",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "rem001-trigger",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [
+        180,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json || {};\nconst payload = input.payload || {};\nconst correlationId = input.correlation_id || $execution.id;\nconst userId = input.user_id;\nconst taskIds = payload.task_ids || input.task_ids || (input.task_id ? [input.task_id] : []);\nconst additional = payload.additional_reminders || input.additional_reminders || [];\n\nif (!userId) throw new Error('WF-REM-001: user_id is required');\nif (!Array.isArray(taskIds) || taskIds.length === 0) {\n  return [{json:{ok:true,status:'no_op',correlation_id:correlationId,data:{reason:'no_task_ids'},warnings:[]}}];\n}\nif (!Array.isArray(additional)) throw new Error('WF-REM-001: additional_reminders must be an array');\n\nreturn taskIds.map((taskId) => {\n  const proposals = additional\n    .filter((r) => !r.task_id || String(r.task_id) === String(taskId))\n    .map((r) => ({\n      kind: r.kind || 'ai',\n      planned_at: r.planned_at,\n      reason: r.reason || null\n      // can_break_silence is deliberately NOT accepted from model/user proposal.\n    }));\n  return {json:{\n    correlation_id:correlationId,\n    user_id:userId,\n    task_id:taskId,\n    additional_reminders_json:JSON.stringify(proposals)\n  }};\n});"
+      },
+      "id": "rem001-validate",
+      "name": "Validate and Expand Planning Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT public.plan_task_reminders($1::uuid, $2::uuid, $3::jsonb) AS res;",
+        "options": {
+          "queryReplacement": "={{ [$json.user_id, $json.task_id, $json.additional_reminders_json] }}"
+        }
+      },
+      "id": "rem001-plan",
+      "name": "Plan Task Reminders RPC",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        640,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "supabase_dev_connection",
+          "name": "Supabase DEV Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all().map((item) => {\n  const raw = item.json.res;\n  return typeof raw === 'string' ? JSON.parse(raw) : raw;\n});\nconst reqs = $('Validate and Expand Planning Request').all();\nconst correlationId = reqs[0]?.json?.correlation_id || $execution.id;\nreturn [{json:{\n  ok:true,status:'completed',correlation_id:correlationId,\n  data:{\n    task_count:rows.length,\n    planning_results:rows,\n    created_count:rows.reduce((n,r)=>n+Number(r?.created_count||0),0),\n    existing_count:rows.reduce((n,r)=>n+Number(r?.existing_count||0),0)\n  },\n  warnings:[]\n}}];"
+      },
+      "id": "rem001-format",
+      "name": "Format Reminder Planning Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Validate and Expand Planning Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate and Expand Planning Request": {
+      "main": [
+        [
+          {
+            "node": "Plan Task Reminders RPC",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Plan Task Reminders RPC": {
+      "main": [
+        [
+          {
+            "node": "Format Reminder Planning Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    {
+      "name": "rem"
+    },
+    {
+      "name": "subworkflow"
+    },
+    {
+      "name": "f2"
+    }
+  ]
+}
