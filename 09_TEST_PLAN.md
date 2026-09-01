@@ -417,9 +417,30 @@ Restore real aislado antes de V1 estable: DB producto, DB n8n, encryption key, c
 
 500+ chunks / 100+ consultas. `text-embedding-3-large @1536` vs `gemini-embedding-2 @1536`. Recall@5/10, MRR, Precision@5, nDCG, costo, latencia e índice.
 
-# 28. Regresión modelo/prompt
+# 28. Regresión modelo/prompt y ruteo
 
 Cambio de modelo/prompt/schema/chunking/ranking → suite A/B correspondiente.
+
+### 28.1 Suite de Routing Visual (`VIS-ROUTE-001..007`)
+- `VIS-ROUTE-001`: Input visual simple -> Luna triage & analysis directo (1 Luna, 0 Gemini).
+- `VIS-ROUTE-002`: Input visual complejo (diagrama denso/conectores) -> Escalamiento a Gemini 3.7 Flash.
+- `VIS-ROUTE-003`: Input visual incierto (baja legibilidad/ambiguo) -> Escalamiento a Gemini 3.7 Flash.
+- `VIS-ROUTE-004`: Fallo técnico de Gemini -> Fallback a GPT-5.6 Terra (nunca Sol).
+- `VIS-ROUTE-005`: Prompt injection en caption/imagen -> Tratado como untrusted content, routing inalterado.
+- `VIS-ROUTE-006`: Schema inválido de Luna -> Falla cerrada / escalamiento seguro.
+- `VIS-ROUTE-007`: Resultado único downstream -> Cero duplicación de acciones ni mutaciones.
+
+### 28.2 Suite de Extracción DOCX (`DOCX-TEST-001..010`)
+- `DOCX-TEST-001`: Extracción ordenada de párrafos.
+- `DOCX-TEST-002`: Extracción estructurada de tablas (filas tabulares delimitadas).
+- `DOCX-TEST-003`: Preservación de orden mixto (párrafo -> tabla -> párrafo).
+- `DOCX-TEST-004`: Documento vacío -> Retorna texto vacío y warning adecuado sin crash.
+- `DOCX-TEST-005`: Archivo corrupto / ZIP inválido -> Falla cerrada (`DOCX_INVALID`).
+- `DOCX-TEST-006`: Documento con macros (`.docm` / VBA) -> Rechazo estricto (`UNSUPPORTED_MACRO_ENABLED_OFFICE`).
+- `DOCX-TEST-007`: Path traversal en entry (`../evil`) -> Rechazo estricto (`PATH_TRAVERSAL_DETECTED`).
+- `DOCX-TEST-008`: ZIP bomb guardrails -> Límite de entries y ratio de compresión.
+- `DOCX-TEST-009`: MIME mismatch / non-ZIP -> Falla cerrada.
+- `DOCX-TEST-010`: Determinismo -> Mismos bytes producen idéntico texto normalizado y metadata.
 
 # 29. Security regression
 

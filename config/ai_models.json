@@ -1,7 +1,7 @@
 {
-  "version": "1.0",
+  "version": "1.1",
   "baseline": "SVIA-DOCSET-V1-RC1",
-  "last_updated": "2026-08-31",
+  "last_updated": "2026-09-01",
   "routing": {
     "text_routine": {
       "provider": "openai",
@@ -28,6 +28,26 @@
       "purpose": "Fallback económico de texto y parsing ligero",
       "role": "fallback_economic"
     },
+    "visual": {
+      "triage_and_routine": {
+        "provider": "openai",
+        "model": "gpt-5.6-luna",
+        "purpose": "Triage inicial y análisis visual simple / OCR estándar",
+        "role": "visual_triage_and_simple"
+      },
+      "complex_and_uncertain": {
+        "provider": "gemini",
+        "model": "gemini-3.7-flash",
+        "purpose": "Escalamiento visual para diagramas complejos, esquemas con múltiples conexiones o incertidumbre",
+        "role": "visual_complex_escalation"
+      },
+      "fallback_complex": {
+        "provider": "openai",
+        "model": "gpt-5.6-terra",
+        "purpose": "Fallback técnico para análisis visual complejo si falla el escalamiento a Gemini",
+        "role": "visual_fallback_complex"
+      }
+    },
     "transcription_primary": null,
     "transcription_candidates": [
       {
@@ -53,6 +73,7 @@
   },
   "benchmarks_pending": {
     "transcription_benchmark": "PENDING_F3_PRIVATE_DATASET_AND_RUNTIME",
-    "embedding_benchmark": "PENDING_F4"
+    "embedding_benchmark": "PENDING_F4",
+    "visual_golden_set": "PENDING_AI_TEST_006"
   }
 }

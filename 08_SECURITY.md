@@ -578,11 +578,19 @@ Después:
 - tras upgrade;
 - periódicamente.
 
-Los hallazgos críticos bloquean despliegue.
+Los hallazgos críticos (P0/P1) bloquean despliegue.
+
+### 12.1 Aceptación Formal Scoped de Hallazgos P2 (Fase F3)
+
+El usuario ha aprobado explícitamente en fecha 2026-09-01 la aceptación acotada de dos categorías de hallazgos P2 de `n8n audit`:
+1. **P2-A (`queryReplacement` en nodos PostgreSQL):** Las consultas SQL son estáticas y parametrizadas (`SELECT public.rpc($1, $2, ...)`), con cero interpolación o concatenación dinámica de strings. Riesgo de SQL injection = 0.
+2. **P2-B (`Official risky nodes` — Code / HTTP Request):** Justificados para cálculo de hashes criptográficos (`getBinaryDataBuffer`), parseo de payloads e invocación a APIs seguras oficiales (OpenAI, Gemini, Telegram, sidecar local). Mitigados por `N8N_BLOCK_ENV_ACCESS_IN_NODE=true`, `communityPackagesEnabled=false`, `publicApiEnabled=false` y contenedores no privilegiados.
+
+*Condiciones de Invalidez:* La introducción de SQL dinámico, acceso a shell/filesystem desde Code nodes, community nodes o peticiones a endpoints no autorizados revoca automáticamente esta aceptación.
 
 ---
 
-# 13. Nodos riesgosos
+# 13. Nodos riesgosos y Sidecars Auxiliares
 
 ## Prohibidos por defecto
 
@@ -602,6 +610,14 @@ También revisar cuidadosamente:
 - community nodes.
 
 “Oficial” no significa automáticamente “seguro para cualquier input”.
+
+### 13.1 Hardening del Sidecar DOCX (`svia-docx-extractor`)
+
+El procesamiento de documentos Word se delega a un microservicio sidecar con los siguientes guardrails de seguridad:
+- **Aislamiento de Red:** Conectado exclusivamente a la red Docker interna `svia_doc_internal` (`internal: true`), sin salida a Internet, sin puertos expuestos al host y sin túneles.
+- **Aislamiento de Contenedor:** Usuario sin privilegios (`non-root`, UID 10001), sistema de archivos de solo lectura (`read_only: true`), `cap_drop: [ALL]`, `no-new-privileges:true`, sin montaje de socket Docker (`/var/run/docker.sock`).
+- **Validación Defensiva (Preflight ZIP):** Verificación de integridad OpenXML, bloqueo estricto de path traversal (`..`), entries encriptadas, macros VBA (`.docm`, `vbaProject.bin`), y guardrails contra ZIP bombs (límite de entradas, tamaño descomprimido y ratio de compresión).
+- **Inmutabilidad:** Servicio de extracción puro y determinístico, sin persistencia de estado ni acceso a base de datos.
 
 ---
 

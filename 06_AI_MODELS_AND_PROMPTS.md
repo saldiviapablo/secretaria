@@ -2151,37 +2151,21 @@ Evitar costo/latencia innecesaria en una nota de voz individual.
 
 ---
 
-# 66. Procesamiento visual
+# 66. Procesamiento visual y política de routing
 
-Ruta sugerida:
+## Política de Dos Etapas Aprobada
 
-## Imagen simple
+1. **Entrada Normal:** Toda imagen/captura ingresa a `gpt-5.6-luna`.
+2. **Triage Integrado en Luna:** Mediante Structured Output, Luna produce simultáneamente el análisis y clasifica la complejidad:
+   - `simple`: fotografía, factura/recibo simple, captura de pantalla simple.
+   - `complex`: diagrama de arquitectura, flujo con múltiples conectores/flechas, esquemas densos.
+   - `uncertain`: baja legibilidad, estructura ambigua o duda de clasificación.
+3. **Decisión de Routing:**
+   - Si `simple`: el análisis de Luna es el resultado definitivo (1 llamada Luna, 0 Gemini).
+   - Si `complex` o `uncertain`: escala automáticamente a `gemini-3.7-flash` (1 llamada Luna + 1 llamada Gemini).
+   - Fallback de contingencia: si Gemini presenta fallo técnico no recuperable, se invoca `gpt-5.6-terra` (nunca Sol).
 
-```text
-gpt-5.6-luna
-```
-
-## Captura/documento visual simple
-
-```text
-gpt-5.6-luna
-or
-gemini-3.5-flash-lite
-```
-
-## Diagrama complejo
-
-```text
-gemini-3.7-flash
-```
-
-## Fallback
-
-```text
-gpt-5.6-terra
-```
-
-La selección final de visión también deberá tener evals.
+La validación cuantitativa mediante golden set visual (`AI-TEST-006`) se ejecutará antes de producción.
 
 ---
 

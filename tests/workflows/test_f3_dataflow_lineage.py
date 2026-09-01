@@ -100,7 +100,7 @@ class TestF3DataflowLineage(unittest.TestCase):
         self.assertIsNotNone(norm_node)
         code = norm_node["parameters"]["jsCode"]
         self.assertIn("EMPTY_DOCUMENT_EXTRACTION", code)
-        self.assertIn("CONTROLLED_REVIEW_REQUIRED_DOCX_EXTRACTION", code)
+        self.assertIn("svia_docx_extractor", code)
 
     def test_prelive_015_child_persistence_gate_in_parent(self):
         verify_child = next((n for n in self.wf3["nodes"] if n["name"] == "Verify Child Persistence Before Completion"), None)

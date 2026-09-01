@@ -219,12 +219,21 @@ NAS
 │
 ├── PostgreSQL dedicado para datos internos de n8n
 │
+├── svia-docx-extractor (sidecar de extracción literal DOCX en red interna)
+│
 └── componente de acceso HTTPS seguro / reverse proxy o túnel
 ```
 
 Para V1 se utilizará una sola instancia de n8n. No se incorporarán Redis, queue mode ni workers adicionales salvo que pruebas reales de carga demuestren que son necesarios.
 
 n8n self-hosted puede funcionar con SQLite o PostgreSQL. Para esta aplicación se elige PostgreSQL como backend interno de producción porque la secretaria depende de ejecución continua, recuperación ante reinicios y backups verificables. Esta base seguirá siendo independiente de Supabase.
+
+### 5.2.1 Sidecar de Extracción de Documentos Word (`svia-docx-extractor`)
+
+Dado que n8n 2.35.4 no soporta nativamente la extracción de texto desde documentos Word (`.docx`), se implementa un microservicio sidecar controlado:
+- **Responsabilidad:** Extracción determinística y literal de párrafos y tablas en orden documental (`python-docx`).
+- **Seguridad:** Aislado en red interna Docker (`svia_doc_internal`, `internal: true`), sin salida a Internet, sin puertos expuestos al host, sin acceso al Docker socket ni credenciales, filesystem en modo `read_only`, ejecución sin privilegios (`non-root`), `cap_drop: [ALL]`, preflight defensivo contra path traversal, ZIP bombs y macros VBA (`.docm`).
+- **Principio:** Parser puro read-only, sin uso de IA, sin interpretación ni efectos secundarios persistentes.
 
 No se recomienda depender de una instalación manual difícil de reproducir.
 

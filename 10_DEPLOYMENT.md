@@ -498,6 +498,25 @@ services:
     networks:
       - svia_internal
 
+  docx_extractor:
+    image: ${DOCX_EXTRACTOR_IMAGE:-svia-docx-extractor:prod}
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - svia_doc_internal
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health').read()\""]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
   n8n:
     image: ${N8N_IMAGE}
     restart: unless-stopped
@@ -533,6 +552,7 @@ services:
     networks:
       - svia_internal
       - svia_ingress
+      - svia_doc_internal
 
   cloudflared:
     image: ${CLOUDFLARED_IMAGE}
@@ -544,6 +564,16 @@ services:
       - svia_ingress
     profiles:
       - tunnel
+
+networks:
+  svia_internal:
+    driver: bridge
+    internal: true
+  svia_ingress:
+    driver: bridge
+  svia_doc_internal:
+    driver: bridge
+    internal: true
 
 volumes:
   postgres_n8n_data:

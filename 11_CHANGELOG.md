@@ -1880,3 +1880,42 @@ Producción/NAS/EXISTING_OPERATIONAL_N8N/Supabase PROD/Immich/Cloudflare: NO MOD
 - **Producción:** NAS UGREEN, Supabase PROD, Immich y Cloudflare permanecen totalmente intactos y fuera de alcance.
 - **Fase F4 (Memoria Semántica):** NO INICIADA.
 
+---
+
+## CHG-2026-09-01-030 — F3 Audio + Drive — Implementación de Decisiones Aprobadas: Sidecar DOCX, Routing Visual en Dos Etapas y Aceptación Formal Scoped P2
+
+**Tipo:** CHANGED / ARCHITECTURE / SECURITY / GOVERNANCE
+**Estado:** APROBADO E IMPLEMENTADO EN DEV (`F3_BLOCKED_EXTERNAL_PRECONDITION`)
+**Motivo:** Materialización exclusiva de las tres decisiones de arquitectura y gobernanza aprobadas explícitamente por el usuario para cerrar los bloqueadores de revisión controlada de la fase F3: (1) Extracción de DOCX mediante microservicio sidecar controlado local (`svia-docx-extractor`), (2) Política de routing visual en dos etapas (GPT-5.6 Luna triage + análisis simple -> Gemini 3.7 Flash complex/uncertain -> GPT-5.6 Terra fallback), y (3) Aceptación formal y acotada (scoped) de los dos hallazgos P2 previamente auditados de `n8n audit` (SQL parametrizado con `queryReplacement` y nodos de código/HTTP bajo hardening).
+**Aprobado por:** Usuario (Aprobación explícita)
+**Documentos afectados:** `00_ESPECIFICACION_MAESTRA.md`, `03_ARQUITECTURA.md`, `05_N8N_WORKFLOWS.md`, `06_AI_MODELS_AND_PROMPTS.md`, `08_SECURITY.md`, `09_TEST_PLAN.md`, `10_DEPLOYMENT.md`, `11_CHANGELOG.md`, `config/ai_models.json`, `infra/docker/compose.dev.yml`, `infra/docker/compose.prod.yml`, `services/docx-extractor/**`, `n8n/workflows/ingestion/WF-ING-006_DOCUMENT_EXTRACT.json`, `n8n/workflows/ai/WF-AI-003_ANALYZE_VISUAL.json`, `tests/workflows/test_docx_extractor.py`, `tests/workflows/test_visual_routing.py`, `tests/evidence/f3_p2_explicit_acceptance.md`
+
+### Cambios Implementados y Verificaciones:
+1. **Sidecar DOCX Local (`svia-docx-extractor`):**
+   - Microservicio Python 3.11 / FastAPI en `services/docx-extractor/` con dependencias fijadas (`python-docx==1.2.0`, `fastapi==0.115.8`, `uvicorn==0.34.0`).
+   - Extracción determinística en orden documental de párrafos y tablas usando `python-docx` (`iter_inner_content`).
+   - Aislamiento en red Docker interna `svia_doc_internal` (`internal: true`), sin salida a Internet, sin puertos expuestos al host, contenedor `read_only: true`, `cap_drop: [ALL]`, `no-new-privileges:true`, usuario `non-root` (UID 10001).
+   - Validaciones de preflight defensivo contra path traversal (`..`), archivos encriptados, macros VBA (`.docm`, `vbaProject.bin`) y guardrails contra ZIP bombs.
+   - Integrado en `WF-ING-006_DOCUMENT_EXTRACT` mediante petición HTTP interna a `http://docx-extractor:8080/v1/extract/docx`.
+   - Test suite unitario `DOCX-TEST-001..010` implementado y verificado (10/10 PASS).
+2. **Routing Visual en Dos Etapas (`WF-AI-003_ANALYZE_VISUAL`):**
+   - Triage integrado y análisis de primer nivel mediante `gpt-5.6-luna`.
+   - Si `routing.visual_complexity == "simple"`: el resultado de Luna es definitivo (1 llamada Luna, 0 Gemini).
+   - Si `routing.visual_complexity == "complex"` o `"uncertain"`: escalamiento automático a `gemini-3.7-flash` (1 llamada Luna + 1 Gemini).
+   - Fallback de contingencia técnica: escalamiento a `gpt-5.6-terra` en caso de indisponibilidad de Gemini (nunca Sol).
+   - Test suite `VIS-ROUTE-001..007` implementado y verificado con mocks determinísticos (7/7 PASS).
+3. **Aceptación Formal Scoped P2 (`f3_p2_explicit_acceptance.md`):**
+   - Aceptación acotada de P2-A (`queryReplacement` en PostgreSQL nodes, riesgo SQLi = 0) y P2-B (`Official risky nodes` Code/HTTP nodes bajo aislamiento).
+   - Cero nuevos P2 sin aceptar reportados por `n8n audit`.
+4. **Cierre de Revisiones Controladas:**
+   - `CONTROLLED_REVIEW_DOCX = CLOSED`
+   - `CONTROLLED_REVIEW_VISUAL_ROUTING = CLOSED`
+   - `P2_PREVIOUSLY_AUDITED = EXPLICITLY_ACCEPTED`
+
+### Gobernanza y Estado del Sistema:
+- **Estado de Fase:** `F3_BLOCKED_EXTERNAL_PRECONDITION`
+- **Total Workflows:** Exactamente 23 workflows activos en n8n 2.35.4 (6 F3, 0 F4+).
+- **Tablas en DB:** Exactamente 25 tablas públicas V1 en Supabase DEV (0 migraciones nuevas).
+- **Blockers Restantes:** Exclusivamente precondiciones externas (4 credenciales DEV, dataset privado de transcripción, smoke tests live y benchmark formal de transcripción).
+- **Producción:** NAS UGREEN, Supabase PROD, Immich y Cloudflare permanecen totalmente intactos y fuera de alcance.
+- **Fase F4 (Memoria Semántica):** NO INICIADA.

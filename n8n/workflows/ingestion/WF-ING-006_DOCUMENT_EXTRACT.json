@@ -16,7 +16,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const i = $input.first();\nconst j = i.json;\nconst p = j.payload || j;\nconst n = String(p.original_filename || '').toLowerCase();\nconst m = String(p.mime_type || '').toLowerCase();\n\nconst isExecutable = /\\.(exe|com|bat|cmd|ps1|msi|scr|jar|js|vbs|wsf|sh|app|dmg)$/i.test(n) || /(x-msdownload|x-executable|javascript|x-sh)/i.test(m);\nconst isMacroEnabled = /\\.(docm|xlsm|pptm|xlam|dotm|potm|ppam)$/i.test(n) || /(vnd\\.ms-excel\\.sheet\\.macroEnabled|vnd\\.ms-word\\.document\\.macroEnabled|vnd\\.ms-powerpoint)/i.test(m);\n\nif (isExecutable) {\n  throw new Error('UNSAFE_DOCUMENT_TYPE_QUARANTINED: Executable or script files are strictly blocked');\n}\nif (isMacroEnabled) {\n  throw new Error('MACRO_ENABLED_DOCUMENT_QUARANTINED: Macro-enabled documents are quarantined to prevent arbitrary code execution');\n}\n\nlet format = 'text';\nif (/\\.pdf$/i.test(n) || m === 'application/pdf') {\n  format = 'pdf';\n} else if (/\\.(csv)$/i.test(n) || m === 'text/csv') {\n  format = 'text';\n} else if (/\\.(json)$/i.test(n) || m === 'application/json') {\n  format = 'text';\n} else if (/\\.(xml|html|htm|txt|md|log|rtf)$/i.test(n) || /^(text\\/|application\\/xml|application\\/rtf)/.test(m)) {\n  format = 'text';\n} else if (/\\.(doc|docx|odt)$/i.test(n) || /wordprocessingml|msword/.test(m)) {\n  format = 'unsupported_word';\n} else {\n  format = 'text';\n}\n\nreturn [{\n  json: {\n    ...j,\n    document_safe_to_extract: true,\n    document_format: format\n  },\n  binary: i.binary\n}];"
+        "jsCode": "const i = $input.first();\nconst j = i.json;\nconst p = j.payload || j;\nconst n = String(p.original_filename || '').toLowerCase();\nconst m = String(p.mime_type || '').toLowerCase();\n\nconst isExecutable = /\\.(exe|com|bat|cmd|ps1|msi|scr|jar|js|vbs|wsf|sh|app|dmg)$/i.test(n) || /(x-msdownload|x-executable|javascript|x-sh)/i.test(m);\nconst isMacroEnabled = /\\.(docm|xlsm|pptm|xlam|dotm|potm|ppam)$/i.test(n) || /(vnd\\.ms-excel\\.sheet\\.macroEnabled|vnd\\.ms-word\\.document\\.macroEnabled|vnd\\.ms-powerpoint)/i.test(m);\n\nif (isExecutable) {\n  throw new Error('UNSAFE_DOCUMENT_TYPE_QUARANTINED: Executable or script files are strictly blocked');\n}\nif (isMacroEnabled) {\n  throw new Error('MACRO_ENABLED_DOCUMENT_QUARANTINED: Macro-enabled documents are quarantined to prevent arbitrary code execution');\n}\n\nlet format = 'text';\nif (/\\.pdf$/i.test(n) || m === 'application/pdf') {\n  format = 'pdf';\n} else if (/\\.(docx)$/i.test(n) || /wordprocessingml\\.document/.test(m)) {\n  format = 'docx';\n} else if (/\\.(csv)$/i.test(n) || m === 'text/csv') {\n  format = 'text';\n} else if (/\\.(json)$/i.test(n) || m === 'application/json') {\n  format = 'text';\n} else if (/\\.(xml|html|htm|txt|md|log|rtf)$/i.test(n) || /^(text\\/|application\\/xml|application\\/rtf)/.test(m)) {\n  format = 'text';\n} else if (/\\.(doc|odt)$/i.test(n) || /msword|opendocument\\.text/.test(m)) {\n  throw new Error('UNSUPPORTED_LEGACY_DOCUMENT_FORMAT: Legacy binary .doc or .odt require conversion to .docx');\n} else {\n  format = 'text';\n}\n\nreturn [{\n  json: {\n    ...j,\n    document_safe_to_extract: true,\n    document_format: format\n  },\n  binary: i.binary\n}];"
       },
       "id": "ing6-gate",
       "name": "Document Safety Gate",
@@ -85,7 +85,7 @@
                 "conditions": [
                   {
                     "leftValue": "={{ $json.document_format }}",
-                    "rightValue": "unsupported_word",
+                    "rightValue": "docx",
                     "operator": {
                       "type": "string",
                       "operation": "equals"
@@ -95,7 +95,7 @@
                 "combinator": "and"
               },
               "renameOutput": true,
-              "outputKey": "unsupported_word"
+              "outputKey": "docx"
             }
           ]
         },
@@ -138,29 +138,68 @@
       "typeVersion": 1.1,
       "position": [
         780,
-        340
+        300
       ],
       "onError": "continueRegularOutput"
     },
     {
       "parameters": {
-        "jsCode": "const j = $input.first().json;\nconst gate = $('Document Safety Gate').first().json;\n\nif (gate.document_format === 'unsupported_word') {\n  throw new Error('CONTROLLED_REVIEW_REQUIRED_DOCX_EXTRACTION: Word docx parsing requires approved parser dependency');\n}\n\nlet text = j.text || j.data || j.extractedText || j.content || '';\nif (typeof text !== 'string') {\n  text = JSON.stringify(text);\n}\n\nconst cleanText = String(text).trim();\nif (!cleanText) {\n  throw new Error('EMPTY_DOCUMENT_EXTRACTION: Document text extraction resulted in empty content');\n}\n\nreturn [{\n  json: {\n    ...gate,\n    extracted_text: cleanText,\n    extraction_warnings: []\n  }\n}];"
+        "method": "POST",
+        "url": "http://docx-extractor:8080/v1/extract/docx",
+        "sendBinaryData": true,
+        "binaryPropertyName": "data",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000,
+          "retry": {
+            "retry": {
+              "maxTries": 2,
+              "waitBetweenTries": 1000
+            }
+          }
+        }
+      },
+      "id": "ing6-extract-docx",
+      "name": "DOCX Sidecar Extraction",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        780,
+        420
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const j = $input.first().json;\nconst gate = $('Document Safety Gate').first().json;\n\nlet text = '';\nlet warnings = [];\nlet extractorProvider = 'n8n_native_extract';\nlet extractorVersion = 'n8n-2.35.4';\n\nif (gate.document_format === 'docx') {\n  extractorProvider = 'svia_docx_extractor';\n  extractorVersion = j.extractor_version || 'python-docx-1.2.0';\n  if (j.status === 'error') {\n    throw new Error(`DOCX_EXTRACTION_FAILED: [${j.error_code || 'ERROR'}] ${j.message || 'Sidecar extraction failed'}`);\n  }\n  text = j.text || '';\n  warnings = j.warnings || [];\n} else {\n  text = j.text || j.data || j.extractedText || j.content || '';\n  if (typeof text !== 'string') {\n    text = JSON.stringify(text);\n  }\n}\n\nconst cleanText = String(text).trim();\nif (!cleanText) {\n  throw new Error('EMPTY_DOCUMENT_EXTRACTION: Document text extraction resulted in empty content');\n}\n\nreturn [{\n  json: {\n    ...gate,\n    extracted_text: cleanText,\n    extractor_provider: extractorProvider,\n    extractor_version: extractorVersion,\n    extraction_warnings: warnings\n  }\n}];"
       },
       "id": "ing6-normalize",
       "name": "Normalize Extracted Text",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1000,
+        1020,
         300
       ]
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT public.create_source_text_variant($1::uuid, $2::uuid, $3::uuid, 'document_extract', $4, NULL, 'n8n_native_extract', 'n8n-2.35.4', NULL, true) AS res;",
+        "query": "SELECT public.create_source_text_variant($1::uuid, $2::uuid, $3::uuid, 'document_extract', $4, NULL, $5, $6, NULL, true) AS res;",
         "options": {
-          "queryReplacement": "={{ [$json.user_id, $json.ingestion_id, $json.asset_id, $json.extracted_text] }}"
+          "queryReplacement": "={{ [$json.user_id, $json.ingestion_id, $json.asset_id, $json.extracted_text, $json.extractor_provider, $json.extractor_version] }}"
         }
       },
       "id": "ing6-source",
@@ -168,7 +207,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
-        1220,
+        1240,
         300
       ],
       "credentials": {
@@ -187,7 +226,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1440,
+        1460,
         300
       ]
     }
@@ -233,7 +272,7 @@
         ],
         [
           {
-            "node": "Normalize Extracted Text",
+            "node": "DOCX Sidecar Extraction",
             "type": "main",
             "index": 0
           }
@@ -252,6 +291,17 @@
       ]
     },
     "Native Extract Text / Code": {
+      "main": [
+        [
+          {
+            "node": "Normalize Extracted Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DOCX Sidecar Extraction": {
       "main": [
         [
           {
@@ -286,7 +336,8 @@
     }
   },
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "errorWorkflow": "WF-SYS-001"
   },
   "id": "WF-ING-006"
 }
