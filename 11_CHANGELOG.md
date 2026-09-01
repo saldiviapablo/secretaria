@@ -1802,3 +1802,27 @@ Producción/NAS/EXISTING_OPERATIONAL_N8N/Supabase PROD/Immich/Cloudflare: NO MOD
 - **Producción:** NAS UGREEN, Supabase PROD, Immich y Cloudflare permanecen totalmente intactos y fuera de alcance.
 - **Fase F4 (Memoria Semántica):** NO INICIADA.
 
+---
+
+## CHG-2026-08-31-027 — F3 Audio + Drive — Sexta Revalidación Correctiva, Continuidad de Binary en Gemini Files API y Validación Estricta de Longitud Numérica
+
+**Tipo:** FIXED / RUNTIME / REVALIDATION / SECURITY
+**Estado:** F3 BLOCKED_EXTERNAL_PRECONDITION
+**Motivo:** Sexta revalidación correctiva tras la auditoría independiente del commit `bbc1829`. Se aplicaron las siguientes resoluciones técnicas definitivas: (1) resolución de `F3-CORR-026` mediante la incorporación del nodo `Validate Gemini Binary Metadata` y la recuperación explícita de `originalBinary` en `Extract Upload Session URL`, garantizando que el stream de audio `binary.data` se preserve íntegro y sin corrupción hacia `Gemini Files API Upload Finalize`; (2) resolución de `F3-CORR-027` validando estrictamente la longitud en bytes como entero positivo (`exact_byte_length`), rechazando cadenas formateadas de presentación (e.g. '1.2 MB'), ceros, negativos o inconsistencias de tamaño (`AUDIO_BINARY_LENGTH_REQUIRED` / `AUDIO_BINARY_LENGTH_MISMATCH`); (3) eliminación del header manual `Content-Length` en `Gemini Files API Upload Finalize` para permitir el cálculo automático exacto por parte del motor HTTP Request de n8n; (4) preservación intacta del diseño de renderizado determinista `DRIVE-ROOT-001` y del hardening `N8N_BLOCK_ENV_ACCESS_IN_NODE=true`; (5) certificación de 14 unit tests automatizados en `tests/workflows/test_gemini_static_contract.py` (incluyendo continuidad binaria por SHA-256); y (6) emisión de evidencia estructurada en `tests/evidence/f3_revalidation6_*` y `evidence_f3_revalidation6.json`.
+**Solicitado por:** Antigravity / Prompt Final Sexta Revalidación Correctiva Mínima F3
+**Documentos afectados:** `11_CHANGELOG.md`, `n8n/workflows/ai/WF-AI-001_TRANSCRIBE.json`, `tests/workflows/test_gemini_static_contract.py`, `tests/integration/test_f3_media_drive.js`, `tests/evidence/f3_revalidation6_*`, `tests/evidence/evidence_f3_revalidation6.json`
+
+### Resoluciones Factuales y Estado de Verificación:
+1. **F3-CORR-026 (Continuidad de Binary):** La respuesta HTTP de `Gemini Files API Start` no preserva binarios de entrada; `Extract Upload Session URL` recupera explícitamente el objeto binario original desde `Validate Gemini Binary Metadata`, verificando `originalBinary.data` antes de enviarlo a `Gemini Files API Upload Finalize`.
+2. **F3-CORR-027 (Longitud Numérica Exacta y Content-Length):** El header `X-Goog-Upload-Header-Content-Length` se alimenta de `exact_byte_length` (validado como entero > 0). En `Gemini Files API Upload Finalize`, se eliminó el header manual `Content-Length`, permitiendo que n8n transmita el stream binario con la longitud real calculada automáticamente.
+3. **DRIVE-ROOT-001 Preservado:** 23 workflows renderizados determinísticamente con `render_n8n_workflows.py`, paridad lógica al 100% y `N8N_BLOCK_ENV_ACCESS_IN_NODE=true` activo.
+
+### Gobernanza y Estado del Sistema:
+- **Estado de Fase:** `F3 BLOCKED_EXTERNAL_PRECONDITION`
+- **Total Workflows:** Exactamente 23 workflows activos en n8n 2.35.4 (6 F3, 0 F4+).
+- **Tablas en DB:** Exactamente 25 tablas públicas V1 en Supabase DEV (migración 13 head, 2 resets exitosos).
+- **Benchmark Transcripción:** `transcription_primary = null` (Pendiente de dataset privado con evaluación humana según `AI-DEC-007`).
+- **Gobernanza P2:** `queryReplacement` y `Code Nodes` en `P2_PENDING_EXPLICIT_USER_ACCEPTANCE`.
+- **Producción:** NAS UGREEN, Supabase PROD, Immich y Cloudflare permanecen totalmente intactos y fuera de alcance.
+- **Fase F4 (Memoria Semántica):** NO INICIADA.
+

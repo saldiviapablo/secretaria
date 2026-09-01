@@ -1,0 +1,25 @@
+F3 SIXTH REVALIDATION — GEMINI BINARY CONTINUITY EVIDENCE (F3-CORR-026)
+Timestamp: 2026-09-01T00:14:47.272887+00:00
+Workflow: n8n/workflows/ai/WF-AI-001_TRANSCRIBE.json
+Node Sequence & Binary Preservation:
+1. Validate Gemini Binary Metadata:
+   - Validates existence of input binary property 'data'.
+   - Derives exact numerical byte length.
+   - Passes binary context downstream.
+2. Gemini Files API Start:
+   - Resumable session initiated with X-Goog-Upload-Protocol: resumable.
+   - Full response includes upload session URL in header 'x-goog-upload-url'.
+3. Extract Upload Session URL:
+   - Explicitly retrieves original binary from 'Validate Gemini Binary Metadata' node ($('Validate Gemini Binary Metadata').first().binary).
+   - Validates originalBinary.data existence (throws GEMINI_AUDIO_BINARY_MISSING if missing).
+   - Pairs upload_session_url with intact binary.data.
+4. Gemini Files API Upload Finalize:
+   - Method: POST to upload_session_url.
+   - contentType: binaryData.
+   - inputDataFieldName: data (real audio stream passed without base64/string corruption).
+
+Binary Continuity Verification:
+- SHA-256 before Start == SHA-256 at Finalize (Verified in test suite).
+- Binary property name strictly preserved as 'data'.
+
+Status: PASS

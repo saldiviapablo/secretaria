@@ -1,0 +1,22 @@
+F3 SIXTH REVALIDATION — DRIVE-ROOT-001 RENDERER REGRESSION EVIDENCE
+Timestamp: 2026-09-01T00:14:47.272887+00:00
+Decision: DRIVE-ROOT-001
+Renderer: infra/scripts/render_n8n_workflows.py
+Placeholder: __SVIA_DRIVE_ROOT_FOLDER_ID__
+
+Regression Assertions:
+- Missing/empty/invalid configuration throws DRIVE_ROOT_CONFIG_REQUIRED (fail-closed).
+- Authorized F3 workflows (WF-ING-003, WF-ING-004, WF-ING-005) receive exact 4 substitutions.
+- Unauthorized files with placeholder throw UNAUTHORIZED_PLACEHOLDER_COUNT.
+- Git template files remain completely immutable during render.
+- Secret scan on rendered workflows: 0 secrets detected.
+
+Renderer Test Output (7/7 Tests PASS):
+.......
+----------------------------------------------------------------------
+Ran 7 tests in 0.366s
+
+OK
+
+
+Status: PASS

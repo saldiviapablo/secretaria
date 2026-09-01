@@ -1,0 +1,16 @@
+F3 SIXTH REVALIDATION — GEMINI EXACT BYTE LENGTH EVIDENCE (F3-CORR-027)
+Timestamp: 2026-09-01T00:14:47.272887+00:00
+Workflow: n8n/workflows/ai/WF-AI-001_TRANSCRIBE.json
+
+Exact Byte Length Validation Rules:
+1. Source of Truth:
+   - payload.file_size or json.file_size strictly validated as positive integer (> 0).
+   - binary.data.fileSize accepted ONLY if numeric digits without presentation units (no '1.2 MB' or '123 KB').
+2. Fail-Closed Enforcement:
+   - Zero, negative, missing, or non-numeric byte lengths throw AUDIO_BINARY_LENGTH_REQUIRED.
+   - Inconsistencies between payload size and numeric binary size throw AUDIO_BINARY_LENGTH_MISMATCH.
+3. Content-Length in Finalize:
+   - Manual Content-Length header removed from 'Gemini Files API Upload Finalize'.
+   - n8n HTTP Request node with contentType='binaryData' calculates exact Content-Length stream header automatically.
+
+Status: PASS

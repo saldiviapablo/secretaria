@@ -1,0 +1,24 @@
+F3 SIXTH REVALIDATION — GEMINI 3.5 TRANSCRIBE COMPLETE STATIC CONTRACT EVIDENCE
+Timestamp: 2026-09-01T00:14:47.272887+00:00
+Workflow: n8n/workflows/ai/WF-AI-001_TRANSCRIBE.json
+Candidate Model: gemini-3.5-transcribe
+
+Specifications Certified:
+- Model: gemini-3.5-transcribe
+- Protocol: Google Gemini Files API resumable upload + Interactions API
+- Start Header Length: ={ $json.exact_byte_length } (strictly numeric positive integer)
+- Start Header MIME: ={ $json.mime_type }
+- Finalize: binaryData streaming via 'data' property (no manual Content-Length header)
+- Interaction Input: [{ type: "audio", uri: file_uri, mime_type: mime_type }]
+- Transcription Config: language_codes: ["es-AR"] (array) and mode: { "type": "verbatim" } (object)
+- Zero forbidden elements: 0 generateContent, 0 inlineData, 0 legacy string properties, 0 hardcoded secrets.
+
+Test Results (14/14 Tests PASS):
+..............
+----------------------------------------------------------------------
+Ran 14 tests in 0.003s
+
+OK
+
+
+Status: PASS

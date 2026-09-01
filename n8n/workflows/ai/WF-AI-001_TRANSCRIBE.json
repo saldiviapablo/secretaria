@@ -133,6 +133,19 @@
     },
     {
       "parameters": {
+        "jsCode": "const item = $input.first();\nconst j = item.json;\nconst p = j.payload || j;\nconst bin = item.binary?.data;\n\nif (!bin) {\n  throw new Error('AUDIO_BINARY_REQUIRED: missing binary.data for Gemini transcription');\n}\n\nlet byteLength = null;\nif (typeof p.file_size === 'number' && Number.isInteger(p.file_size) && p.file_size > 0) {\n  byteLength = p.file_size;\n} else if (typeof j.file_size === 'number' && Number.isInteger(j.file_size) && j.file_size > 0) {\n  byteLength = j.file_size;\n} else if (bin.fileSize && /^\\d+$/.test(String(bin.fileSize).trim())) {\n  const parsed = parseInt(String(bin.fileSize).trim(), 10);\n  if (parsed > 0) {\n    byteLength = parsed;\n  }\n}\n\nif (!byteLength || byteLength <= 0) {\n  throw new Error('AUDIO_BINARY_LENGTH_REQUIRED: exact numeric byte length is required');\n}\n\nif (p.file_size && bin.fileSize && /^\\d+$/.test(String(bin.fileSize).trim())) {\n  const binNum = parseInt(String(bin.fileSize).trim(), 10);\n  if (p.file_size !== binNum) {\n    throw new Error('AUDIO_BINARY_LENGTH_MISMATCH: payload file_size does not match binary byte length');\n  }\n}\n\nconst mimeType = bin.mimeType || p.mime_type || j.mime_type || 'audio/ogg';\n\nreturn [{\n  json: {\n    ...j,\n    exact_byte_length: byteLength,\n    mime_type: mimeType\n  },\n  binary: item.binary\n}];"
+      },
+      "id": "ai1-gemini-validate-binary",
+      "name": "Validate Gemini Binary Metadata",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        420
+      ]
+    },
+    {
+      "parameters": {
         "method": "POST",
         "url": "https://generativelanguage.googleapis.com/upload/v1beta/files",
         "authentication": "predefinedCredentialType",
@@ -150,11 +163,11 @@
             },
             {
               "name": "X-Goog-Upload-Header-Content-Length",
-              "value": "={{ $binary.data.fileSize || $json.payload?.file_size || 0 }}"
+              "value": "={{ $json.exact_byte_length }}"
             },
             {
               "name": "X-Goog-Upload-Header-Content-Type",
-              "value": "={{ $binary.data.mimeType || 'audio/ogg' }}"
+              "value": "={{ $json.mime_type }}"
             },
             {
               "name": "Content-Type",
@@ -179,7 +192,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        800,
+        1000,
         420
       ],
       "credentials": {
@@ -194,14 +207,14 @@
     },
     {
       "parameters": {
-        "jsCode": "const item = $input.first();\nconst j = item.json;\nconst headers = j.headers || {};\nconst uploadUrl = headers['x-goog-upload-url'] || headers['X-Goog-Upload-URL'] || j['x-goog-upload-url'] || null;\nif (!uploadUrl) {\n  throw new Error('GEMINI_FILES_API_START_FAILED: x-goog-upload-url header not returned by Files API');\n}\nconst prev = $('Validate Transcription Contract').first().json;\nreturn [{\n  json: {\n    ...prev,\n    upload_session_url: uploadUrl,\n    file_size: item.binary?.data?.fileSize || prev.payload?.file_size || 0,\n    mime_type: item.binary?.data?.mimeType || 'audio/ogg'\n  },\n  binary: item.binary\n}];"
+        "jsCode": "const item = $input.first();\nconst j = item.json;\nconst headers = j.headers || {};\nconst uploadUrl = headers['x-goog-upload-url'] || headers['X-Goog-Upload-URL'] || j['x-goog-upload-url'] || null;\nif (!uploadUrl) {\n  throw new Error('GEMINI_FILES_API_START_FAILED: x-goog-upload-url header not returned by Files API');\n}\nconst prev = $('Validate Gemini Binary Metadata').first().json;\nconst originalBinary = $('Validate Gemini Binary Metadata').first().binary;\nif (!originalBinary || !originalBinary.data) {\n  throw new Error('GEMINI_AUDIO_BINARY_MISSING: binary audio data not preserved for finalize');\n}\nreturn [{\n  json: {\n    ...prev,\n    upload_session_url: uploadUrl\n  },\n  binary: originalBinary\n}];"
       },
       "id": "ai1-gemini-extract-url",
       "name": "Extract Upload Session URL",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1000,
+        1200,
         420
       ]
     },
@@ -214,10 +227,6 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {
-              "name": "Content-Length",
-              "value": "={{ $binary.data.fileSize || $json.file_size }}"
-            },
             {
               "name": "X-Goog-Upload-Offset",
               "value": "0"
@@ -240,7 +249,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1200,
+        1400,
         420
       ],
       "credentials": {
@@ -261,7 +270,7 @@
         "nodeCredentialType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"model\": \"gemini-3.5-transcribe\",\n  \"input\": [\n    {\n      \"type\": \"audio\",\n      \"uri\": $json.file?.uri || $json.uri,\n      \"mime_type\": $json.file?.mimeType || \"audio/ogg\"\n    }\n  ],\n  \"generation_config\": {\n    \"transcription_config\": {\n      \"language_codes\": [\"es-AR\"],\n      \"mode\": {\n        \"type\": \"verbatim\"\n      }\n    }\n  }\n}",
+        "jsonBody": "={\n  \"model\": \"gemini-3.5-transcribe\",\n  \"input\": [\n    {\n      \"type\": \"audio\",\n      \"uri\": $json.file?.uri || $json.uri,\n      \"mime_type\": $json.file?.mimeType || $json.mime_type || \"audio/ogg\"\n    }\n  ],\n  \"generation_config\": {\n    \"transcription_config\": {\n      \"language_codes\": [\"es-AR\"],\n      \"mode\": {\n        \"type\": \"verbatim\"\n      }\n    }\n  }\n}",
         "options": {
           "timeout": 120000
         }
@@ -271,7 +280,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1400,
+        1620,
         420
       ],
       "credentials": {
@@ -293,7 +302,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1620,
+        1840,
         300
       ]
     },
@@ -310,7 +319,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
-        1840,
+        2060,
         300
       ],
       "credentials": {
@@ -333,7 +342,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
-        2060,
+        2280,
         300
       ],
       "credentials": {
@@ -352,7 +361,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2280,
+        2500,
         300
       ]
     }
@@ -391,7 +400,7 @@
         ],
         [
           {
-            "node": "Gemini Files API Start",
+            "node": "Validate Gemini Binary Metadata",
             "type": "main",
             "index": 0
           }
@@ -403,6 +412,17 @@
         [
           {
             "node": "Normalize Transcription Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Gemini Binary Metadata": {
+      "main": [
+        [
+          {
+            "node": "Gemini Files API Start",
             "type": "main",
             "index": 0
           }
