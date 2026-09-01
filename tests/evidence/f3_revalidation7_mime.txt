@@ -1,0 +1,13 @@
+F3 SEVENTH REVALIDATION — STRICT MIME VALIDATION EVIDENCE (F3-CORR-029)
+Timestamp: 2026-09-01T00:23:33.101024+00:00
+Workflow: n8n/workflows/ai/WF-AI-001_TRANSCRIBE.json
+
+Validation Rules:
+- Prohibited fallback strings (|| 'audio/ogg' / || "audio/ogg") completely removed from WF-AI-001.
+- Missing MIME throws AUDIO_MIME_TYPE_REQUIRED.
+- Mismatch between payload.mime_type and binary.data.mimeType throws AUDIO_MIME_TYPE_MISMATCH.
+- Supported MIME whitelist enforced for Gemini API:
+  audio/ogg, audio/mp3, audio/mpeg, audio/wav, audio/x-wav, audio/aac, audio/flac, audio/m4a, audio/x-m4a, audio/mp4, audio/opus, audio/webm.
+- Unsupported MIME formats throw GEMINI_UNSUPPORTED_AUDIO_MIME.
+
+Status: PASS

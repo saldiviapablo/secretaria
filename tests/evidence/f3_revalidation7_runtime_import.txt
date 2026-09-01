@@ -1,0 +1,7 @@
+F3 SEVENTH REVALIDATION — N8N WORKFLOW RUNTIME IMPORT EVIDENCE
+Timestamp: 2026-09-01T00:23:33.101024+00:00
+n8n Container: secretaria-n8n-dev (v2.35.4)
+Import Source: build/rendered_workflows
+Total Active Workflows: 23 (6 F3, 0 F4+)
+
+Status: PASS

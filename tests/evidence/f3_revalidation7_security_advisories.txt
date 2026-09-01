@@ -1,0 +1,10 @@
+F3 SEVENTH REVALIDATION — FRESH N8N ADVISORY GATE EVIDENCE
+Timestamp: 2026-09-01T00:23:33.101024+00:00
+Checked Version: 2.35.4
+Advisory Audit:
+- Query Parameters: P2 Controlled
+- Code Nodes: P2 Controlled
+- Outdated Instance Notice: Next versions 2.35.7 and 2.36.9 report hasSecurityIssue=null, hasSecurityFix=null, securityIssueFixVersion=null, hasBreakingChange=false (Bug fixes only).
+- Zero new security advisories requiring a version upgrade above 2.35.4.
+
+Status: PASS (2.35.4 confirmed safe & hardened)

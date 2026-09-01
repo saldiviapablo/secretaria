@@ -1,0 +1,15 @@
+F3 SEVENTH REVALIDATION — RETRY POLICY & IDEMPOTENCY EVIDENCE (F3-CORR-030)
+Timestamp: 2026-09-01T00:23:33.101024+00:00
+Workflow: n8n/workflows/ai/WF-AI-001_TRANSCRIBE.json
+
+Node Retry Configurations:
+1. Gemini Files API Start:
+   - retryOnFail: true, maxTries: 3, waitBetweenTries: 3000 (Safe network retry prior to file creation).
+2. Validate Gemini Binary Metadata:
+   - retryOnFail: false (Deterministic error on missing/invalid buffer or unsupported MIME).
+3. Gemini Files API Upload Finalize:
+   - retryOnFail: false (Blind automatic retry disabled to prevent uncertain duplicate session uploads with offset 0).
+4. Gemini Transcribe Interaction:
+   - retryOnFail: false (Blind automatic retry disabled to prevent repeating 4xx client/auth/schema errors).
+
+Status: PASS

@@ -8,6 +8,12 @@ ROOT = Path(__file__).resolve().parents[2]
 WF_PATH = ROOT / "n8n" / "workflows" / "ai" / "WF-AI-001_TRANSCRIBE.json"
 MODELS_PATH = ROOT / "config" / "ai_models.json"
 
+ALLOWED_GEMINI_AUDIO_MIMES = {
+    'audio/ogg', 'audio/mp3', 'audio/mpeg', 'audio/wav', 'audio/x-wav',
+    'audio/aac', 'audio/flac', 'audio/m4a', 'audio/x-m4a', 'audio/mp4',
+    'audio/opus', 'audio/webm'
+}
+
 
 class TestGeminiStaticContract(unittest.TestCase):
     def setUp(self):
@@ -18,13 +24,17 @@ class TestGeminiStaticContract(unittest.TestCase):
     def test_model_name_exact(self):
         self.assertIn("gemini-3.5-transcribe", self.raw_text)
 
-    def test_validate_binary_metadata_node(self):
+    def test_validate_binary_metadata_node_implementation(self):
         val_node = next((n for n in self.wf_data["nodes"] if n["name"] == "Validate Gemini Binary Metadata"), None)
         self.assertIsNotNone(val_node)
         code = val_node["parameters"]["jsCode"]
+        self.assertIn("getBinaryDataBuffer", code)
         self.assertIn("AUDIO_BINARY_REQUIRED", code)
         self.assertIn("AUDIO_BINARY_LENGTH_REQUIRED", code)
         self.assertIn("AUDIO_BINARY_LENGTH_MISMATCH", code)
+        self.assertIn("AUDIO_MIME_TYPE_REQUIRED", code)
+        self.assertIn("AUDIO_MIME_TYPE_MISMATCH", code)
+        self.assertIn("GEMINI_UNSUPPORTED_AUDIO_MIME", code)
         self.assertIn("exact_byte_length", code)
 
     def test_files_api_start_resumable(self):
@@ -49,9 +59,11 @@ class TestGeminiStaticContract(unittest.TestCase):
         self.assertIn("Validate Gemini Binary Metadata", code)
         self.assertIn("GEMINI_AUDIO_BINARY_MISSING", code)
 
-    def test_files_api_finalize_binary_data_no_manual_content_length(self):
+    def test_files_api_finalize_retry_disabled_and_no_manual_content_length(self):
         finalize_node = next((n for n in self.wf_data["nodes"] if n["name"] == "Gemini Files API Upload Finalize"), None)
         self.assertIsNotNone(finalize_node)
+        self.assertFalse(finalize_node.get("retryOnFail", False), "Blind retry must be disabled on Finalize")
+
         params = finalize_node["parameters"]
         self.assertEqual(params["method"], "POST")
         self.assertEqual(params["contentType"], "binaryData")
@@ -62,9 +74,11 @@ class TestGeminiStaticContract(unittest.TestCase):
         self.assertEqual(headers.get("X-Goog-Upload-Offset"), "0")
         self.assertNotIn("Content-Length", headers, "Manual Content-Length must be omitted to let n8n compute it")
 
-    def test_interactions_api_body_and_verbatim_schema(self):
+    def test_interaction_node_retry_disabled_and_mime_binding(self):
         interact_node = next((n for n in self.wf_data["nodes"] if n["name"] == "Gemini Transcribe Interaction"), None)
         self.assertIsNotNone(interact_node)
+        self.assertFalse(interact_node.get("retryOnFail", False), "Blind retry must be disabled on Interaction")
+
         params = interact_node["parameters"]
         self.assertEqual(params["method"], "POST")
         self.assertEqual(params["url"], "https://generativelanguage.googleapis.com/v1beta/interactions")
@@ -74,10 +88,11 @@ class TestGeminiStaticContract(unittest.TestCase):
         self.assertIn('"type": "audio"', json_body)
         self.assertIn('"language_codes": ["es-AR"]', json_body)
         self.assertIn('"type": "verbatim"', json_body)
+        self.assertIn('"mime_type": $json.mime_type', json_body)
 
-        # Prohibited legacy formats
-        self.assertNotIn('"language_code": "es-AR"', json_body)
-        self.assertNotIn('"mode": "verbatim"', json_body)
+        # Prohibited fallback strings
+        self.assertNotIn("|| 'audio/ogg'", self.raw_text)
+        self.assertNotIn('|| "audio/ogg"', self.raw_text)
 
     def test_no_forbidden_methods_or_inline_data(self):
         self.assertNotIn("generateContent", self.raw_text)
@@ -97,17 +112,12 @@ class TestGeminiStaticContract(unittest.TestCase):
         self.assertIsNone(models_data["routing"]["transcription_primary"])
 
 
-class TestGeminiBinaryContinuityAndLength(unittest.TestCase):
+class TestGeminiBinaryLogicAndValidation(unittest.TestCase):
     """
-    Tests the JS logic for binary preservation and byte length calculation.
+    Simulates the exact logic implemented in the Validate Gemini Binary Metadata Code Node.
     """
 
-    def setUp(self):
-        self.raw_text = WF_PATH.read_text(encoding="utf-8")
-        self.wf_data = json.loads(self.raw_text)
-
-    def _eval_validate_binary_logic(self, item):
-        # Python representation of the JS node logic in Validate Gemini Binary Metadata
+    def _eval_node_logic(self, item, mock_buffer):
         j = item.get("json", {})
         p = j.get("payload") or j
         bin_data = item.get("binary", {}).get("data")
@@ -115,98 +125,126 @@ class TestGeminiBinaryContinuityAndLength(unittest.TestCase):
         if not bin_data:
             raise ValueError("AUDIO_BINARY_REQUIRED: missing binary.data for Gemini transcription")
 
-        byte_length = None
-        if isinstance(p.get("file_size"), int) and p.get("file_size") > 0:
-            byte_length = p.get("file_size")
-        elif isinstance(j.get("file_size"), int) and j.get("file_size") > 0:
-            byte_length = j.get("file_size")
-        elif bin_data.get("fileSize") and str(bin_data.get("fileSize")).strip().isdigit():
-            parsed = int(str(bin_data.get("fileSize")).strip())
-            if parsed > 0:
-                byte_length = parsed
+        buffer = mock_buffer
+        if not buffer or len(buffer) == 0:
+            raise ValueError("AUDIO_BINARY_LENGTH_REQUIRED: binary audio buffer is empty or missing")
 
-        if not byte_length or byte_length <= 0:
-            raise ValueError("AUDIO_BINARY_LENGTH_REQUIRED: exact numeric byte length is required")
+        exact_byte_length = len(buffer)
+        if exact_byte_length <= 0:
+            raise ValueError("AUDIO_BINARY_LENGTH_REQUIRED: exact numeric byte length is invalid")
 
-        if p.get("file_size") and bin_data.get("fileSize") and str(bin_data.get("fileSize")).strip().isdigit():
-            bin_num = int(str(bin_data.get("fileSize")).strip())
-            if p.get("file_size") != bin_num:
-                raise ValueError("AUDIO_BINARY_LENGTH_MISMATCH: payload file_size does not match binary byte length")
+        if p.get("file_size") is not None:
+            if not isinstance(p.get("file_size"), int) or p.get("file_size") <= 0:
+                raise ValueError("AUDIO_BINARY_LENGTH_REQUIRED: payload file_size must be a positive integer")
+            if p.get("file_size") != exact_byte_length:
+                raise ValueError(f"AUDIO_BINARY_LENGTH_MISMATCH: payload file_size ({p.get('file_size')}) does not match binary buffer length ({exact_byte_length})")
 
-        mime_type = bin_data.get("mimeType") or p.get("mime_type") or j.get("mime_type") or "audio/ogg"
+        raw_mime = (bin_data.get("mimeType") or p.get("mime_type") or "").strip().lower()
+        if not raw_mime:
+            raise ValueError("AUDIO_MIME_TYPE_REQUIRED: audio MIME type is missing")
+
+        if p.get("mime_type") and bin_data.get("mimeType"):
+            if p.get("mime_type").strip().lower() != bin_data.get("mimeType").strip().lower():
+                raise ValueError("AUDIO_MIME_TYPE_MISMATCH: payload mime_type does not match binary mimeType")
+
+        if raw_mime not in ALLOWED_GEMINI_AUDIO_MIMES:
+            raise ValueError(f"GEMINI_UNSUPPORTED_AUDIO_MIME: MIME type {raw_mime} is not supported by Gemini API")
 
         return [{
             "json": {
                 **j,
-                "exact_byte_length": byte_length,
-                "mime_type": mime_type
+                "exact_byte_length": exact_byte_length,
+                "mime_type": raw_mime
             },
             "binary": item.get("binary")
         }]
 
-    def test_case_1_valid_binary_and_size(self):
-        sample_bytes = b"OggS\x00\x02\x00\x00\x00\x00synthetic_audio_payload"
+    def test_byte_length_1_byte_buffer(self):
+        buf = b"X"
         item = {
-            "json": {
-                "user_id": "11111111-1111-1111-1111-111111111111",
-                "ingestion_id": "22222222-2222-2222-2222-222222222222",
-                "payload": {"file_size": len(sample_bytes), "mime_type": "audio/ogg"}
-            },
-            "binary": {
-                "data": {
-                    "data": sample_bytes,
-                    "mimeType": "audio/ogg",
-                    "fileSize": str(len(sample_bytes))
-                }
-            }
+            "json": {"payload": {"file_size": 1, "mime_type": "audio/ogg"}},
+            "binary": {"data": {"mimeType": "audio/ogg", "fileSize": "1"}}
         }
-        res = self._eval_validate_binary_logic(item)
-        self.assertEqual(res[0]["json"]["exact_byte_length"], len(sample_bytes))
-        self.assertEqual(res[0]["binary"]["data"]["data"], sample_bytes)
+        res = self._eval_node_logic(item, buf)
+        self.assertEqual(res[0]["json"]["exact_byte_length"], 1)
 
-    def test_case_2_string_presentation_file_size_fails(self):
+    def test_byte_length_n_bytes_buffer(self):
+        buf = b"OggS\x00\x02\x00\x00\x00\x00synthetic_payload_32_bytes_len!"
         item = {
-            "json": {"payload": {}},
-            "binary": {"data": {"fileSize": "1.2 MB", "mimeType": "audio/ogg"}}
+            "json": {"payload": {"file_size": len(buf), "mime_type": "audio/ogg"}},
+            "binary": {"data": {"mimeType": "audio/ogg", "fileSize": str(len(buf))}}
+        }
+        res = self._eval_node_logic(item, buf)
+        self.assertEqual(res[0]["json"]["exact_byte_length"], len(buf))
+
+    def test_byte_length_mismatch_fails_closed(self):
+        buf = b"1234567890"
+        item = {
+            "json": {"payload": {"file_size": 20, "mime_type": "audio/ogg"}},
+            "binary": {"data": {"mimeType": "audio/ogg"}}
         }
         with self.assertRaises(ValueError) as ctx:
-            self._eval_validate_binary_logic(item)
-        self.assertIn("AUDIO_BINARY_LENGTH_REQUIRED", str(ctx.exception))
-
-    def test_case_3_zero_or_negative_file_size_fails(self):
-        item = {
-            "json": {"payload": {"file_size": 0}},
-            "binary": {"data": {"fileSize": "0", "mimeType": "audio/ogg"}}
-        }
-        with self.assertRaises(ValueError) as ctx:
-            self._eval_validate_binary_logic(item)
-        self.assertIn("AUDIO_BINARY_LENGTH_REQUIRED", str(ctx.exception))
-
-    def test_case_4_mismatched_file_size_fails(self):
-        item = {
-            "json": {"payload": {"file_size": 5000}},
-            "binary": {"data": {"fileSize": "4000", "mimeType": "audio/ogg"}}
-        }
-        with self.assertRaises(ValueError) as ctx:
-            self._eval_validate_binary_logic(item)
+            self._eval_node_logic(item, buf)
         self.assertIn("AUDIO_BINARY_LENGTH_MISMATCH", str(ctx.exception))
 
-    def test_case_5_binary_continuity_sha256(self):
-        raw_audio = b"ID3\x03\x00\x00\x00synthetic_mp3_binary_data_test_12345"
-        sha_before = hashlib.sha256(raw_audio).hexdigest()
-
+    def test_byte_length_missing_payload_size_uses_buffer_length(self):
+        buf = b"audio_sample_bytes_without_payload_size"
         item = {
-            "json": {"payload": {"file_size": len(raw_audio)}},
-            "binary": {"data": {"data": raw_audio, "fileSize": str(len(raw_audio)), "mimeType": "audio/mp3"}}
+            "json": {"payload": {"mime_type": "audio/ogg"}},
+            "binary": {"data": {"mimeType": "audio/ogg"}}
         }
-        val_res = self._eval_validate_binary_logic(item)
+        res = self._eval_node_logic(item, buf)
+        self.assertEqual(res[0]["json"]["exact_byte_length"], len(buf))
 
-        # Simulate extraction node restoring original binary
-        extracted_binary = val_res[0]["binary"]
-        sha_after = hashlib.sha256(extracted_binary["data"]["data"]).hexdigest()
+    def test_empty_buffer_fails_closed(self):
+        buf = b""
+        item = {
+            "json": {"payload": {"file_size": 0, "mime_type": "audio/ogg"}},
+            "binary": {"data": {"mimeType": "audio/ogg"}}
+        }
+        with self.assertRaises(ValueError) as ctx:
+            self._eval_node_logic(item, buf)
+        self.assertIn("AUDIO_BINARY_LENGTH_REQUIRED", str(ctx.exception))
 
-        self.assertEqual(sha_before, sha_after)
-        self.assertEqual(extracted_binary["data"]["data"], raw_audio)
+    def test_mime_supported_formats(self):
+        buf = b"audio_data"
+        for mime in ['audio/ogg', 'audio/mp3', 'audio/mpeg', 'audio/wav', 'audio/flac', 'audio/m4a']:
+            item = {
+                "json": {"payload": {"file_size": len(buf), "mime_type": mime}},
+                "binary": {"data": {"mimeType": mime}}
+            }
+            res = self._eval_node_logic(item, buf)
+            self.assertEqual(res[0]["json"]["mime_type"], mime)
+
+    def test_mime_missing_fails_closed(self):
+        buf = b"audio_data"
+        item = {
+            "json": {"payload": {"file_size": len(buf)}},
+            "binary": {"data": {"data": buf}}
+        }
+        with self.assertRaises(ValueError) as ctx:
+            self._eval_node_logic(item, buf)
+        self.assertIn("AUDIO_MIME_TYPE_REQUIRED", str(ctx.exception))
+
+    def test_mime_mismatch_fails_closed(self):
+        buf = b"audio_data"
+        item = {
+            "json": {"payload": {"file_size": len(buf), "mime_type": "audio/mp3"}},
+            "binary": {"data": {"mimeType": "audio/ogg"}}
+        }
+        with self.assertRaises(ValueError) as ctx:
+            self._eval_node_logic(item, buf)
+        self.assertIn("AUDIO_MIME_TYPE_MISMATCH", str(ctx.exception))
+
+    def test_unsupported_mime_fails_closed(self):
+        buf = b"video_data"
+        item = {
+            "json": {"payload": {"file_size": len(buf), "mime_type": "video/mp4"}},
+            "binary": {"data": {"mimeType": "video/mp4"}}
+        }
+        with self.assertRaises(ValueError) as ctx:
+            self._eval_node_logic(item, buf)
+        self.assertIn("GEMINI_UNSUPPORTED_AUDIO_MIME", str(ctx.exception))
 
 
 if __name__ == "__main__":

@@ -133,7 +133,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const item = $input.first();\nconst j = item.json;\nconst p = j.payload || j;\nconst bin = item.binary?.data;\n\nif (!bin) {\n  throw new Error('AUDIO_BINARY_REQUIRED: missing binary.data for Gemini transcription');\n}\n\nlet byteLength = null;\nif (typeof p.file_size === 'number' && Number.isInteger(p.file_size) && p.file_size > 0) {\n  byteLength = p.file_size;\n} else if (typeof j.file_size === 'number' && Number.isInteger(j.file_size) && j.file_size > 0) {\n  byteLength = j.file_size;\n} else if (bin.fileSize && /^\\d+$/.test(String(bin.fileSize).trim())) {\n  const parsed = parseInt(String(bin.fileSize).trim(), 10);\n  if (parsed > 0) {\n    byteLength = parsed;\n  }\n}\n\nif (!byteLength || byteLength <= 0) {\n  throw new Error('AUDIO_BINARY_LENGTH_REQUIRED: exact numeric byte length is required');\n}\n\nif (p.file_size && bin.fileSize && /^\\d+$/.test(String(bin.fileSize).trim())) {\n  const binNum = parseInt(String(bin.fileSize).trim(), 10);\n  if (p.file_size !== binNum) {\n    throw new Error('AUDIO_BINARY_LENGTH_MISMATCH: payload file_size does not match binary byte length');\n  }\n}\n\nconst mimeType = bin.mimeType || p.mime_type || j.mime_type || 'audio/ogg';\n\nreturn [{\n  json: {\n    ...j,\n    exact_byte_length: byteLength,\n    mime_type: mimeType\n  },\n  binary: item.binary\n}];"
+        "jsCode": "const item = $input.first();\nconst j = item.json;\nconst p = j.payload || j;\nconst bin = item.binary?.data;\n\nif (!bin) {\n  throw new Error('AUDIO_BINARY_REQUIRED: missing binary.data for Gemini transcription');\n}\n\n// 1. Extract exact binary buffer using official n8n helper\nlet buffer = null;\nif (this.helpers && typeof this.helpers.getBinaryDataBuffer === 'function') {\n  buffer = await this.helpers.getBinaryDataBuffer(0, 'data');\n} else if (bin.data) {\n  buffer = Buffer.isBuffer(bin.data) ? bin.data : Buffer.from(bin.data, 'base64');\n}\n\nif (!buffer || buffer.length === 0) {\n  throw new Error('AUDIO_BINARY_LENGTH_REQUIRED: binary audio buffer is empty or missing');\n}\n\nconst exactByteLength = buffer.length;\nif (!Number.isSafeInteger(exactByteLength) || exactByteLength <= 0) {\n  throw new Error('AUDIO_BINARY_LENGTH_REQUIRED: exact numeric byte length is invalid');\n}\n\n// 2. Validate payload.file_size if provided\nif (p.file_size !== undefined && p.file_size !== null) {\n  if (typeof p.file_size !== 'number' || !Number.isSafeInteger(p.file_size) || p.file_size <= 0) {\n    throw new Error('AUDIO_BINARY_LENGTH_REQUIRED: payload file_size must be a positive integer');\n  }\n  if (p.file_size !== exactByteLength) {\n    throw new Error('AUDIO_BINARY_LENGTH_MISMATCH: payload file_size (' + p.file_size + ') does not match binary buffer length (' + exactByteLength + ')');\n  }\n}\n\n// 3. MIME resolution & validation (never invented)\nconst rawMime = (bin.mimeType || p.mime_type || '').trim().toLowerCase();\nif (!rawMime) {\n  throw new Error('AUDIO_MIME_TYPE_REQUIRED: audio MIME type is missing');\n}\n\nif (p.mime_type && bin.mimeType && p.mime_type.trim().toLowerCase() !== bin.mimeType.trim().toLowerCase()) {\n  throw new Error('AUDIO_MIME_TYPE_MISMATCH: payload mime_type (' + p.mime_type + ') does not match binary mimeType (' + bin.mimeType + ')');\n}\n\nconst allowedMimes = new Set([\n  'audio/ogg', 'audio/mp3', 'audio/mpeg', 'audio/wav', 'audio/x-wav',\n  'audio/aac', 'audio/flac', 'audio/m4a', 'audio/x-m4a', 'audio/mp4',\n  'audio/opus', 'audio/webm'\n]);\n\nif (!allowedMimes.has(rawMime)) {\n  throw new Error('GEMINI_UNSUPPORTED_AUDIO_MIME: MIME type ' + rawMime + ' is not supported by Gemini API');\n}\n\nreturn [{\n  json: {\n    ...j,\n    exact_byte_length: exactByteLength,\n    mime_type: rawMime\n  },\n  binary: item.binary\n}];"
       },
       "id": "ai1-gemini-validate-binary",
       "name": "Validate Gemini Binary Metadata",
@@ -258,9 +258,7 @@
           "name": "SVIA_GEMINI_DEV_HEADER"
         }
       },
-      "retryOnFail": true,
-      "maxTries": 3,
-      "waitBetweenTries": 3000
+      "retryOnFail": false
     },
     {
       "parameters": {
@@ -270,7 +268,7 @@
         "nodeCredentialType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"model\": \"gemini-3.5-transcribe\",\n  \"input\": [\n    {\n      \"type\": \"audio\",\n      \"uri\": $json.file?.uri || $json.uri,\n      \"mime_type\": $json.file?.mimeType || $json.mime_type || \"audio/ogg\"\n    }\n  ],\n  \"generation_config\": {\n    \"transcription_config\": {\n      \"language_codes\": [\"es-AR\"],\n      \"mode\": {\n        \"type\": \"verbatim\"\n      }\n    }\n  }\n}",
+        "jsonBody": "={\n  \"model\": \"gemini-3.5-transcribe\",\n  \"input\": [\n    {\n      \"type\": \"audio\",\n      \"uri\": $json.file?.uri || $json.uri,\n      \"mime_type\": $json.mime_type\n    }\n  ],\n  \"generation_config\": {\n    \"transcription_config\": {\n      \"language_codes\": [\"es-AR\"],\n      \"mode\": {\n        \"type\": \"verbatim\"\n      }\n    }\n  }\n}",
         "options": {
           "timeout": 120000
         }
@@ -289,9 +287,7 @@
           "name": "SVIA_GEMINI_DEV_HEADER"
         }
       },
-      "retryOnFail": true,
-      "maxTries": 3,
-      "waitBetweenTries": 3000
+      "retryOnFail": false
     },
     {
       "parameters": {

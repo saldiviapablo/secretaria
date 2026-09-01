@@ -86,13 +86,22 @@ const s1 = JSON.stringify(ai1);
 assert(s1.includes('TRANSCRIPTION_PRIMARY_NOT_SELECTED'), 'Primary selection requirement enforced');
 assert(s1.includes('gpt-transcribe'), 'OpenAI gpt-transcribe candidate present');
 assert(s1.includes('Validate Gemini Binary Metadata'), 'Validate Gemini Binary Metadata node present in WF-AI-001');
+assert(s1.includes('getBinaryDataBuffer'), 'Official getBinaryDataBuffer helper used in WF-AI-001');
 assert(s1.includes('AUDIO_BINARY_LENGTH_REQUIRED'), 'Exact byte length requirement enforced in WF-AI-001');
+assert(s1.includes('AUDIO_MIME_TYPE_REQUIRED'), 'Strict MIME validation enforced in WF-AI-001');
+assert(s1.includes('GEMINI_UNSUPPORTED_AUDIO_MIME'), 'Unsupported MIME check enforced in WF-AI-001');
 assert(s1.includes('GEMINI_AUDIO_BINARY_MISSING'), 'Binary preservation error check in WF-AI-001');
 assert(s1.includes('Gemini Files API Start') && s1.includes('Extract Upload Session URL') && s1.includes('Gemini Files API Upload Finalize'), 'Gemini Files API resumable sequence present');
 assert(s1.includes('binaryData'), 'Gemini Files API Finalize uses binaryData content type');
 assert(s1.includes('language_codes') && s1.includes('es-AR'), 'Gemini Interactions uses language_codes array');
 assert(s1.includes('verbatim') && s1.includes('mode'), 'Gemini Interactions uses verbatim mode object');
 assert(!s1.includes('generateContent') && !s1.includes('inlineData'), 'No generateContent/inlineData in transcription workflow');
+
+const finalizeNode = ai1.nodes.find(n => n.name === 'Gemini Files API Upload Finalize');
+assert.strictEqual(finalizeNode.retryOnFail, false, 'Blind retry disabled on Finalize');
+
+const interactNode = ai1.nodes.find(n => n.name === 'Gemini Transcribe Interaction');
+assert.strictEqual(interactNode.retryOnFail, false, 'Blind retry disabled on Interaction');
 
 const ai3 = read('ai/WF-AI-003_ANALYZE_VISUAL.json');
 const sAi3 = JSON.stringify(ai3);

@@ -1826,3 +1826,29 @@ Producción/NAS/EXISTING_OPERATIONAL_N8N/Supabase PROD/Immich/Cloudflare: NO MOD
 - **Producción:** NAS UGREEN, Supabase PROD, Immich y Cloudflare permanecen totalmente intactos y fuera de alcance.
 - **Fase F4 (Memoria Semántica):** NO INICIADA.
 
+---
+
+## CHG-2026-08-31-028 — F3 Audio + Drive — Séptima Revalidación Correctiva, Uso de Buffer Binario Real (getBinaryDataBuffer), Validación Estricta de MIME y Desactivación de Retry Ciego en Finalize
+
+**Tipo:** FIXED / RUNTIME / SECURITY / REVALIDATION
+**Estado:** F3 BLOCKED_EXTERNAL_PRECONDITION
+**Motivo:** Séptima revalidación correctiva tras la auditoría independiente del commit `cb0be73`. Se aplicaron las siguientes resoluciones técnicas definitivas: (1) resolución de `F3-CORR-028` accediendo directamente al Buffer real en memoria mediante el helper oficial de n8n `this.helpers.getBinaryDataBuffer(0, 'data')` en `Validate Gemini Binary Metadata`, asegurando que `exact_byte_length` provenga de `buffer.length` y validando consistencia fail-closed (`AUDIO_BINARY_LENGTH_REQUIRED` / `AUDIO_BINARY_LENGTH_MISMATCH`); (2) resolución de `F3-CORR-029` eliminando cualquier fallback de MIME inventado (e.g. `'audio/ogg'`), requiriendo MIME verificable (`AUDIO_MIME_TYPE_REQUIRED`) y validando contra la whitelist oficial de audio de Gemini API (`GEMINI_UNSUPPORTED_AUDIO_MIME`); (3) resolución de `F3-CORR-030` desactivando el reintento automático ciego (`retryOnFail: false`) en `Gemini Files API Upload Finalize` y `Gemini Transcribe Interaction` para evitar cargas duplicadas o repetición de errores 4xx; (4) resolución de `F3-CORR-031` mediante la creación y ejecución de una prueba de runtime/componente con un mock HTTP local efímero del protocolo Files API (`tests/workflows/test_gemini_binary_runtime_mock.py`), verificando el ciclo completo de carga, integridad SHA-256 y longitud efectiva sin interactuar con servicios externos de pago ni alterar endpoints productivos; (5) preservación integral de la solución `DRIVE-ROOT-001` y de la protección `N8N_BLOCK_ENV_ACCESS_IN_NODE=true`; y (6) generación del set completo de evidencia en `tests/evidence/f3_revalidation7_*` y `evidence_f3_revalidation7.json`.
+**Solicitado por:** Antigravity / Prompt Final Séptima Revalidación Correctiva Mínima F3
+**Documentos afectados:** `11_CHANGELOG.md`, `n8n/workflows/ai/WF-AI-001_TRANSCRIBE.json`, `tests/workflows/test_gemini_static_contract.py`, `tests/workflows/test_gemini_binary_runtime_mock.py`, `tests/integration/test_f3_media_drive.js`, `tests/evidence/f3_revalidation7_*`, `tests/evidence/evidence_f3_revalidation7.json`
+
+### Resoluciones Factuales y Estado de Verificación:
+1. **F3-CORR-028 (Buffer Real):** `exact_byte_length` se calcula a partir de `buffer.length` vía `getBinaryDataBuffer(0, 'data')` en `Validate Gemini Binary Metadata`, descartando metadatos informativos como autoridad de tamaño.
+2. **F3-CORR-029 (MIME Estricto):** Cero fallbacks inventados en el workflow; el MIME type debe provenir del binario o de la metadata validada y pertenecer a la whitelist oficial soportada por Gemini.
+3. **F3-CORR-030 (Retry Policy):** `retryOnFail: false` configurado en `Gemini Files API Upload Finalize` y `Gemini Transcribe Interaction`, evitando operaciones duplicadas o reintentos ciegos de 4xx.
+4. **F3-CORR-031 (Test Runtime de Binary):** Verificación con mock HTTP local (`test_gemini_binary_runtime_mock.py`) demostrando transmisión de bytes íntegros, coincidencia SHA-256 y Content-Length exacto.
+5. **DRIVE-ROOT-001 Preservado:** 23 workflows renderizados determinísticamente con `render_n8n_workflows.py`, paridad lógica al 100% y `N8N_BLOCK_ENV_ACCESS_IN_NODE=true` activo.
+
+### Gobernanza y Estado del Sistema:
+- **Estado de Fase:** `F3 BLOCKED_EXTERNAL_PRECONDITION`
+- **Total Workflows:** Exactamente 23 workflows activos en n8n 2.35.4 (6 F3, 0 F4+).
+- **Tablas en DB:** Exactamente 25 tablas públicas V1 en Supabase DEV (migración 13 head, 2 resets exitosos).
+- **Benchmark Transcripción:** `transcription_primary = null` (Pendiente de dataset privado con evaluación humana según `AI-DEC-007`).
+- **Gobernanza P2:** `queryReplacement` y `Code Nodes` en `P2_PENDING_EXPLICIT_USER_ACCEPTANCE`.
+- **Producción:** NAS UGREEN, Supabase PROD, Immich y Cloudflare permanecen totalmente intactos y fuera de alcance.
+- **Fase F4 (Memoria Semántica):** NO INICIADA.
+

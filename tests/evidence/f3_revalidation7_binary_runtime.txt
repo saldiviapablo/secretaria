@@ -1,0 +1,19 @@
+F3 SEVENTH REVALIDATION — GEMINI BINARY RUNTIME & BUFFER EVIDENCE (F3-CORR-028 & F3-CORR-031)
+Timestamp: 2026-09-01T00:23:33.101024+00:00
+Target Workflow: n8n/workflows/ai/WF-AI-001_TRANSCRIBE.json
+
+Buffer Access Architecture:
+- Helper: this.helpers.getBinaryDataBuffer(0, 'data') invoked in 'Validate Gemini Binary Metadata' node.
+- Exact Byte Length: buffer.length (strictly validated integer > 0).
+- Binary Preservation: Intact binary object retrieved by 'Extract Upload Session URL' via $('Validate Gemini Binary Metadata').first().binary.
+- Finalize Stream: Streamed directly via contentType='binaryData' and inputDataFieldName='data' without JSON/base64 corruption.
+
+Local Mock Lifecycle Test Output:
+.
+----------------------------------------------------------------------
+Ran 1 test in 0.537s
+
+OK
+
+
+Status: PASS
