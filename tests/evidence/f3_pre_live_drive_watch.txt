@@ -1,0 +1,10 @@
+F3 INTEGRAL PRE-LIVE CLOSURE — DRIVE WATCH DUPLICATE TERMINATION EVIDENCE (PRELIVE-005)
+Timestamp: 2026-09-01T02:35:04.198249+00:00
+Workflow: WF-ING-004_DRIVE_WATCH
+
+Duplicate Handling:
+- Register Drive Ingestion -> Check Ingestion Duplicate -> Branch on Duplicate vs New.
+- Duplicate Branch: Routes to 'Drive Duplicate Ignored' (No-Op terminal node, 0 downloads, 0 side effects).
+- New Branch: Routes to 'Download File From Drive' -> 'Call WF-ING-003_PROCESS_MEDIA'.
+
+Status: PASS

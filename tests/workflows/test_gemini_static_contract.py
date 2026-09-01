@@ -86,7 +86,7 @@ class TestGeminiStaticContract(unittest.TestCase):
         json_body = params.get("jsonBody", "")
         self.assertIn('"model": "gemini-3.5-transcribe"', json_body)
         self.assertIn('"type": "audio"', json_body)
-        self.assertIn('"language_codes": ["es-AR"]', json_body)
+        self.assertIn('"language_codes": []', json_body)
         self.assertIn('"type": "verbatim"', json_body)
         self.assertIn('"mime_type": $json.mime_type', json_body)
 

@@ -16,7 +16,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const i = $input.first();\nconst j = i.json;\nconst p = j.payload || j;\nconst n = String(p.original_filename || '').toLowerCase();\nconst m = String(p.mime_type || '').toLowerCase();\n\nconst isExecutable = /\\.(exe|com|bat|cmd|ps1|msi|scr|jar|js|vbs|wsf|sh|app|dmg)$/i.test(n) || /(x-msdownload|x-executable|javascript|x-sh)/i.test(m);\nconst isMacroEnabled = /\\.(docm|xlsm|pptm|xlam|dotm|potm|ppam)$/i.test(n) || /(vnd\\.ms-excel\\.sheet\\.macroEnabled|vnd\\.ms-word\\.document\\.macroEnabled|vnd\\.ms-powerpoint)/i.test(m);\n\nif (isExecutable) {\n  throw new Error('UNSAFE_DOCUMENT_TYPE_QUARANTINED: Executable or script files are strictly blocked');\n}\nif (isMacroEnabled) {\n  throw new Error('MACRO_ENABLED_DOCUMENT_QUARANTINED: Macro-enabled documents are quarantined to prevent arbitrary code execution');\n}\n\nreturn [{ json: { ...j, document_safe_to_extract: true }, binary: i.binary }];"
+        "jsCode": "const i = $input.first();\nconst j = i.json;\nconst p = j.payload || j;\nconst n = String(p.original_filename || '').toLowerCase();\nconst m = String(p.mime_type || '').toLowerCase();\n\nconst isExecutable = /\\.(exe|com|bat|cmd|ps1|msi|scr|jar|js|vbs|wsf|sh|app|dmg)$/i.test(n) || /(x-msdownload|x-executable|javascript|x-sh)/i.test(m);\nconst isMacroEnabled = /\\.(docm|xlsm|pptm|xlam|dotm|potm|ppam)$/i.test(n) || /(vnd\\.ms-excel\\.sheet\\.macroEnabled|vnd\\.ms-word\\.document\\.macroEnabled|vnd\\.ms-powerpoint)/i.test(m);\n\nif (isExecutable) {\n  throw new Error('UNSAFE_DOCUMENT_TYPE_QUARANTINED: Executable or script files are strictly blocked');\n}\nif (isMacroEnabled) {\n  throw new Error('MACRO_ENABLED_DOCUMENT_QUARANTINED: Macro-enabled documents are quarantined to prevent arbitrary code execution');\n}\n\nlet format = 'text';\nif (/\\.pdf$/i.test(n) || m === 'application/pdf') {\n  format = 'pdf';\n} else if (/\\.(csv)$/i.test(n) || m === 'text/csv') {\n  format = 'text';\n} else if (/\\.(json)$/i.test(n) || m === 'application/json') {\n  format = 'text';\n} else if (/\\.(xml|html|htm|txt|md|log|rtf)$/i.test(n) || /^(text\\/|application\\/xml|application\\/rtf)/.test(m)) {\n  format = 'text';\n} else if (/\\.(doc|docx|odt)$/i.test(n) || /wordprocessingml|msword/.test(m)) {\n  format = 'unsupported_word';\n} else {\n  format = 'text';\n}\n\nreturn [{\n  json: {\n    ...j,\n    document_safe_to_extract: true,\n    document_format: format\n  },\n  binary: i.binary\n}];"
       },
       "id": "ing6-gate",
       "name": "Document Safety Gate",
@@ -29,39 +29,138 @@
     },
     {
       "parameters": {
-        "operation": "text",
-        "binaryPropertyName": "data",
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.document_format }}",
+                    "rightValue": "pdf",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "pdf"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.document_format }}",
+                    "rightValue": "text",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "text"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.document_format }}",
+                    "rightValue": "unsupported_word",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "unsupported_word"
+            }
+          ]
+        },
         "options": {}
       },
-      "id": "ing6-extract",
-      "name": "Native Extract From File",
-      "type": "n8n-nodes-base.extractFromFile",
-      "typeVersion": 1.1,
+      "id": "ing6-format-router",
+      "name": "Document Format Router",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
       "position": [
         560,
         300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "binaryPropertyName": "data",
+        "options": {}
+      },
+      "id": "ing6-extract-pdf",
+      "name": "Native Extract PDF",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        780,
+        180
       ],
       "onError": "continueRegularOutput"
     },
     {
       "parameters": {
-        "jsCode": "const j=$input.first().json;\nlet text=j.text || j.data || j.extractedText || j.content || '';\nif(typeof text!=='string') text=JSON.stringify(text);\nreturn [{json:{...$('Document Safety Gate').first().json,extracted_text:text,extraction_warnings:[]}}];"
+        "operation": "text",
+        "binaryPropertyName": "data",
+        "options": {}
+      },
+      "id": "ing6-extract-text",
+      "name": "Native Extract Text / Code",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        780,
+        340
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const j = $input.first().json;\nconst gate = $('Document Safety Gate').first().json;\n\nif (gate.document_format === 'unsupported_word') {\n  throw new Error('CONTROLLED_REVIEW_REQUIRED_DOCX_EXTRACTION: Word docx parsing requires approved parser dependency');\n}\n\nlet text = j.text || j.data || j.extractedText || j.content || '';\nif (typeof text !== 'string') {\n  text = JSON.stringify(text);\n}\n\nconst cleanText = String(text).trim();\nif (!cleanText) {\n  throw new Error('EMPTY_DOCUMENT_EXTRACTION: Document text extraction resulted in empty content');\n}\n\nreturn [{\n  json: {\n    ...gate,\n    extracted_text: cleanText,\n    extraction_warnings: []\n  }\n}];"
       },
       "id": "ing6-normalize",
       "name": "Normalize Extracted Text",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        780,
+        1000,
         300
       ]
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT public.create_source_text_variant($1::uuid,$2::uuid,$3::uuid,'document_extract',$4,NULL,'n8n_native_extract','n8n-2.35.4',NULL,true) AS res;",
+        "query": "SELECT public.create_source_text_variant($1::uuid, $2::uuid, $3::uuid, 'document_extract', $4, NULL, 'n8n_native_extract', 'n8n-2.35.4', NULL, true) AS res;",
         "options": {
-          "queryReplacement": "={{ [$json.user_id,$json.ingestion_id,$json.asset_id,$json.extracted_text] }}"
+          "queryReplacement": "={{ [$json.user_id, $json.ingestion_id, $json.asset_id, $json.extracted_text] }}"
         }
       },
       "id": "ing6-source",
@@ -69,7 +168,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
-        1000,
+        1220,
         300
       ],
       "credentials": {
@@ -78,6 +177,19 @@
           "name": "Supabase DEV Database"
         }
       }
+    },
+    {
+      "parameters": {
+        "jsCode": "const norm = $('Normalize Extracted Text').first().json;\nconst sourceRes = $('Persist Literal Extraction').first().json.res;\nconst stId = sourceRes.source_text_id || (typeof sourceRes === 'string' ? JSON.parse(sourceRes).source_text_id : null);\n\nreturn [{\n  json: {\n    ok: true,\n    status: 'completed',\n    ingestion_id: norm.ingestion_id,\n    asset_id: norm.asset_id,\n    source_text_id: stId,\n    extracted_text: norm.extracted_text\n  }\n}];"
+      },
+      "id": "ing6-format-output",
+      "name": "Format Extraction Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        300
+      ]
     }
   ],
   "connections": {
@@ -96,14 +208,50 @@
       "main": [
         [
           {
-            "node": "Native Extract From File",
+            "node": "Document Format Router",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Native Extract From File": {
+    "Document Format Router": {
+      "main": [
+        [
+          {
+            "node": "Native Extract PDF",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Native Extract Text / Code",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Normalize Extracted Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Native Extract PDF": {
+      "main": [
+        [
+          {
+            "node": "Normalize Extracted Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Native Extract Text / Code": {
       "main": [
         [
           {
@@ -119,6 +267,17 @@
         [
           {
             "node": "Persist Literal Extraction",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Persist Literal Extraction": {
+      "main": [
+        [
+          {
+            "node": "Format Extraction Output",
             "type": "main",
             "index": 0
           }

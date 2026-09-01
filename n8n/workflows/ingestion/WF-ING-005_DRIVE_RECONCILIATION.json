@@ -124,7 +124,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const owner = $('Validate Single V1 Owner').first().json.user_id;\nconst files = $('List Root Files').all().map(i => i.json);\nconst existingLocRows = $input.all().map(i => i.json);\nconst knownKeys = new Set(existingLocRows.map(r => r.external_id));\n\nconst candidates = [];\nfor (const f of files) {\n  if (!f.id) continue;\n  const ver = f.modifiedTime || f.version || f.drive_version;\n  if (!ver) {\n    throw new Error(`DRIVE_VERSION_METADATA_REQUIRED: Missing real version metadata for file ${f.id}`);\n  }\n  const expectedKey = `drive:${f.id}:${ver}`;\n  if (!knownKeys.has(expectedKey)) {\n    const mime = String(f.mimeType || '').toLowerCase();\n    const mediaKind = mime.startsWith('audio/') ? 'audio' : (mime.startsWith('image/') ? 'image' : 'document');\n    candidates.push({\n      json: {\n        contract_version: '1.0',\n        correlation_id: 'corr_recon_' + crypto.randomUUID(),\n        user_id: owner,\n        source_channel: 'google_drive',\n        captured_at: f.modifiedTime,\n        idempotency_key: expectedKey,\n        payload: {\n          drive_file_id: f.id,\n          drive_version: String(ver),\n          modifiedTime: f.modifiedTime || null,\n          original_filename: f.name || null,\n          mime_type: f.mimeType || null,\n          file_size: f.size ? Number(f.size) : null,\n          media_kind: mediaKind,\n          reconciled: true\n        }\n      }\n    });\n  }\n}\n\nreturn candidates;"
+        "jsCode": "const owner = $('Validate Single V1 Owner').first().json.user_id;\nconst files = $('List Root Files').all().map(i => i.json);\nconst existingLocRows = $input.all().map(i => i.json);\nconst knownKeys = new Set(existingLocRows.map(r => r.external_id));\n\nconst candidates = [];\nfor (const f of files) {\n  if (!f.id) continue;\n  const ver = f.modifiedTime || f.version || f.drive_version;\n  if (!ver) {\n    throw new Error(`DRIVE_VERSION_METADATA_REQUIRED: Missing real version metadata for file ${f.id}`);\n  }\n  const expectedKey = `drive:${f.id}:${ver}`;\n  if (!knownKeys.has(expectedKey)) {\n    const mime = String(f.mimeType || '').trim().toLowerCase();\n    const mediaKind = mime.startsWith('audio/') ? 'audio' : (mime.startsWith('image/') ? 'image' : 'document');\n    candidates.push({\n      json: {\n        contract_version: '1.0',\n        correlation_id: 'corr_recon_' + crypto.randomUUID(),\n        user_id: owner,\n        source_channel: 'google_drive',\n        captured_at: f.modifiedTime,\n        idempotency_key: expectedKey,\n        payload: {\n          drive_file_id: f.id,\n          drive_version: String(ver),\n          modifiedTime: f.modifiedTime || null,\n          original_filename: f.name || null,\n          mime_type: f.mimeType || null,\n          file_size: f.size ? Number(f.size) : null,\n          media_kind: mediaKind,\n          reconciled: true\n        }\n      }\n    });\n  }\n}\n\nreturn candidates;"
       },
       "id": "ing5-reconcile-filter",
       "name": "Filter Unindexed or Modified Files",
@@ -160,6 +160,93 @@
     },
     {
       "parameters": {
+        "jsCode": "const candidates = $('Filter Unindexed or Modified Files').all();\nconst results = $input.all();\n\nreturn results.map((item, idx) => {\n  const ingRaw = item.json.res;\n  const ing = typeof ingRaw === 'string' ? JSON.parse(ingRaw) : ingRaw;\n  const cand = candidates[idx]?.json || {};\n  \n  return {\n    json: {\n      ...cand,\n      ingestion_id: ing.ingestion_id,\n      is_duplicate: Boolean(ing.is_duplicate)\n    }\n  };\n});"
+      },
+      "id": "ing5-restore-candidate",
+      "name": "Restore Reconciled Candidate Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1660,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.is_duplicate }}",
+                    "rightValue": true,
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "duplicate"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.is_duplicate }}",
+                    "rightValue": false,
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "false"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "new"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ing5-duplicate-switch",
+      "name": "Branch Reconciled Duplicate vs New",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        1880,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nreturn [{\n  json: {\n    ok: true,\n    status: 'duplicate',\n    ingestion_id: item.ingestion_id,\n    message: 'Reconciliation duplicate ignored cleanly'\n  }\n}];"
+      },
+      "id": "ing5-duplicate-noop",
+      "name": "Reconciliation Duplicate Ignored",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2100,
+        180
+      ]
+    },
+    {
+      "parameters": {
         "resource": "file",
         "operation": "download",
         "fileId": {
@@ -174,8 +261,8 @@
       "type": "n8n-nodes-base.googleDrive",
       "typeVersion": 3,
       "position": [
-        1660,
-        300
+        2100,
+        380
       ],
       "credentials": {
         "googleDriveOAuth2Api": {
@@ -197,8 +284,8 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.1,
       "position": [
-        1880,
-        300
+        2320,
+        380
       ]
     }
   ],
@@ -271,6 +358,35 @@
     },
     "Register Reconciled Ingestion": {
       "main": [
+        [
+          {
+            "node": "Restore Reconciled Candidate Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Restore Reconciled Candidate Context": {
+      "main": [
+        [
+          {
+            "node": "Branch Reconciled Duplicate vs New",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Branch Reconciled Duplicate vs New": {
+      "main": [
+        [
+          {
+            "node": "Reconciliation Duplicate Ignored",
+            "type": "main",
+            "index": 0
+          }
+        ],
         [
           {
             "node": "Download Missed File",

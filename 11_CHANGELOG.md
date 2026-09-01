@@ -1852,3 +1852,31 @@ Producción/NAS/EXISTING_OPERATIONAL_N8N/Supabase PROD/Immich/Cloudflare: NO MOD
 - **Producción:** NAS UGREEN, Supabase PROD, Immich y Cloudflare permanecen totalmente intactos y fuera de alcance.
 - **Fase F4 (Memoria Semántica):** NO INICIADA.
 
+---
+
+## CHG-2026-08-31-029 — F3 Audio + Drive — Cierre Local Pre-Live Integral: Dataflow Lineage, Dual Locations, Fail-Closed Gates y Retries
+
+**Tipo:** FIXED / RUNTIME / SECURITY / ARCHITECTURE / REVALIDATION
+**Estado:** F3 BLOCKED_EXTERNAL_PRECONDITION
+**Motivo:** Auditoría y cierre local pre-live integral de los 6 workflows F3 previo a la incorporación de credenciales cloud, resolviendo de forma completa y armónica todos los defectos locales PRELIVE-001 a PRELIVE-016: (1) PRELIVE-001: sustitución de nodo Crypto v1 por Code node 'Compute SHA-256 Preserving Binary' con `getBinaryDataBuffer(0, 'data')`, preservando íntegro el payload binario a través del hashing; (2) PRELIVE-002: adición del nodo 'Restore Telegram Media Context' en `WF-ING-003` para recomponer el contexto canónico de entrada tras la descarga de Telegram; (3) PRELIVE-003 y PRELIVE-004: bifurcación explícita por canal de origen en `WF-ING-003` (archivos de Telegram se suben 1 vez a Drive y registran 2 locations 'telegram' y 'drive' vinculadas al mismo `asset_id`; archivos originados en Drive omiten re-subida y registran 1 location 'drive'); (4) PRELIVE-005: bifurcación en `WF-ING-004_DRIVE_WATCH` para terminar eventos duplicados en nodo no-op terminal con 0 descargas y 0 llamadas downstream; (5) PRELIVE-006 y PRELIVE-007: pairing por índice de candidatos en `WF-ING-005_DRIVE_RECONCILIATION` sin uso de `.first()` cruzado en arrays multi-ítem; (6) PRELIVE-008: eliminación sistemática de defaults inventados (`|| 'telegram'`, file_size `0` en vez de null/unknown); (7) PRELIVE-009: manejo terminal explícito de media no ruteable (`media_route === 'unsupported'`) en `WF-ING-003` evitando estados de procesamiento colgados; (8) PRELIVE-010 y PRELIVE-011: Gemini Transcribe configurado con `language_codes: []` para autodetección sin forzar 'es-AR', persistencia de `language = NULL` si no se detecta, validación de estado de archivo en Files API y `retryOnFail: false`; (9) PRELIVE-012 y PRELIVE-013: acceso estandarizado a buffers de visión vía `getBinaryDataBuffer`, eliminación de fallback `image/jpeg`, validación estricta de MIME y lenguaje nullable; (10) PRELIVE-014: enrutador de formato por tipo de parser nativo en `WF-ING-006` con rechazo estricto de extracciones vacías y cuarentena de documentos no soportados/macros; (11) PRELIVE-015: compuerta en `WF-ING-003` que condiciona el estado `completed` a la confirmación de `source_text_id` persistido por los subworkflows hijos; (12) PRELIVE-016: matriz formal de clasificación de side effects y desactivación de reintentos ciegos en nodos de creación/pago; (13) generación de contratos de dataflow (`f3_dataflow_contract.json`), matriz de reintentos (`f3_retry_side_effect_matrix.json`), ledger de defectos (`f3_pre_live_defect_ledger.md`) y suite completa de evidencias factuales `f3_pre_live_*`.
+**Solicitado por:** Antigravity / Prompt Cierre Local Pre-Live Integral F3
+**Documentos afectados:** `11_CHANGELOG.md`, `n8n/workflows/ingestion/WF-ING-003_PROCESS_MEDIA.json`, `n8n/workflows/ingestion/WF-ING-004_DRIVE_WATCH.json`, `n8n/workflows/ingestion/WF-ING-005_DRIVE_RECONCILIATION.json`, `n8n/workflows/ingestion/WF-ING-006_DOCUMENT_EXTRACT.json`, `n8n/workflows/ai/WF-AI-001_TRANSCRIBE.json`, `n8n/workflows/ai/WF-AI-003_ANALYZE_VISUAL.json`, `tests/contracts/f3_dataflow_contract.json`, `tests/contracts/f3_retry_side_effect_matrix.json`, `tests/evidence/f3_pre_live_*`, `tests/evidence/evidence_f3_pre_live_closure.json`, `tests/workflows/test_f3_dataflow_lineage.py`, `tests/integration/test_f3_media_drive.js`
+
+### Resoluciones Factuales y Estado de Verificación:
+1. **Dataflow Lineage & Binary Continuity (PRELIVE-001/002/012):** Acceso estandarizado mediante `getBinaryDataBuffer(0, 'data')` en hashing, transcripción y visión. Preservación y reconstrucción verificada de contextos canónicos.
+2. **Multi-Location & Drive Archival (PRELIVE-003/004):** Telegram media archivado a Drive genera 1 registro en `public.assets` y 2 registros en `public.asset_locations`. Drive media preserva 1 ubicación sin bucles de re-subida.
+3. **Control de Flujo y Terminales Fail-Closed (PRELIVE-005/006/007/009/014/015):** Cero descargas en duplicados de Drive Watch/Reconciliación; pairing de candidatos multi-ítem sin cruces; manejo terminal para media no ruteable; extracción de documentos con validación contra vacíos; estado `completed` protegido por verificación de persistencia en subworkflows hijos.
+4. **Gemini & Vision Strict Contracts (PRELIVE-010/011/013):** Autodetección de lenguaje con `language_codes: []`, persistencia de idioma nullable, validación de estado de archivo, y retries deshabilitados en operaciones no idempotentes/costosas.
+5. **Paridad Runtime n8n 2.35.4:** 23 workflows renderizados determinísticamente con `render_n8n_workflows.py`, 100% de paridad lógica runtime verificada.
+6. **Base de Datos Supabase DEV:** 25 tablas públicas V1, migración 13 head, 2 resets exitosos ejecutados y toda la suite de regresión 100% PASS.
+
+### Gobernanza y Estado del Sistema:
+- **Estado de Fase:** `F3 BLOCKED_EXTERNAL_PRECONDITION`
+- **Total Workflows:** Exactamente 23 workflows activos en n8n 2.35.4 (6 F3, 0 F4+).
+- **Tablas en DB:** Exactamente 25 tablas públicas V1 en Supabase DEV.
+- **Benchmark Transcripción:** `transcription_primary = null` (Pendiente de dataset privado con evaluación humana según `AI-DEC-007`).
+- **Gobernanza P2:** `queryReplacement` y `Code Nodes` en `P2_PENDING_EXPLICIT_USER_ACCEPTANCE`.
+- **Revisiones Controladas Registradas:** `CONTROLLED_REVIEW_REQUIRED_DOCX_EXTRACTION`, `VISUAL_ROUTING_POLICY_NOT_CERTIFIED`.
+- **Producción:** NAS UGREEN, Supabase PROD, Immich y Cloudflare permanecen totalmente intactos y fuera de alcance.
+- **Fase F4 (Memoria Semántica):** NO INICIADA.
+

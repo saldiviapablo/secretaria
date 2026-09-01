@@ -1,0 +1,17 @@
+F3 INTEGRAL PRE-LIVE CLOSURE — ARCHIVE & DUAL LOCATIONS EVIDENCE (PRELIVE-003 & PRELIVE-004)
+Timestamp: 2026-09-01T02:35:04.198249+00:00
+Workflow: WF-ING-003_PROCESS_MEDIA
+
+Separation of Origin & Location Upsert:
+1. Telegram Source Flow:
+   - Telegram Get File -> Restore Context -> Compute SHA -> Branch Archive (telegram_archive).
+   - Archive Original in Drive (upload once, retryOnFail: false).
+   - Upsert Telegram Location RPC -> Upsert Drive Location RPC -> Attach Asset ID.
+   - Result: 1 Asset entity in public.assets with 2 locations in public.asset_locations (telegram + drive).
+2. Google Drive Source Flow:
+   - Drive Binary Passthrough -> Compute SHA -> Branch Archive (drive_existing).
+   - Skips Drive Upload (does NOT re-upload existing Drive file).
+   - Upsert Drive Only Location RPC -> Attach Asset ID.
+   - Result: 1 Asset entity with 1 location in public.asset_locations (drive).
+
+Status: PASS

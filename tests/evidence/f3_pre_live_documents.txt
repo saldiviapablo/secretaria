@@ -1,0 +1,13 @@
+F3 INTEGRAL PRE-LIVE CLOSURE — DOCUMENT EXTRACTION ROUTING EVIDENCE (PRELIVE-014)
+Timestamp: 2026-09-01T02:35:04.198249+00:00
+Workflow: WF-ING-006_DOCUMENT_EXTRACT
+
+Native Operations & Safety:
+- Quarantine: Executables and macro-enabled documents (.docm, .xlsm, .pptm) quarantined strictly.
+- Format Router: Routes by format to native operations of ExtractFromFile 1.1:
+  - PDF -> Native Extract PDF (operation: pdf)
+  - Plain Text / Code / CSV / JSON / XML / HTML / RTF -> Native Extract Text / Code (operation: text)
+  - DOCX / Word -> Preserved and marked with CONTROLLED_REVIEW_REQUIRED_DOCX_EXTRACTION.
+- Fail-Closed Text Check: Node 'Normalize Extracted Text' throws EMPTY_DOCUMENT_EXTRACTION on empty extraction (no empty success).
+
+Status: PASS

@@ -1,0 +1,10 @@
+F3 INTEGRAL PRE-LIVE CLOSURE — RECONCILIATION MULTI-ITEM CONTEXT EVIDENCE (PRELIVE-006 & PRELIVE-007)
+Timestamp: 2026-09-01T02:35:04.198249+00:00
+Workflow: WF-ING-005_DRIVE_RECONCILIATION
+
+Multi-Item Context Pairing:
+- Node 'Restore Reconciled Candidate Context' maps Postgres results to each candidate index without using .first().
+- Preserves drive_file_id, version, correlation_id, and ingestion_id per candidate.
+- Branch Reconciled Duplicate vs New ensures duplicate candidates are ignored without downloading.
+
+Status: PASS

@@ -69,7 +69,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const j = $input.first().json;\nconst id = j.id || j.fileId;\nconst modified = j.modifiedTime || j.modified_time || j.version || j.drive_version;\nif (!id) throw new Error('DRIVE_EVENT_REQUIRES_FILE_ID');\nif (!modified) throw new Error('DRIVE_VERSION_METADATA_REQUIRED: Real drive version or modifiedTime is required');\n\nconst mime = String(j.mimeType || '').toLowerCase();\nconst mediaKind = mime.startsWith('audio/') ? 'audio' : (mime.startsWith('image/') ? 'image' : 'document');\n\nreturn [{\n  json: {\n    drive_file_id: id,\n    drive_version: String(modified),\n    modifiedTime: j.modifiedTime || modified,\n    original_filename: j.name || null,\n    mime_type: j.mimeType || null,\n    file_size: j.size ? Number(j.size) : null,\n    media_kind: mediaKind\n  }\n}];"
+        "jsCode": "const j = $input.first().json;\nconst id = j.id || j.fileId;\nconst modified = j.modifiedTime || j.modified_time || j.version || j.drive_version;\nif (!id) {\n  throw new Error('DRIVE_EVENT_REQUIRES_FILE_ID');\n}\nif (!modified) {\n  throw new Error('DRIVE_VERSION_METADATA_REQUIRED: Real drive version or modifiedTime is required');\n}\n\nconst mime = String(j.mimeType || '').trim().toLowerCase();\nconst mediaKind = mime.startsWith('audio/') ? 'audio' : (mime.startsWith('image/') ? 'image' : 'document');\n\nreturn [{\n  json: {\n    drive_file_id: id,\n    drive_version: String(modified),\n    modifiedTime: j.modifiedTime || modified,\n    original_filename: j.name || null,\n    mime_type: j.mimeType || null,\n    file_size: j.size ? Number(j.size) : null,\n    media_kind: mediaKind\n  }\n}];"
       },
       "id": "ing4-normalize",
       "name": "Normalize Drive Metadata",
@@ -139,7 +139,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const ingRaw = $('Register Drive Ingestion').first().json.res;\nconst ing = typeof ingRaw === 'string' ? JSON.parse(ingRaw) : ingRaw;\nconst ctx = $('Merge Context and Enforce Single Owner').first().json;\n\nif (ing.is_duplicate) {\n  return [{\n    json: {\n      ok: true,\n      status: 'duplicate',\n      ingestion_id: ing.ingestion_id,\n      message: 'Drive event already ingested'\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    ...ctx,\n    ingestion_id: ing.ingestion_id\n  }\n}];"
+        "jsCode": "const ingRaw = $('Register Drive Ingestion').first().json.res;\nconst ing = typeof ingRaw === 'string' ? JSON.parse(ingRaw) : ingRaw;\nconst ctx = $('Merge Context and Enforce Single Owner').first().json;\n\nreturn [{\n  json: {\n    ...ctx,\n    ingestion_id: ing.ingestion_id,\n    is_duplicate: Boolean(ing.is_duplicate)\n  }\n}];"
       },
       "id": "ing4-check-duplicate",
       "name": "Check Ingestion Duplicate",
@@ -148,6 +148,80 @@
       "position": [
         1240,
         300
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.is_duplicate }}",
+                    "rightValue": true,
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "duplicate"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.is_duplicate }}",
+                    "rightValue": false,
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "false"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "new"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ing4-duplicate-switch",
+      "name": "Branch on Duplicate vs New",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        1460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nreturn [{\n  json: {\n    ok: true,\n    status: 'duplicate',\n    ingestion_id: item.ingestion_id,\n    message: 'Duplicate drive event ignored cleanly with zero downloads'\n  }\n}];"
+      },
+      "id": "ing4-duplicate-noop",
+      "name": "Drive Duplicate Ignored",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1680,
+        180
       ]
     },
     {
@@ -166,8 +240,8 @@
       "type": "n8n-nodes-base.googleDrive",
       "typeVersion": 3,
       "position": [
-        1460,
-        300
+        1680,
+        380
       ],
       "credentials": {
         "googleDriveOAuth2Api": {
@@ -189,8 +263,8 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.1,
       "position": [
-        1680,
-        300
+        1900,
+        380
       ]
     }
   ],
@@ -263,6 +337,24 @@
     },
     "Check Ingestion Duplicate": {
       "main": [
+        [
+          {
+            "node": "Branch on Duplicate vs New",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Branch on Duplicate vs New": {
+      "main": [
+        [
+          {
+            "node": "Drive Duplicate Ignored",
+            "type": "main",
+            "index": 0
+          }
+        ],
         [
           {
             "node": "Download File From Drive",

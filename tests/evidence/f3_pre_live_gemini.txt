@@ -1,0 +1,19 @@
+F3 INTEGRAL PRE-LIVE CLOSURE — GEMINI 3.5 TRANSCRIBE EVIDENCE (PRELIVE-010 & PRELIVE-011)
+Timestamp: 2026-09-01T02:35:04.198249+00:00
+Workflow: WF-AI-001_TRANSCRIBE
+
+Official Contract Validations:
+- Exact MIME Set: audio/wav, audio/mp3, audio/aiff, audio/aac, audio/ogg, audio/flac, audio/mpeg, audio/m4a, audio/l16, audio/opus, audio/alaw, audio/mulaw, audio/webm.
+- Language Policy: language_codes: [] for autodetection (no hardcoded 'es-AR' assumption). Persists detected language or NULL.
+- File Resource & State: Validates file.state (FAILED throws GEMINI_FILE_STATE_FAILED).
+- Retry Policies: retryOnFail: false on Finalize and Interactions (disabled blind retries).
+
+Static Test Suite:
+..................
+----------------------------------------------------------------------
+Ran 18 tests in 0.003s
+
+OK
+
+
+Status: PASS

@@ -93,7 +93,7 @@ assert(s1.includes('GEMINI_UNSUPPORTED_AUDIO_MIME'), 'Unsupported MIME check enf
 assert(s1.includes('GEMINI_AUDIO_BINARY_MISSING'), 'Binary preservation error check in WF-AI-001');
 assert(s1.includes('Gemini Files API Start') && s1.includes('Extract Upload Session URL') && s1.includes('Gemini Files API Upload Finalize'), 'Gemini Files API resumable sequence present');
 assert(s1.includes('binaryData'), 'Gemini Files API Finalize uses binaryData content type');
-assert(s1.includes('language_codes') && s1.includes('es-AR'), 'Gemini Interactions uses language_codes array');
+assert(s1.includes('language_codes'), 'Gemini Interactions uses language_codes array for autodetection');
 assert(s1.includes('verbatim') && s1.includes('mode'), 'Gemini Interactions uses verbatim mode object');
 assert(!s1.includes('generateContent') && !s1.includes('inlineData'), 'No generateContent/inlineData in transcription workflow');
 

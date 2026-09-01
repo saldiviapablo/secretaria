@@ -1,0 +1,84 @@
+{
+  "version": "1.0",
+  "phase": "F3",
+  "side_effect_classifications": [
+    {
+      "node": "Telegram Get File",
+      "workflow": "WF-ING-003",
+      "classification": "READ_ONLY",
+      "retry_policy": "retryOnFail: true, maxTries: 3, waitBetweenTries: 2000"
+    },
+    {
+      "node": "Notify Telegram Large File",
+      "workflow": "WF-ING-003",
+      "classification": "NON_IDEMPOTENT_CREATE",
+      "retry_policy": "governed by subworkflow WF-TG-002"
+    },
+    {
+      "node": "Archive Original in Drive",
+      "workflow": "WF-ING-003",
+      "classification": "NON_IDEMPOTENT_CREATE",
+      "retry_policy": "retryOnFail: false (no blind retry on create)"
+    },
+    {
+      "node": "Download File From Drive",
+      "workflow": "WF-ING-004",
+      "classification": "READ_ONLY",
+      "retry_policy": "retryOnFail: true, maxTries: 3, waitBetweenTries: 3000"
+    },
+    {
+      "node": "List Root Files",
+      "workflow": "WF-ING-005",
+      "classification": "READ_ONLY",
+      "retry_policy": "retryOnFail: true, maxTries: 3, waitBetweenTries: 3000"
+    },
+    {
+      "node": "Download Missed File",
+      "workflow": "WF-ING-005",
+      "classification": "READ_ONLY",
+      "retry_policy": "retryOnFail: true, maxTries: 3, waitBetweenTries: 3000"
+    },
+    {
+      "node": "OpenAI GPT-Transcribe",
+      "workflow": "WF-AI-001",
+      "classification": "PAID_COMPUTE",
+      "retry_policy": "retryOnFail: true, maxTries: 3, waitBetweenTries: 3000 (standard network retry)"
+    },
+    {
+      "node": "Gemini Files API Start",
+      "workflow": "WF-AI-001",
+      "classification": "NON_IDEMPOTENT_CREATE",
+      "retry_policy": "retryOnFail: true, maxTries: 3, waitBetweenTries: 3000 (pre-upload session start)"
+    },
+    {
+      "node": "Gemini Files API Upload Finalize",
+      "workflow": "WF-AI-001",
+      "classification": "NON_IDEMPOTENT_CREATE",
+      "retry_policy": "retryOnFail: false (disabled blind finalize retry)"
+    },
+    {
+      "node": "Gemini Transcribe Interaction",
+      "workflow": "WF-AI-001",
+      "classification": "PAID_COMPUTE",
+      "retry_policy": "retryOnFail: false (disabled blind retry on 4xx)"
+    },
+    {
+      "node": "OpenAI Luna Vision Adapter",
+      "workflow": "WF-AI-003",
+      "classification": "PAID_COMPUTE",
+      "retry_policy": "retryOnFail: false"
+    },
+    {
+      "node": "Gemini Multimodal Vision Adapter",
+      "workflow": "WF-AI-003",
+      "classification": "PAID_COMPUTE",
+      "retry_policy": "retryOnFail: false"
+    },
+    {
+      "node": "All PostgreSQL RPC Nodes",
+      "workflow": "All",
+      "classification": "LOCAL_DB_TRANSACTION",
+      "retry_policy": "immediate fail / standard transaction rollback"
+    }
+  ]
+}

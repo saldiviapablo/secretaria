@@ -1,0 +1,19 @@
+F3 INTEGRAL PRE-LIVE CLOSURE — SUPABASE SCHEMA & RESET EVIDENCE
+Timestamp: 2026-09-01T02:35:04.198249+00:00
+PostgreSQL DEV Instance: 127.0.0.1:54322 (Supabase CLI)
+Schema: public (25 tables V1)
+Migration Head: 20260831000013_f3_media_drive_runtime.sql (13 migrations total)
+
+Resets Executed:
+1. First Reset: PASS (Clean schema recreation, 13 migrations applied, 25 tables confirmed)
+2. Integration Verification 1: PASS (Asset locations, SHA dedupe, Source texts versioning, RLS/RPC)
+3. Second Reset: PASS (Clean schema recreation, 13 migrations applied, 25 tables confirmed)
+4. Integration Verification 2: PASS (Repeated critical assertions 100% green)
+
+RPC Security:
+- public.set_ingestion_media_status: SECURITY DEFINER, search_path = '', service_role only
+- public.upsert_asset_with_location: SECURITY DEFINER, search_path = '', service_role only
+- public.create_source_text_variant: SECURITY DEFINER, search_path = '', service_role only
+- public.record_media_ai_usage: SECURITY DEFINER, search_path = '', service_role only
+
+Status: PASS

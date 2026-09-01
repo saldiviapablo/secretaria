@@ -1,0 +1,11 @@
+F3 INTEGRAL PRE-LIVE CLOSURE — FRESH N8N ADVISORY GATE EVIDENCE
+Timestamp: 2026-09-01T02:35:04.198249+00:00
+Checked Version: 2.35.4
+Advisory Findings:
+- P0 Vulnerabilities: 0
+- P1 Vulnerabilities: 0
+- P2 Vulnerabilities: 2 (Controlled: queryReplacement + Code Nodes)
+- Outdated instance notice: Next releases (2.35.7, 2.36.9) contain general bug fixes only (hasSecurityIssue: null, hasSecurityFix: null).
+- Zero new security advisories requiring a version upgrade above 2.35.4.
+
+Status: PASS

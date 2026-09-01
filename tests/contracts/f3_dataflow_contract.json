@@ -1,0 +1,350 @@
+{
+  "version": "1.0",
+  "phase": "F3",
+  "workflows": {
+    "WF-ING-003": {
+      "name": "WF-ING-003_PROCESS_MEDIA",
+      "nodes": [
+        {
+          "node_id": "ing3-trigger",
+          "name": "Execute Workflow Trigger",
+          "type": "n8n-nodes-base.executeWorkflowTrigger",
+          "typeVersion": 1.1,
+          "required_input_json": [
+            "user_id",
+            "ingestion_id",
+            "source_channel",
+            "payload"
+          ],
+          "required_input_binary": "optional (binary.data if pre-downloaded)",
+          "guaranteed_output_json": [
+            "user_id",
+            "ingestion_id",
+            "source_channel",
+            "payload"
+          ],
+          "guaranteed_output_binary": "preserves input binary",
+          "side_effect": "none",
+          "retry_policy": "none",
+          "idempotency_key": "ingestion_id"
+        },
+        {
+          "node_id": "ing3-gate",
+          "name": "Validate / Gate Media",
+          "type": "n8n-nodes-base.code",
+          "typeVersion": 2,
+          "required_input_json": [
+            "user_id",
+            "ingestion_id"
+          ],
+          "required_input_binary": "preserves binary",
+          "guaranteed_output_json": [
+            "user_id",
+            "ingestion_id",
+            "source_channel",
+            "payload",
+            "media_gate",
+            "media_route"
+          ],
+          "guaranteed_output_binary": "preserves binary",
+          "side_effect": "none",
+          "retry_policy": "none"
+        },
+        {
+          "node_id": "ing3-status-start",
+          "name": "Persist Processing / Fallback Status",
+          "type": "n8n-nodes-base.postgres",
+          "typeVersion": 2.5,
+          "required_input_json": [
+            "user_id",
+            "ingestion_id",
+            "media_gate"
+          ],
+          "guaranteed_output_json": [
+            "res"
+          ],
+          "guaranteed_output_binary": "none",
+          "side_effect": "update (public.set_ingestion_media_status)",
+          "retry_policy": "safe local db transaction"
+        },
+        {
+          "node_id": "ing3-source-switch",
+          "name": "Gate and Source Router",
+          "type": "n8n-nodes-base.switch",
+          "typeVersion": 3.2,
+          "side_effect": "none"
+        },
+        {
+          "node_id": "ing3-telegram-get",
+          "name": "Telegram Get File",
+          "type": "n8n-nodes-base.telegram",
+          "typeVersion": 1.2,
+          "required_input_json": [
+            "payload.telegram_file_id"
+          ],
+          "guaranteed_output_json": [
+            "telegram provider metadata"
+          ],
+          "guaranteed_output_binary": "binary.data downloaded",
+          "side_effect": "read (Telegram Bot API download)",
+          "retry_policy": "retryOnFail: true, maxTries: 3"
+        },
+        {
+          "node_id": "ing3-restore-tg-context",
+          "name": "Restore Telegram Media Context",
+          "type": "n8n-nodes-base.code",
+          "typeVersion": 2,
+          "guaranteed_output_json": [
+            "user_id",
+            "ingestion_id",
+            "correlation_id",
+            "source_channel",
+            "payload",
+            "telegram_provider_meta"
+          ],
+          "guaranteed_output_binary": "binary.data intact",
+          "side_effect": "none"
+        },
+        {
+          "node_id": "ing3-compute-sha",
+          "name": "Compute SHA-256 Preserving Binary",
+          "type": "n8n-nodes-base.code",
+          "typeVersion": 2,
+          "guaranteed_output_json": [
+            "sha256",
+            "exact_byte_length",
+            "all previous context"
+          ],
+          "guaranteed_output_binary": "binary.data intact (via getBinaryDataBuffer)",
+          "side_effect": "none"
+        },
+        {
+          "node_id": "ing3-archive-drive",
+          "name": "Archive Telegram Original in Drive",
+          "type": "n8n-nodes-base.googleDrive",
+          "typeVersion": 3,
+          "side_effect": "create (Google Drive file upload)",
+          "retry_policy": "retryOnFail: false (no blind duplicate upload)"
+        },
+        {
+          "node_id": "ing3-upsert-locations",
+          "name": "Upsert Asset and Locations",
+          "type": "n8n-nodes-base.code",
+          "typeVersion": 2,
+          "side_effect": "create/update (public.upsert_asset_with_location)",
+          "guaranteed_output_json": [
+            "asset_id",
+            "location_id",
+            "telegram_location_id",
+            "drive_location_id"
+          ]
+        },
+        {
+          "node_id": "ing3-child-gate",
+          "name": "Verify Child Persistence Before Completion",
+          "type": "n8n-nodes-base.code",
+          "typeVersion": 2,
+          "side_effect": "none",
+          "guaranteed_output_json": [
+            "persisted",
+            "source_text_id",
+            "asset_id",
+            "ingestion_id"
+          ]
+        },
+        {
+          "node_id": "ing3-status-completed",
+          "name": "Persist Completed Media Status",
+          "type": "n8n-nodes-base.postgres",
+          "typeVersion": 2.5,
+          "side_effect": "update (set_ingestion_media_status to 'completed')"
+        }
+      ]
+    },
+    "WF-ING-004": {
+      "name": "WF-ING-004_DRIVE_WATCH",
+      "nodes": [
+        {
+          "node_id": "ing4-normalize",
+          "name": "Normalize Drive Metadata",
+          "type": "n8n-nodes-base.code",
+          "typeVersion": 2,
+          "guaranteed_output_json": [
+            "drive_file_id",
+            "drive_version",
+            "modifiedTime",
+            "mime_type",
+            "media_kind"
+          ]
+        },
+        {
+          "node_id": "ing4-merge",
+          "name": "Merge Context and Enforce Single Owner",
+          "type": "n8n-nodes-base.code",
+          "typeVersion": 2,
+          "guaranteed_output_json": [
+            "user_id",
+            "source_channel",
+            "idempotency_key",
+            "captured_at",
+            "timezone",
+            "locale",
+            "payload"
+          ]
+        },
+        {
+          "node_id": "ing4-check-duplicate",
+          "name": "Check Ingestion Duplicate",
+          "type": "n8n-nodes-base.code",
+          "typeVersion": 2,
+          "guaranteed_output_json": [
+            "is_duplicate",
+            "ingestion_id"
+          ]
+        },
+        {
+          "node_id": "ing4-duplicate-switch",
+          "name": "Branch on Duplicate vs New",
+          "type": "n8n-nodes-base.switch",
+          "typeVersion": 3.2
+        },
+        {
+          "node_id": "ing4-download",
+          "name": "Download File From Drive",
+          "type": "n8n-nodes-base.googleDrive",
+          "typeVersion": 3,
+          "side_effect": "read (Google Drive download)"
+        }
+      ]
+    },
+    "WF-ING-005": {
+      "name": "WF-ING-005_DRIVE_RECONCILIATION",
+      "nodes": [
+        {
+          "node_id": "ing5-reconcile-filter",
+          "name": "Filter Unindexed or Modified Files",
+          "type": "n8n-nodes-base.code",
+          "typeVersion": 2,
+          "guaranteed_output_json": [
+            "array of candidate items without .first() mixing"
+          ]
+        },
+        {
+          "node_id": "ing5-restore-candidate",
+          "name": "Restore Candidate Context Post-Registration",
+          "type": "n8n-nodes-base.code",
+          "typeVersion": 2,
+          "guaranteed_output_json": [
+            "paired candidate context",
+            "ingestion_id",
+            "is_duplicate"
+          ]
+        }
+      ]
+    },
+    "WF-ING-006": {
+      "name": "WF-ING-006_DOCUMENT_EXTRACT",
+      "nodes": [
+        {
+          "node_id": "ing6-gate",
+          "name": "Document Safety Gate",
+          "type": "n8n-nodes-base.code",
+          "typeVersion": 2,
+          "side_effect": "none"
+        },
+        {
+          "node_id": "ing6-format-router",
+          "name": "Document Format Router",
+          "type": "n8n-nodes-base.switch",
+          "typeVersion": 3.2
+        },
+        {
+          "node_id": "ing6-extract-pdf",
+          "name": "Native Extract PDF",
+          "type": "n8n-nodes-base.extractFromFile",
+          "typeVersion": 1.1,
+          "operation": "pdf"
+        },
+        {
+          "node_id": "ing6-extract-text",
+          "name": "Native Extract Text / Code",
+          "type": "n8n-nodes-base.extractFromFile",
+          "typeVersion": 1.1,
+          "operation": "text"
+        },
+        {
+          "node_id": "ing6-normalize",
+          "name": "Normalize Extracted Text",
+          "type": "n8n-nodes-base.code",
+          "typeVersion": 2
+        },
+        {
+          "node_id": "ing6-source",
+          "name": "Persist Literal Extraction",
+          "type": "n8n-nodes-base.postgres",
+          "typeVersion": 2.5
+        }
+      ]
+    },
+    "WF-AI-001": {
+      "name": "WF-AI-001_TRANSCRIBE",
+      "nodes": [
+        {
+          "node_id": "ai1-gemini-validate-binary",
+          "name": "Validate Gemini Binary Metadata",
+          "type": "n8n-nodes-base.code",
+          "typeVersion": 2
+        },
+        {
+          "node_id": "ai1-gemini-start",
+          "name": "Gemini Files API Start",
+          "type": "n8n-nodes-base.httpRequest",
+          "typeVersion": 4.2
+        },
+        {
+          "node_id": "ai1-gemini-extract-url",
+          "name": "Extract Upload Session URL",
+          "type": "n8n-nodes-base.code",
+          "typeVersion": 2
+        },
+        {
+          "node_id": "ai1-gemini-finalize",
+          "name": "Gemini Files API Upload Finalize",
+          "type": "n8n-nodes-base.httpRequest",
+          "typeVersion": 4.2,
+          "retryOnFail": false
+        },
+        {
+          "node_id": "ai1-gemini-interact",
+          "name": "Gemini Transcribe Interaction",
+          "type": "n8n-nodes-base.httpRequest",
+          "typeVersion": 4.2,
+          "retryOnFail": false
+        }
+      ]
+    },
+    "WF-AI-003": {
+      "name": "WF-AI-003_ANALYZE_VISUAL",
+      "nodes": [
+        {
+          "node_id": "ai3-prep-binary",
+          "name": "Validate and Prepare Visual Binary",
+          "type": "n8n-nodes-base.code",
+          "typeVersion": 2
+        },
+        {
+          "node_id": "ai3-openai",
+          "name": "OpenAI Luna Vision Adapter",
+          "type": "n8n-nodes-base.httpRequest",
+          "typeVersion": 4.2
+        },
+        {
+          "node_id": "ai3-gemini",
+          "name": "Gemini Multimodal Vision Adapter",
+          "type": "n8n-nodes-base.httpRequest",
+          "typeVersion": 4.2
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,12 @@
+F3 INTEGRAL PRE-LIVE CLOSURE — LIFECYCLE PERSISTENCE GATE EVIDENCE (PRELIVE-015)
+Timestamp: 2026-09-01T02:35:04.198249+00:00
+Workflow: WF-ING-003_PROCESS_MEDIA
+
+Persistence Gate:
+- Node 'Verify Child Persistence Before Completion' validates that subworkflow (WF-AI-001, WF-AI-003, WF-ING-006) returned:
+  - ok === true
+  - status === 'completed'
+  - source_text_id is present and valid UUID.
+- If child fails or does not persist source_text: throws CHILD_WORKFLOW_PERSISTENCE_FAILED and blocks completed status.
+
+Status: PASS

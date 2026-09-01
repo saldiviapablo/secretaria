@@ -29,6 +29,19 @@
     },
     {
       "parameters": {
+        "jsCode": "const item = $input.first();\nconst j = item.json;\nconst p = j.payload || j;\nconst bin = item.binary?.data;\n\nif (!bin) {\n  throw new Error('IMAGE_BINARY_REQUIRED: missing binary.data for visual analysis');\n}\n\nlet buffer = null;\nif (this.helpers && typeof this.helpers.getBinaryDataBuffer === 'function') {\n  buffer = await this.helpers.getBinaryDataBuffer(0, 'data');\n} else if (bin.data) {\n  buffer = Buffer.isBuffer(bin.data) ? bin.data : Buffer.from(bin.data, 'base64');\n}\n\nif (!buffer || buffer.length === 0) {\n  throw new Error('IMAGE_BINARY_LENGTH_REQUIRED: image buffer is empty');\n}\n\nconst rawMime = (bin.mimeType || p.mime_type || '').trim().toLowerCase();\nif (!rawMime) {\n  throw new Error('IMAGE_MIME_TYPE_REQUIRED: image MIME type is missing');\n}\n\nconst allowedMimes = new Set([\n  'image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/heic', 'image/gif'\n]);\n\nif (!allowedMimes.has(rawMime)) {\n  throw new Error('UNSUPPORTED_IMAGE_MIME: MIME type ' + rawMime + ' is not supported for visual analysis');\n}\n\nconst base64Data = buffer.toString('base64');\n\nreturn [{\n  json: {\n    ...j,\n    mime_type: rawMime,\n    image_base64: base64Data,\n    image_data_url: 'data:' + rawMime + ';base64,' + base64Data\n  },\n  binary: item.binary\n}];"
+      },
+      "id": "ai3-prep-binary",
+      "name": "Validate and Prepare Visual Binary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        560,
+        300
+      ]
+    },
+    {
+      "parameters": {
         "rules": {
           "values": [
             {
@@ -84,7 +97,7 @@
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.2,
       "position": [
-        560,
+        780,
         300
       ]
     },
@@ -96,7 +109,7 @@
         "nodeCredentialType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"model\": \"gpt-5.6-luna\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": $json.vision_instruction\n    },\n    {\n      \"role\": \"user\",\n      \"content\": [\n        {\n          \"type\": \"text\",\n          \"text\": \"Extract all visible text and describe this visual content factually.\"\n        },\n        {\n          \"type\": \"image_url\",\n          \"image_url\": {\n            \"url\": \"data:\" + ($binary.data.mimeType || \"image/jpeg\") + \";base64,\" + $binary.data.data\n          }\n        }\n      ]\n    }\n  ],\n  \"max_tokens\": 1000\n}",
+        "jsonBody": "={\n  \"model\": \"gpt-5.6-luna\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": $json.vision_instruction\n    },\n    {\n      \"role\": \"user\",\n      \"content\": [\n        {\n          \"type\": \"text\",\n          \"text\": \"Extract all visible text and describe this visual content factually.\"\n        },\n        {\n          \"type\": \"image_url\",\n          \"image_url\": {\n            \"url\": $json.image_data_url\n          }\n        }\n      ]\n    }\n  ],\n  \"max_tokens\": 1000\n}",
         "options": {
           "timeout": 60000
         }
@@ -106,8 +119,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        780,
-        220
+        1000,
+        200
       ],
       "credentials": {
         "httpHeaderAuth": {
@@ -115,9 +128,7 @@
           "name": "SVIA_OPENAI_DEV_HEADER"
         }
       },
-      "retryOnFail": true,
-      "maxTries": 3,
-      "waitBetweenTries": 2000
+      "retryOnFail": false
     },
     {
       "parameters": {
@@ -127,7 +138,7 @@
         "nodeCredentialType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"contents\": [\n    {\n      \"parts\": [\n        {\n          \"text\": $json.vision_instruction + \"\\nExtract all visible text and describe this visual content factually.\"\n        },\n        {\n          \"inlineData\": {\n            \"mimeType\": $binary.data.mimeType || \"image/jpeg\",\n            \"data\": $binary.data.data\n          }\n        }\n      ]\n    }\n  ]\n}",
+        "jsonBody": "={\n  \"contents\": [\n    {\n      \"parts\": [\n        {\n          \"text\": $json.vision_instruction + \"\\nExtract all visible text and describe this visual content factually.\"\n        },\n        {\n          \"inlineData\": {\n            \"mimeType\": $json.mime_type,\n            \"data\": $json.image_base64\n          }\n        }\n      ]\n    }\n  ]\n}",
         "options": {
           "timeout": 60000
         }
@@ -137,8 +148,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        780,
-        420
+        1000,
+        400
       ],
       "credentials": {
         "httpHeaderAuth": {
@@ -146,9 +157,7 @@
           "name": "SVIA_GEMINI_DEV_HEADER"
         }
       },
-      "retryOnFail": true,
-      "maxTries": 3,
-      "waitBetweenTries": 2000
+      "retryOnFail": false
     },
     {
       "parameters": {
@@ -159,14 +168,14 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1000,
+        1220,
         300
       ]
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT public.create_source_text_variant($1::uuid, $2::uuid, $3::uuid, 'visual_description', $4, 'es-AR', $5, $6, '1.0', true) AS res;",
+        "query": "SELECT public.create_source_text_variant($1::uuid, $2::uuid, $3::uuid, 'visual_description', $4, NULL, $5, $6, '1.0', true) AS res;",
         "options": {
           "queryReplacement": "={{ [$json.user_id, $json.ingestion_id, $json.asset_id, $json.visual_text, $json.vision_provider, $json.vision_model] }}"
         }
@@ -176,7 +185,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
-        1220,
+        1440,
         300
       ],
       "credentials": {
@@ -199,7 +208,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
-        1440,
+        1660,
         300
       ],
       "credentials": {
@@ -218,7 +227,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1660,
+        1880,
         300
       ]
     }
@@ -236,6 +245,17 @@
       ]
     },
     "Validate Visual Contract + Untrusted Boundary": {
+      "main": [
+        [
+          {
+            "node": "Validate and Prepare Visual Binary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate and Prepare Visual Binary": {
       "main": [
         [
           {

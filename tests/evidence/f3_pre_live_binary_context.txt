@@ -1,0 +1,25 @@
+F3 INTEGRAL PRE-LIVE CLOSURE — BINARY & CONTEXT CONTINUITY EVIDENCE (PRELIVE-001 & PRELIVE-002)
+Timestamp: 2026-09-01T02:35:04.198249+00:00
+Workflows: WF-ING-003, WF-AI-001, WF-AI-003
+
+Architecture & Fix Verification:
+1. Crypto v1 Node Stripping Removed:
+   - Node 'SHA-256 Binary' in WF-ING-003 replaced by Code node 'Compute SHA-256 Preserving Binary'.
+   - Uses `await this.helpers.getBinaryDataBuffer(0, 'data')`.
+   - Preserves `item.binary` intact across hashing.
+2. Telegram Download Context Restoration:
+   - Node 'Restore Telegram Media Context' in WF-ING-003 links input canonical envelope context with Telegram file metadata.
+   - Preserves correlation_id, user_id, ingestion_id, source_channel, payload.
+3. Binary Access Standardization:
+   - All Code nodes requiring binary bytes invoke `this.helpers.getBinaryDataBuffer(0, 'data')`.
+   - Direct access to `$binary.data.data` or raw base64 strings removed.
+
+Test Suite Output:
+.........
+----------------------------------------------------------------------
+Ran 9 tests in 0.013s
+
+OK
+
+
+Status: PASS

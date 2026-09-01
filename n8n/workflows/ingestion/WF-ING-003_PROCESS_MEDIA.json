@@ -16,7 +16,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const item = $input.first();\nconst j = item.json;\nif (!j.user_id || !j.ingestion_id) throw new Error('F3_MEDIA_CONTRACT: user_id and ingestion_id required');\nconst p = j.payload || j;\nconst kind = p.media_kind || p.media?.media_kind;\nconst fileSize = Number(p.file_size ?? p.size_bytes ?? p.media?.file_size ?? 0);\nconst mime = String(p.mime_type || p.media?.mime_type || '').toLowerCase();\nconst name = String(p.original_filename || p.media?.original_filename || '').toLowerCase();\nconst source = j.source_channel || p.source_channel || 'telegram';\nconst max = 20 * 1024 * 1024; // Telegram standard Bot API getFile download limit verified at package build.\nconst forbiddenExt = /\\.(exe|com|bat|cmd|ps1|msi|scr|jar|js|vbs|wsf|sh|app|dmg|docm|xlsm|pptm|xlam|dotm|potm|ppam)$/i;\nconst forbiddenMime = /(x-msdownload|x-msdos-program|x-executable|x-sh|x-bat|javascript|vnd\\.ms-excel\\.sheet\\.macroEnabled|vnd\\.ms-word\\.document\\.macroEnabled|vnd\\.ms-powerpoint)/i;\nlet gate = 'download';\nif (source === 'telegram' && fileSize > max) gate = 'awaiting_external_file';\nif (forbiddenExt.test(name) || forbiddenMime.test(mime)) gate = 'quarantine';\nlet route = 'unsupported';\nif (kind === 'audio' || /^audio\\//.test(mime)) route = 'transcribe';\nelse if (kind === 'image' || /^image\\//.test(mime)) route = 'visual';\nelse if (kind === 'document' || /(pdf|text|word|officedocument|spreadsheet|csv|json|xml)/i.test(mime + ' ' + name)) route = 'document';\nreturn [{json:{...j,payload:{...p,media_kind:kind,file_size:fileSize,mime_type:mime,original_filename:p.original_filename || p.media?.original_filename || null},media_gate:gate,media_route:route},binary:item.binary}];"
+        "jsCode": "const item = $input.first();\nconst j = item.json;\nif (!j.user_id || !j.ingestion_id) {\n  throw new Error('F3_MEDIA_CONTRACT: user_id and ingestion_id required');\n}\nconst p = j.payload || j;\nconst kind = p.media_kind || p.media?.media_kind || null;\nconst fileSize = (typeof p.file_size === 'number' && p.file_size > 0) ? p.file_size : (typeof p.size_bytes === 'number' && p.size_bytes > 0 ? p.size_bytes : null);\nconst mime = String(p.mime_type || p.media?.mime_type || '').trim().toLowerCase();\nconst name = String(p.original_filename || p.media?.original_filename || '').trim().toLowerCase();\nconst source = j.source_channel || p.source_channel;\nif (!source) {\n  throw new Error('SOURCE_CHANNEL_REQUIRED: source_channel must be authenticated and present');\n}\n\nconst maxTelegramBytes = 20 * 1024 * 1024; // 20 MB Telegram Bot API limit\nconst forbiddenExt = /\\.(exe|com|bat|cmd|ps1|msi|scr|jar|js|vbs|wsf|sh|app|dmg|docm|xlsm|pptm|xlam|dotm|potm|ppam)$/i;\nconst forbiddenMime = /(x-msdownload|x-msdos-program|x-executable|x-sh|x-bat|javascript|vnd\\.ms-excel\\.sheet\\.macroEnabled|vnd\\.ms-word\\.document\\.macroEnabled|vnd\\.ms-powerpoint)/i;\n\nlet gate = 'download';\nif (source === 'telegram' && fileSize && fileSize > maxTelegramBytes) {\n  gate = 'awaiting_external_file';\n}\nif (forbiddenExt.test(name) || forbiddenMime.test(mime)) {\n  gate = 'quarantine';\n}\n\nlet route = 'unsupported';\nif (kind === 'audio' || /^audio\\//.test(mime)) {\n  route = 'transcribe';\n} else if (kind === 'image' || /^image\\//.test(mime)) {\n  route = 'visual';\n} else if (kind === 'document' || /(pdf|text|word|officedocument|spreadsheet|csv|json|xml|plain|html|rtf)/i.test(mime + ' ' + name)) {\n  route = 'document';\n}\n\nreturn [{\n  json: {\n    ...j,\n    source_channel: source,\n    payload: {\n      ...p,\n      media_kind: kind,\n      file_size: fileSize,\n      mime_type: mime || null,\n      original_filename: p.original_filename || p.media?.original_filename || null\n    },\n    media_gate: gate,\n    media_route: route\n  },\n  binary: item.binary\n}];"
       },
       "id": "ing3-gate",
       "name": "Validate / Gate Media",
@@ -30,9 +30,9 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT public.set_ingestion_media_status($1::uuid,$2::uuid,$3,NULL,NULL) AS res;",
+        "query": "SELECT public.set_ingestion_media_status($1::uuid, $2::uuid, $3, NULL, NULL) AS res;",
         "options": {
-          "queryReplacement": "={{ [$json.user_id,$json.ingestion_id,$json.media_gate === 'awaiting_external_file' ? 'awaiting_external_file' : ($json.media_gate === 'quarantine' ? 'error' : 'processing')] }}"
+          "queryReplacement": "={{ [$json.user_id, $json.ingestion_id, $json.media_gate === 'awaiting_external_file' ? 'awaiting_external_file' : ($json.media_gate === 'quarantine' ? 'error' : 'processing')] }}"
         }
       },
       "id": "ing3-status-start",
@@ -173,7 +173,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const ctx = $('Validate / Gate Media').first().json;\nconst notificationText = '⚠️ El archivo supera el límite de 20 MB de Telegram Bot API. Por favor, sube el archivo original directamente a la carpeta de Google Drive configurada (/SECRETARIA_VIRTUAL) para que pueda ser procesado.';\n\nreturn [{\n  json: {\n    correlation_id: ctx.correlation_id || ('corr_large_' + crypto.randomUUID()),\n    user_id: ctx.user_id,\n    delivery_class: 'reactive',\n    text: notificationText,\n    is_critical: false,\n    payload: {\n      text: notificationText,\n      delivery_class: 'reactive',\n      is_critical: false\n    }\n  }\n}];"
+        "jsCode": "const ctx = $('Validate / Gate Media').first().json;\nconst notificationText = '⚠️ El archivo supera el límite de 20 MB de Telegram Bot API. Por favor, sube el archivo original directamente a la carpeta de Google Drive configurada (/SECRETARIA_VIRTUAL) para que pueda ser procesado.';\n\nreturn [{\n  json: {\n    correlation_id: ctx.correlation_id || ('corr_large_' + ctx.ingestion_id),\n    user_id: ctx.user_id,\n    delivery_class: 'reactive',\n    text: notificationText,\n    is_critical: false,\n    payload: {\n      text: notificationText,\n      delivery_class: 'reactive',\n      is_critical: false\n    }\n  }\n}];"
       },
       "id": "ing3-build-large-notify",
       "name": "Build Large File Notification",
@@ -212,7 +212,7 @@
       "typeVersion": 1.2,
       "position": [
         980,
-        280
+        240
       ],
       "credentials": {
         "telegramApi": {
@@ -226,33 +226,102 @@
     },
     {
       "parameters": {
-        "jsCode": "return $input.all().map(i => ({json:i.json,binary:i.binary}));"
+        "jsCode": "const item = $input.first();\nconst tgMeta = item.json;\nconst prev = $('Validate / Gate Media').first().json;\n\nreturn [{\n  json: {\n    ...prev,\n    telegram_download_meta: tgMeta,\n    payload: {\n      ...prev.payload,\n      telegram_file_id: tgMeta.file_id || prev.payload?.telegram_file_id || prev.payload?.file_id,\n      telegram_file_unique_id: tgMeta.file_unique_id || null,\n      file_size: tgMeta.file_size || prev.payload?.file_size || null\n    }\n  },\n  binary: item.binary\n}];"
+      },
+      "id": "ing3-restore-tg-context",
+      "name": "Restore Telegram Media Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1180,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(i => ({\n  json: {\n    ...$('Validate / Gate Media').first().json,\n    ...i.json\n  },\n  binary: i.binary\n}));"
       },
       "id": "ing3-drive-passthrough",
       "name": "Drive Binary Passthrough",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        980,
-        440
+        1180,
+        380
       ]
     },
     {
       "parameters": {
-        "action": "hash",
-        "type": "SHA256",
-        "binaryData": true,
-        "dataPropertyName": "data",
-        "encoding": "hex",
-        "propertyName": "sha256"
+        "jsCode": "const crypto = require('crypto');\nconst item = $input.first();\nconst j = item.json;\n\nif (!item.binary || !item.binary.data) {\n  throw new Error('BINARY_DATA_REQUIRED: binary audio/media stream not found');\n}\n\nlet buffer = null;\nif (this.helpers && typeof this.helpers.getBinaryDataBuffer === 'function') {\n  buffer = await this.helpers.getBinaryDataBuffer(0, 'data');\n} else if (item.binary.data.data) {\n  buffer = Buffer.isBuffer(item.binary.data.data) ? item.binary.data.data : Buffer.from(item.binary.data.data, 'base64');\n}\n\nif (!buffer || buffer.length === 0) {\n  throw new Error('EMPTY_BINARY_BUFFER: binary media buffer is empty');\n}\n\nconst sha256 = crypto.createHash('sha256').update(buffer).digest('hex').toLowerCase();\nconst exactBytes = buffer.length;\n\nreturn [{\n  json: {\n    ...j,\n    sha256: sha256,\n    exact_byte_length: exactBytes,\n    payload: {\n      ...j.payload,\n      file_size: exactBytes\n    }\n  },\n  binary: item.binary\n}];"
       },
-      "id": "ing3-hash",
-      "name": "SHA-256 Binary",
-      "type": "n8n-nodes-base.crypto",
-      "typeVersion": 1,
+      "id": "ing3-compute-sha",
+      "name": "Compute SHA-256 Preserving Binary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
-        1200,
-        360
+        1380,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.source_channel }}",
+                    "rightValue": "telegram",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "telegram_archive"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.source_channel }}",
+                    "rightValue": "google_drive",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "drive_existing"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ing3-branch-archive",
+      "name": "Branch Source for Archive",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        1580,
+        300
       ]
     },
     {
@@ -261,7 +330,7 @@
         "operation": "upload",
         "authentication": "oAuth2",
         "inputDataFieldName": "data",
-        "name": "={{ $('Validate / Gate Media').first().json.payload.original_filename || ('svia-' + $('Validate / Gate Media').first().json.ingestion_id) }}",
+        "name": "={{ $json.payload.original_filename || ('svia-' + $json.ingestion_id) }}",
         "driveId": {
           "__rl": true,
           "mode": "list",
@@ -279,8 +348,8 @@
       "type": "n8n-nodes-base.googleDrive",
       "typeVersion": 3,
       "position": [
-        1420,
-        360
+        1780,
+        220
       ],
       "credentials": {
         "googleDriveOAuth2Api": {
@@ -288,38 +357,36 @@
           "name": "SVIA_DRIVE_DEV"
         }
       },
-      "retryOnFail": true,
-      "maxTries": 3,
-      "waitBetweenTries": 3000
+      "retryOnFail": false
     },
     {
       "parameters": {
-        "jsCode": "const item = $input.first();\nconst j = item.json;\nconst p = j.payload || {};\nconst hash = j.sha256 || j.data || j.hash;\nif (!hash || !/^[0-9a-f]{64}$/i.test(hash)) throw new Error('SHA256_REQUIRED');\nconst source = j.source_channel || 'telegram';\nlet externalId;\nif (source === 'telegram') {\n  externalId = `telegram:${p.telegram_chat_id || j.telegram_chat_id}:${p.telegram_message_id || j.message_id}:${p.telegram_file_id || p.file_id || p.media?.file_id}`;\n} else if (source === 'google_drive') {\n  const fileId = p.drive_file_id || p.id;\n  const ver = p.drive_version || p.version || p.modifiedTime;\n  if (!fileId || !ver) throw new Error('DRIVE_VERSIONED_EXTERNAL_ID_REQUIRED');\n  externalId = `drive:${fileId}:${ver}`;\n} else throw new Error('UNSUPPORTED_MEDIA_SOURCE');\nreturn [{json:{...j,sha256:String(hash).toLowerCase(),external_id:externalId,asset_id:j.asset_id || null},binary:item.binary}];"
+        "jsCode": "const item = $input.first();\nconst driveUpload = item.json;\nconst prev = $('Compute SHA-256 Preserving Binary').first().json;\nconst originalBinary = $('Compute SHA-256 Preserving Binary').first().binary;\nconst p = prev.payload || {};\n\nconst tgFileId = p.telegram_file_id || p.file_id || p.media?.file_id;\nconst tgChatId = p.telegram_chat_id || prev.telegram_chat_id;\nconst tgMsgId = p.telegram_message_id || prev.message_id;\nconst tgExternalId = `telegram:${tgChatId || '0'}:${tgMsgId || '0'}:${tgFileId || 'unknown'}`;\n\nconst driveFileId = driveUpload.id || p.drive_file_id || null;\nconst driveVer = driveUpload.modifiedTime || driveUpload.version || p.drive_version || '1';\nconst driveExternalId = driveFileId ? `drive:${driveFileId}:${driveVer}` : null;\n\nreturn [{\n  json: {\n    ...prev,\n    drive_upload_meta: driveUpload,\n    telegram_external_id: tgExternalId,\n    drive_external_id: driveExternalId,\n    payload: {\n      ...p,\n      drive_file_id: driveFileId,\n      drive_version: driveVer\n    }\n  },\n  binary: originalBinary\n}];"
       },
-      "id": "ing3-prepare",
-      "name": "Prepare Asset Identity",
+      "id": "ing3-prep-tg-locations",
+      "name": "Prepare Telegram & Drive Locations",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1640,
-        360
+        1980,
+        220
       ]
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT public.upsert_asset_with_location($1::uuid,$2::uuid,$3,$4,$5,$6,$7::bigint,$8::bigint,$9,$10,$11,$12,$13::bigint,$14::bigint,$15,$16::jsonb) AS res;",
+        "query": "SELECT public.upsert_asset_with_location($1::uuid, $2::uuid, $3, $4, $5, $6, $7::bigint, $8::bigint, 'telegram', $9, NULL, $10, $11::bigint, $12::bigint, NULL, $13::jsonb) AS res;",
         "options": {
-          "queryReplacement": "={{ [$json.user_id,$json.ingestion_id,$json.sha256,$json.payload.media_kind,$json.payload.original_filename,$json.payload.mime_type,$json.payload.file_size || null,$json.payload.duration_ms || null,$json.source_channel === 'google_drive' ? 'drive' : 'telegram',$json.external_id,$json.payload.drive_file_id || null,$json.payload.telegram_file_id || $json.payload.file_id || null,$json.payload.telegram_chat_id || $json.telegram_chat_id || null,$json.payload.telegram_message_id || $json.message_id || null,null,JSON.stringify({correlation_id:$json.correlation_id,source_channel:$json.source_channel})] }}"
+          "queryReplacement": "={{ [$json.user_id, $json.ingestion_id, $json.sha256, $json.payload.media_kind, $json.payload.original_filename, $json.payload.mime_type, $json.payload.file_size || null, $json.payload.duration_ms || null, $json.telegram_external_id, $json.payload.telegram_file_id, $json.payload.telegram_chat_id || null, $json.payload.telegram_message_id || null, JSON.stringify({correlation_id:$json.correlation_id,source_channel:'telegram'})] }}"
         }
       },
-      "id": "ing3-upsert",
-      "name": "Upsert Asset + Location RPC",
+      "id": "ing3-upsert-tg-loc",
+      "name": "Upsert Telegram Location RPC",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
-        1860,
-        360
+        2180,
+        220
       ],
       "credentials": {
         "postgres": {
@@ -330,15 +397,74 @@
     },
     {
       "parameters": {
-        "jsCode": "const item = $input.first();\nconst j = item.json;\nconst upsertRaw = j.res;\nconst upsert = typeof upsertRaw === 'string' ? JSON.parse(upsertRaw) : upsertRaw;\nconst prev = $('Prepare Asset Identity').first().json;\n\nreturn [{\n  json: {\n    ...prev,\n    asset_id: upsert.asset_id,\n    location_id: upsert.location_id\n  },\n  binary: item.binary\n}];"
+        "operation": "executeQuery",
+        "query": "SELECT public.upsert_asset_with_location($1::uuid, $2::uuid, $3, $4, $5, $6, $7::bigint, $8::bigint, 'drive', $9, $10, NULL, NULL, NULL, NULL, $11::jsonb) AS res;",
+        "options": {
+          "queryReplacement": "={{ [$json.user_id, $json.ingestion_id, $json.sha256, $json.payload.media_kind, $json.payload.original_filename, $json.payload.mime_type, $json.payload.file_size || null, $json.payload.duration_ms || null, $json.drive_external_id, $json.payload.drive_file_id, JSON.stringify({correlation_id:$json.correlation_id,source_channel:'google_drive',archive:true})] }}"
+        }
+      },
+      "id": "ing3-upsert-drive-loc",
+      "name": "Upsert Drive Location RPC",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        2380,
+        220
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "supabase_dev_connection",
+          "name": "Supabase DEV Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first();\nconst j = item.json;\nconst p = j.payload || {};\nconst hash = j.sha256;\nconst fileId = p.drive_file_id || p.id;\nconst ver = p.drive_version || p.version || p.modifiedTime;\nif (!fileId || !ver) {\n  throw new Error('DRIVE_VERSIONED_EXTERNAL_ID_REQUIRED');\n}\nconst externalId = `drive:${fileId}:${ver}`;\n\nreturn [{\n  json: {\n    ...j,\n    drive_external_id: externalId,\n    payload: {\n      ...p,\n      drive_file_id: fileId,\n      drive_version: ver\n    }\n  },\n  binary: item.binary\n}];"
+      },
+      "id": "ing3-prep-drive-only",
+      "name": "Prepare Drive Single Location",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1780,
+        380
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT public.upsert_asset_with_location($1::uuid, $2::uuid, $3, $4, $5, $6, $7::bigint, $8::bigint, 'drive', $9, $10, NULL, NULL, NULL, NULL, $11::jsonb) AS res;",
+        "options": {
+          "queryReplacement": "={{ [$json.user_id, $json.ingestion_id, $json.sha256, $json.payload.media_kind, $json.payload.original_filename, $json.payload.mime_type, $json.payload.file_size || null, $json.payload.duration_ms || null, $json.drive_external_id, $json.payload.drive_file_id, JSON.stringify({correlation_id:$json.correlation_id,source_channel:'google_drive'})] }}"
+        }
+      },
+      "id": "ing3-upsert-drive-only",
+      "name": "Upsert Drive Only Location RPC",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        2080,
+        380
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "supabase_dev_connection",
+          "name": "Supabase DEV Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first();\nconst j = item.json;\nconst upsertRaw = j.res;\nconst upsert = typeof upsertRaw === 'string' ? JSON.parse(upsertRaw) : upsertRaw;\nconst prev = $('Compute SHA-256 Preserving Binary').first().json;\nconst originalBinary = $('Compute SHA-256 Preserving Binary').first().binary;\n\nreturn [{\n  json: {\n    ...prev,\n    asset_id: upsert.asset_id,\n    location_id: upsert.location_id\n  },\n  binary: originalBinary\n}];"
       },
       "id": "ing3-attach-asset-id",
       "name": "Attach Asset ID to Payload",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1980,
-        360
+        2580,
+        300
       ]
     },
     {
@@ -410,6 +536,28 @@
               },
               "renameOutput": true,
               "outputKey": "document"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Validate / Gate Media').first().json.media_route }}",
+                    "rightValue": "unsupported",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "unsupported"
             }
           ]
         },
@@ -420,9 +568,32 @@
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.2,
       "position": [
-        2120,
-        360
+        2780,
+        300
       ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT public.set_ingestion_media_status($1::uuid, $2::uuid, 'error', NULL, 'UNSUPPORTED_MEDIA_TYPE') AS res;",
+        "options": {
+          "queryReplacement": "={{ [$json.user_id, $json.ingestion_id] }}"
+        }
+      },
+      "id": "ing3-status-unsupported",
+      "name": "Persist Unsupported Media Status",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        3000,
+        500
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "supabase_dev_connection",
+          "name": "Supabase DEV Database"
+        }
+      }
     },
     {
       "parameters": {
@@ -441,8 +612,8 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
-        2340,
-        240
+        3000,
+        140
       ]
     },
     {
@@ -462,8 +633,8 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
-        2340,
-        360
+        3000,
+        260
       ]
     },
     {
@@ -483,16 +654,29 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
-        2340,
-        480
+        3000,
+        380
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first();\nconst j = item.json;\nconst prev = $('Attach Asset ID to Payload').first().json;\n\nif (!j || !j.ok || j.status !== 'completed' || !j.source_text_id) {\n  throw new Error('CHILD_WORKFLOW_PERSISTENCE_FAILED: Subworkflow did not persist valid source_text_id');\n}\n\nreturn [{\n  json: {\n    ...prev,\n    child_output: j,\n    source_text_id: j.source_text_id\n  }\n}];"
+      },
+      "id": "ing3-verify-child",
+      "name": "Verify Child Persistence Before Completion",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3240,
+        260
       ]
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT public.set_ingestion_media_status($1::uuid,$2::uuid,'completed',NULL,NULL) AS res;",
+        "query": "SELECT public.set_ingestion_media_status($1::uuid, $2::uuid, 'completed', NULL, NULL) AS res;",
         "options": {
-          "queryReplacement": "={{ [$json.user_id || $('Validate / Gate Media').first().json.user_id, $json.ingestion_id || $('Validate / Gate Media').first().json.ingestion_id] }}"
+          "queryReplacement": "={{ [$json.user_id, $json.ingestion_id] }}"
         }
       },
       "id": "ing3-status-completed",
@@ -500,8 +684,8 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
-        2580,
-        360
+        3460,
+        260
       ],
       "credentials": {
         "postgres": {
@@ -586,7 +770,18 @@
       "main": [
         [
           {
-            "node": "SHA-256 Binary",
+            "node": "Restore Telegram Media Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Restore Telegram Media Context": {
+      "main": [
+        [
+          {
+            "node": "Compute SHA-256 Preserving Binary",
             "type": "main",
             "index": 0
           }
@@ -597,18 +792,36 @@
       "main": [
         [
           {
-            "node": "SHA-256 Binary",
+            "node": "Compute SHA-256 Preserving Binary",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "SHA-256 Binary": {
+    "Compute SHA-256 Preserving Binary": {
+      "main": [
+        [
+          {
+            "node": "Branch Source for Archive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Branch Source for Archive": {
       "main": [
         [
           {
             "node": "Archive Original in Drive",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Drive Single Location",
             "type": "main",
             "index": 0
           }
@@ -619,25 +832,58 @@
       "main": [
         [
           {
-            "node": "Prepare Asset Identity",
+            "node": "Prepare Telegram & Drive Locations",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Prepare Asset Identity": {
+    "Prepare Telegram & Drive Locations": {
       "main": [
         [
           {
-            "node": "Upsert Asset + Location RPC",
+            "node": "Upsert Telegram Location RPC",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Upsert Asset + Location RPC": {
+    "Upsert Telegram Location RPC": {
+      "main": [
+        [
+          {
+            "node": "Upsert Drive Location RPC",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert Drive Location RPC": {
+      "main": [
+        [
+          {
+            "node": "Attach Asset ID to Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Drive Single Location": {
+      "main": [
+        [
+          {
+            "node": "Upsert Drive Only Location RPC",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert Drive Only Location RPC": {
       "main": [
         [
           {
@@ -681,6 +927,13 @@
             "type": "main",
             "index": 0
           }
+        ],
+        [
+          {
+            "node": "Persist Unsupported Media Status",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
@@ -688,7 +941,7 @@
       "main": [
         [
           {
-            "node": "Persist Completed Media Status",
+            "node": "Verify Child Persistence Before Completion",
             "type": "main",
             "index": 0
           }
@@ -699,7 +952,7 @@
       "main": [
         [
           {
-            "node": "Persist Completed Media Status",
+            "node": "Verify Child Persistence Before Completion",
             "type": "main",
             "index": 0
           }
@@ -707,6 +960,17 @@
       ]
     },
     "WF-ING-006 DOCUMENT_EXTRACT": {
+      "main": [
+        [
+          {
+            "node": "Verify Child Persistence Before Completion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify Child Persistence Before Completion": {
       "main": [
         [
           {

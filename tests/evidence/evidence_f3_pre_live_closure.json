@@ -1,0 +1,150 @@
+{
+  "phase": "F3",
+  "stage": "INTEGRAL_PRE_LIVE_CLOSURE",
+  "timestamp": "2026-09-01T02:35:04.198249+00:00",
+  "n8n_version": "2.35.4",
+  "total_workflows": 23,
+  "f3_workflows": [
+    "WF-ING-003_PROCESS_MEDIA",
+    "WF-ING-004_DRIVE_WATCH",
+    "WF-ING-005_DRIVE_RECONCILIATION",
+    "WF-AI-001_TRANSCRIBE",
+    "WF-ING-006_DOCUMENT_EXTRACT",
+    "WF-AI-003_ANALYZE_VISUAL"
+  ],
+  "f4_workflows_present": 0,
+  "drive_root_decision": {
+    "id": "DRIVE-ROOT-001",
+    "status": "APPROVED_IMPLEMENTED",
+    "placeholder": "__SVIA_DRIVE_ROOT_FOLDER_ID__",
+    "renderer": "infra/scripts/render_n8n_workflows.py",
+    "env_hardening_preserved": true,
+    "n8n_block_env_access_in_node": true
+  },
+  "evidence_semantics": {
+    "audio_transcription_openai": {
+      "static_contract": "PASS",
+      "exact_node_semantics_contract": "PASS",
+      "local_n8n_dataflow_runtime": "PASS",
+      "local_protocol_mock": "NOT_APPLICABLE",
+      "db_integration": "PASS",
+      "runtime_import": "PASS",
+      "runtime_parity": "PASS",
+      "external_node_runtime": "BLOCKED_EXTERNAL_PRECONDITION",
+      "live_provider_call": "BLOCKED_EXTERNAL_PRECONDITION",
+      "live_path_persistence": "NOT_EXECUTED",
+      "credential_required": "SVIA_OPENAI_DEV_HEADER"
+    },
+    "audio_transcription_gemini": {
+      "static_contract": "PASS",
+      "exact_node_semantics_contract": "PASS",
+      "local_n8n_dataflow_runtime": "PASS",
+      "local_protocol_mock": "PASS",
+      "db_integration": "PASS",
+      "runtime_import": "PASS",
+      "runtime_parity": "PASS",
+      "external_node_runtime": "BLOCKED_EXTERNAL_PRECONDITION",
+      "live_provider_call": "BLOCKED_EXTERNAL_PRECONDITION",
+      "live_path_persistence": "NOT_EXECUTED",
+      "credential_required": "SVIA_GEMINI_DEV_HEADER"
+    },
+    "visual_analysis_openai_luna": {
+      "static_contract": "PASS",
+      "exact_node_semantics_contract": "PASS",
+      "local_n8n_dataflow_runtime": "PASS",
+      "local_protocol_mock": "NOT_APPLICABLE",
+      "db_integration": "PASS",
+      "runtime_import": "PASS",
+      "runtime_parity": "PASS",
+      "external_node_runtime": "BLOCKED_EXTERNAL_PRECONDITION",
+      "live_provider_call": "BLOCKED_EXTERNAL_PRECONDITION",
+      "live_path_persistence": "NOT_EXECUTED",
+      "credential_required": "SVIA_OPENAI_DEV_HEADER"
+    },
+    "visual_analysis_gemini_flash": {
+      "static_contract": "PASS",
+      "exact_node_semantics_contract": "PASS",
+      "local_n8n_dataflow_runtime": "PASS",
+      "local_protocol_mock": "NOT_APPLICABLE",
+      "db_integration": "PASS",
+      "runtime_import": "PASS",
+      "runtime_parity": "PASS",
+      "external_node_runtime": "BLOCKED_EXTERNAL_PRECONDITION",
+      "live_provider_call": "BLOCKED_EXTERNAL_PRECONDITION",
+      "live_path_persistence": "NOT_EXECUTED",
+      "credential_required": "SVIA_GEMINI_DEV_HEADER"
+    },
+    "google_drive_watch_and_reconciliation": {
+      "static_contract": "PASS",
+      "exact_node_semantics_contract": "PASS",
+      "local_n8n_dataflow_runtime": "PASS",
+      "local_protocol_mock": "NOT_APPLICABLE",
+      "db_integration": "PASS",
+      "runtime_import": "PASS",
+      "runtime_parity": "PASS",
+      "external_node_runtime": "BLOCKED_EXTERNAL_PRECONDITION",
+      "live_provider_call": "BLOCKED_EXTERNAL_PRECONDITION",
+      "live_path_persistence": "NOT_EXECUTED",
+      "credential_required": "SVIA_DRIVE_DEV"
+    },
+    "document_extract_and_macro_quarantine": {
+      "static_contract": "PASS",
+      "exact_node_semantics_contract": "PASS",
+      "local_n8n_dataflow_runtime": "PASS",
+      "local_protocol_mock": "NOT_APPLICABLE",
+      "db_integration": "PASS",
+      "runtime_import": "PASS",
+      "runtime_parity": "PASS",
+      "external_node_runtime": "PASS",
+      "live_provider_call": "PASS",
+      "live_path_persistence": "PASS"
+    },
+    "large_telegram_file_fallback_notification": {
+      "static_contract": "PASS",
+      "exact_node_semantics_contract": "PASS",
+      "local_n8n_dataflow_runtime": "PASS",
+      "local_protocol_mock": "NOT_APPLICABLE",
+      "db_integration": "PASS",
+      "runtime_import": "PASS",
+      "runtime_parity": "PASS",
+      "external_node_runtime": "BLOCKED_EXTERNAL_PRECONDITION",
+      "live_provider_call": "BLOCKED_EXTERNAL_PRECONDITION",
+      "live_path_persistence": "NOT_EXECUTED",
+      "credential_required": "SVIA_TELEGRAM_DEV"
+    }
+  },
+  "transcription_primary": null,
+  "transcription_benchmark": {
+    "status": "PENDING_EXTERNAL_BENCHMARK",
+    "candidates": [
+      "gpt-transcribe",
+      "gemini-3.5-transcribe"
+    ],
+    "reason": "Private human-evaluated dataset of 25-40 clips (45-90 min total) pending execution"
+  },
+  "p2_governance": {
+    "queryReplacement": "P2_PENDING_EXPLICIT_USER_ACCEPTANCE",
+    "code_nodes": "P2_PENDING_EXPLICIT_USER_ACCEPTANCE"
+  },
+  "n8n_audit_findings": {
+    "p0": 0,
+    "p1": 0,
+    "p2": 2,
+    "p3": 3
+  },
+  "controlled_reviews": [
+    {
+      "id": "CONTROLLED_REVIEW_REQUIRED_DOCX_EXTRACTION",
+      "topic": "Native extraction of Word .docx files in n8n 2.35.4 without external/community nodes",
+      "status": "RECORDED_BLOCKER",
+      "safe_fallback": "Preserve original .docx without execution, route to unsupported"
+    },
+    {
+      "id": "VISUAL_ROUTING_POLICY_NOT_CERTIFIED",
+      "topic": "Automatic classification heuristic between simple image (Luna) vs complex diagram (Flash)",
+      "status": "RECORDED_BLOCKER",
+      "safe_fallback": "Explicit provider/model parameter from parent or default to gpt-5.6-luna"
+    }
+  ],
+  "status": "F3 BLOCKED_EXTERNAL_PRECONDITION"
+}

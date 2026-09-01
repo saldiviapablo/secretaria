@@ -1,0 +1,8 @@
+F3 INTEGRAL PRE-LIVE CLOSURE — N8N RUNTIME IMPORT EVIDENCE
+Timestamp: 2026-09-01T02:35:04.198249+00:00
+n8n Container: secretaria-n8n-dev (v2.35.4)
+Binary Mode: filesystem
+Total Active Workflows: 23 (6 F3, 0 F4+)
+Import Source: build/rendered_workflows
+
+Status: PASS

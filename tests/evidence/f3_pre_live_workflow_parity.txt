@@ -1,0 +1,19 @@
+F3 INTEGRAL PRE-LIVE CLOSURE — DETERMINISTIC RUNTIME PARITY EVIDENCE
+Timestamp: 2026-09-01T02:35:04.198249+00:00
+Parity Evaluation:
+  runtime_logic == extract_logic_signature(deterministic_render(template + config))
+
+Normalization Applied:
+  - Technical metadata (execution IDs, DB IDs, node coordinates) normalized.
+  - Deployment-local Drive Root Folder ID mapped deterministically to __SVIA_DRIVE_ROOT_FOLDER_ID__.
+
+Comparison Result:
+  - WF-ING-003: PASS (100% logic match)
+  - WF-ING-004: PASS (100% logic match)
+  - WF-ING-005: PASS (100% logic match)
+  - WF-ING-006: PASS (100% logic match)
+  - WF-AI-001:  PASS (100% logic match)
+  - WF-AI-003:  PASS (100% logic match)
+  - 17 Base Workflows: PASS (100% logic match)
+
+Status: PASS (23/23 workflows match deterministic render)

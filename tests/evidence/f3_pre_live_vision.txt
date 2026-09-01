@@ -1,0 +1,11 @@
+F3 INTEGRAL PRE-LIVE CLOSURE — VISION BUFFER & MIME EVIDENCE (PRELIVE-012 & PRELIVE-013)
+Timestamp: 2026-09-01T02:35:04.198249+00:00
+Workflow: WF-AI-003_ANALYZE_VISUAL
+
+Vision Analysis Integrity:
+- Binary Access: Node 'Validate and Prepare Visual Binary' uses `getBinaryDataBuffer(0, 'data')`.
+- MIME Validation: Strictly checks allowed image formats (image/jpeg, image/png, image/webp, image/heic, image/gif).
+- Language Persistence: Language persisted as NULL (visual description).
+- Retries: retryOnFail: false on OpenAI and Gemini adapters.
+
+Status: PASS
