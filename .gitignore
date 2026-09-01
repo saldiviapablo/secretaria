@@ -48,3 +48,8 @@ supabase/.storage/
 .pytest_cache/
 .coverage
 htmlcov/
+
+# Build & rendered artifacts (DRIVE-ROOT-001)
+build/
+.rendered_workflows/
+dist/

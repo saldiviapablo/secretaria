@@ -919,6 +919,8 @@ Producción solo recibe smoke tests seguros.
 Evidence incluye commit/versiones/config.
 ### TST-DEC-020
 Si cambia el SRS, la matriz se actualiza antes de release.
+### TST-DEC-021
+Los workflows con binding a recursos externos de deployment (e.g. DRIVE-ROOT-001) deben superar la suite de renderizado determinista: (1) fail closed ante config faltante/vacía/inválida; (2) verificación de immutabilidad de plantillas Git; (3) validación de placeholders autorizados y ausencia de placeholders residuales; (4) paridad lógica runtime vs renderizado normalizado; (5) validación de hardening con N8N_BLOCK_ENV_ACCESS_IN_NODE; y (6) escaneo estático de secretos.
 
 # 43. Pendiente antes del RC
 

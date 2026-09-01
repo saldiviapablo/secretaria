@@ -57,17 +57,23 @@ assert(s3.includes('Notify Telegram Large File'), 'Large file Telegram notificat
 assert(s3.includes('Persist Completed Media Status'), 'Durable completion node present in WF-ING-003');
 assert(s3.includes('docm') && s3.includes('xlsm'), 'Macro formats in forbidden patterns in WF-ING-003');
 assert(s3.includes('WF-AI-001') && s3.includes('WF-AI-003') && s3.includes('WF-ING-006'), 'F3 subworkflow links');
+assert(s3.includes('__SVIA_DRIVE_ROOT_FOLDER_ID__'), 'Placeholder __SVIA_DRIVE_ROOT_FOLDER_ID__ present in WF-ING-003');
+assert(!s3.includes('$env.SVIA_DRIVE_ROOT_FOLDER_ID_DEV'), 'No $env Drive dependency in WF-ING-003');
 
 const ing4 = read('ingestion/WF-ING-004_DRIVE_WATCH.json');
 const s4 = JSON.stringify(ing4);
 assert(s4.includes('Normalize Drive Metadata'), 'Metadata preserved before owner resolution');
-assert(s4.includes('AMBIGUOUS_DRIVE_OWNER'), 'Single V1 owner enforcement in WF-ING-004');
+assert(s4.includes('__SVIA_DRIVE_ROOT_FOLDER_ID__'), 'Placeholder __SVIA_DRIVE_ROOT_FOLDER_ID__ present in WF-ING-004');
+assert(!s4.includes('$env.SVIA_DRIVE_ROOT_FOLDER_ID_DEV'), 'No $env Drive dependency in WF-ING-004');
 assert(s4.includes('DRIVE_VERSION_METADATA_REQUIRED'), 'Strict real version requirement in WF-ING-004');
+assert(s4.includes('AMBIGUOUS_DRIVE_OWNER'), 'Single V1 owner enforcement in WF-ING-004');
 
 const ing5 = read('ingestion/WF-ING-005_DRIVE_RECONCILIATION.json');
 const trig = ing5.nodes.find(n => n.type === 'n8n-nodes-base.scheduleTrigger');
 assert.strictEqual(trig.parameters.rule.interval[0].minutesInterval, 15, 'Reconciliation interval is 15 minutes');
 const s5 = JSON.stringify(ing5);
+assert(s5.includes('__SVIA_DRIVE_ROOT_FOLDER_ID__'), 'Placeholder __SVIA_DRIVE_ROOT_FOLDER_ID__ present in WF-ING-005');
+assert(!s5.includes('$env.SVIA_DRIVE_ROOT_FOLDER_ID_DEV'), 'No $env Drive dependency in WF-ING-005');
 assert(s5.includes('Query Existing Asset Locations'), 'Explicit asset_locations query in reconciliation');
 assert(s5.includes('DRIVE_VERSION_METADATA_REQUIRED'), 'Strict real version requirement in WF-ING-005');
 
@@ -81,7 +87,10 @@ assert(s1.includes('TRANSCRIPTION_PRIMARY_NOT_SELECTED'), 'Primary selection req
 assert(s1.includes('gpt-transcribe'), 'OpenAI gpt-transcribe candidate present');
 assert(s1.includes('gemini-3.5-transcribe'), 'Gemini gemini-3.5-transcribe candidate present');
 assert(s1.includes('Gemini Files API Start') && s1.includes('Extract Upload Session URL') && s1.includes('Gemini Files API Upload Finalize'), 'Gemini Files API resumable sequence present');
-assert(s1.includes('Gemini Transcribe Interaction') && s1.includes('transcription_config') && s1.includes('verbatim'), 'Gemini Interactions API verbatim structure present');
+assert(s1.includes('binaryData'), 'Gemini Files API Finalize uses binaryData content type');
+assert(s1.includes('language_codes') && s1.includes('es-AR'), 'Gemini Interactions uses language_codes array');
+assert(s1.includes('verbatim') && s1.includes('mode'), 'Gemini Interactions uses verbatim mode object');
+assert(!s1.includes('generateContent') && !s1.includes('inlineData'), 'No generateContent/inlineData in transcription workflow');
 
 const ai3 = read('ai/WF-AI-003_ANALYZE_VISUAL.json');
 const sAi3 = JSON.stringify(ai3);

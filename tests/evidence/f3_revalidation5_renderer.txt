@@ -1,0 +1,25 @@
+F3 FIFTH REVALIDATION — DRIVE-ROOT-001 DETERMINISTIC RENDERER EVIDENCE
+Timestamp: 2026-09-01T00:04:37.386963+00:00
+Approved Decision: DRIVE-ROOT-001
+Implementation: infra/scripts/render_n8n_workflows.py
+Placeholder: __SVIA_DRIVE_ROOT_FOLDER_ID__
+Authorized Files (4 substitutions total):
+  - ingestion/WF-ING-003_PROCESS_MEDIA.json (1)
+  - ingestion/WF-ING-004_DRIVE_WATCH.json (2)
+  - ingestion/WF-ING-005_DRIVE_RECONCILIATION.json (1)
+
+Hardening & Security Enforcement:
+- N8N_BLOCK_ENV_ACCESS_IN_NODE=true enforced in compose.dev.yml.
+- SVIA_DRIVE_ROOT_FOLDER_ID_DEV removed from container process.env.
+- Real Google Drive root ID remains strictly in local .env and is never versioned or printed.
+- Build/rendered artifacts ignored via .gitignore.
+
+Test Suite Output (7/7 Unit Tests PASS):
+.......
+----------------------------------------------------------------------
+Ran 7 tests in 0.399s
+
+OK
+
+
+Status: PASS

@@ -250,6 +250,17 @@ https://github.com/n8n-io/n8n/security/advisories/GHSA-wxwj-8wv6-vpw2
 https://github.com/n8n-io/n8n/security/advisories/GHSA-xwx6-jjhv-84p8
 ```
 
+## 1.4 Decisión controlada DRIVE-ROOT-001 — Configuración Determinista Pre-Import del Google Drive Root
+
+El usuario aprobó explícitamente la decisión `DRIVE-ROOT-001` para el aprovisionamiento de la carpeta raíz de Google Drive (`/SECRETARIA_VIRTUAL`):
+
+1. **Configuración Local del Deployment:** El ID de la carpeta raíz de Google Drive es una configuración específica del entorno de deployment (`SVIA_DRIVE_ROOT_FOLDER_ID_DEV` en `infra/docker/.env`).
+2. **Plantillas Git con Placeholder No Ejecutable:** Los archivos de workflow versionados en Git utilizan exclusivamente el placeholder no ejecutable `__SVIA_DRIVE_ROOT_FOLDER_ID__` en los 3 workflows de ingestión autorizados (`WF-ING-003`, `WF-ING-004`, `WF-ING-005`).
+3. **Renderizado Determinista Pre-Import:** El script versionado `infra/scripts/render_n8n_workflows.py` genera los workflows renderizados en un directorio temporal/build antes de su importación a n8n.
+4. **Aislamiento de Secretos y Hardening:** El ID real de la carpeta permanece fuera de Git y **NO se inyecta como variable de entorno al contenedor n8n**. La protección `N8N_BLOCK_ENV_ACCESS_IN_NODE=true` permanece estrictamente habilitada para evitar exponer secretos del proceso (`N8N_ENCRYPTION_KEY`, credenciales DB) a los Code nodes y expresiones.
+5. **Paridad Runtime == Git Renderizado:** La paridad técnica se certifica verificando que la lógica exportada de la instancia n8n coincide determinísticamente con el resultado de `deterministic_render(template + config)`.
+6. **Comportamiento Fail-Closed:** La ausencia, vacío o formato inválido de `SVIA_DRIVE_ROOT_FOLDER_ID_DEV` detiene de inmediato el proceso de deployment con error `DRIVE_ROOT_CONFIG_REQUIRED`.
+
 ---
 
 # 2. PostgreSQL interno de n8n

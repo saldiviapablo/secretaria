@@ -28,7 +28,8 @@ assert "telegram_chat_id" in tgtext and "telegram_user_id" in tgtext
 assert "process_media" in tgtext
 
 alltxt="\n".join((wfroot/e["file"]).read_text(encoding="utf-8") for e in m["workflows"] if e["phase"]=="F3")
-assert "SVIA_DRIVE_ROOT_FOLDER_ID_DEV" in alltxt
+assert "__SVIA_DRIVE_ROOT_FOLDER_ID__" in alltxt
+assert "$env.SVIA_DRIVE_ROOT_FOLDER_ID_DEV" not in alltxt
 assert "SVIA_DRIVE_ROOT_FOLDER_ID_DEV__REQUIRED_BINDING" not in alltxt
 assert "gemini-3.5-transcribe" in alltxt
 assert "gpt-transcribe" in alltxt

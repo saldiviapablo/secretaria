@@ -1,0 +1,31 @@
+F3 FIFTH REVALIDATION — GEMINI 3.5 TRANSCRIBE STATIC CONTRACT EVIDENCE
+Timestamp: 2026-09-01T00:04:37.386963+00:00
+Workflow: n8n/workflows/ai/WF-AI-001_TRANSCRIBE.json
+Candidate Model: gemini-3.5-transcribe
+Google Gemini REST Protocol Alignment:
+1. Resumable Files API Upload Start:
+   - Method: POST https://generativelanguage.googleapis.com/upload/v1beta/files
+   - Headers: X-Goog-Upload-Protocol: resumable, X-Goog-Upload-Command: start, Length & MIME headers
+   - Captures x-goog-upload-url response header.
+2. Binary Upload Finalize:
+   - Method: POST to captured upload session URL
+   - ContentType: binaryData (inputDataFieldName: data)
+   - Headers: X-Goog-Upload-Command: upload, finalize; X-Goog-Upload-Offset: 0
+   - Captures file.uri.
+3. Interactions API Request:
+   - Method: POST https://generativelanguage.googleapis.com/v1beta/interactions
+   - Model: gemini-3.5-transcribe
+   - Input: [{ type: "audio", uri: file_uri, mime_type: mime_type }]
+   - Generation Config: transcription_config with language_codes: ["es-AR"] (array) and mode: { "type": "verbatim" } (object)
+4. Prohibited Elements Verified Absent:
+   - No generateContent, no inlineData, no legacy string language_code / mode: "verbatim", no hardcoded keys.
+
+Unit Test Suite Output (8/8 Tests PASS):
+........
+----------------------------------------------------------------------
+Ran 8 tests in 0.002s
+
+OK
+
+
+Status: PASS

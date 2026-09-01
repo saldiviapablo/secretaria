@@ -1776,3 +1776,29 @@ Producción/NAS/EXISTING_OPERATIONAL_N8N/Supabase PROD/Immich/Cloudflare: NO MOD
 - **Producción:** NAS UGREEN, Supabase PROD, Immich y Cloudflare permanecen totalmente intactos y fuera de alcance.
 - **Fase F4 (Memoria Semántica):** NO INICIADA.
 
+---
+
+## CHG-2026-08-31-026 — F3 Audio + Drive — Quinta Revalidación Correctiva, Implementación Revisión Controlada DRIVE-ROOT-001 y Certificación Estática Final Gemini 3.5 Transcribe
+
+**Tipo:** CONTROLLED REVIEW / SECURITY / DEPLOYMENT / RUNTIME
+**Estado:** F3 BLOCKED_EXTERNAL_PRECONDITION
+**Motivo:** Quinta revalidación correctiva e implementación formal de la revisión controlada `DRIVE-ROOT-001` aprobada explícitamente por el usuario ("Apruebo DRIVE-ROOT-001: renderizado determinista pre-import, manteniendo bloqueado $env y sin cambiar las 25 tablas"). Se implementaron las siguientes acciones definitivas: (1) sustitución en plantillas Git del acceso a `$env.SVIA_DRIVE_ROOT_FOLDER_ID_DEV` por el placeholder no ejecutable `__SVIA_DRIVE_ROOT_FOLDER_ID__` en los 3 workflows autorizados (`WF-ING-003`, `WF-ING-004`, `WF-ING-005`); (2) creación del script versionado `infra/scripts/render_n8n_workflows.py` para renderizado determinista pre-import con validación fail-closed y verificación de inmutabilidad de plantillas fuente; (3) endurecimiento de seguridad en Docker Compose manteniendo `N8N_BLOCK_ENV_ACCESS_IN_NODE=true` y eliminando la inyección innecesaria de `SVIA_DRIVE_ROOT_FOLDER_ID_DEV` al proceso del contenedor; (4) corrección definitiva del contrato estático de Gemini 3.5 Transcribe en `WF-AI-001` (`language_codes` como array `["es-AR"]`, modo verbatim como objeto `{ "type": "verbatim" }` y envío binario en `Gemini Files API Upload Finalize` con `contentType: binaryData`); (5) verificación de paridad determinista (100% logic parity entre el renderizado normalizado y el runtime exportado); (6) documentación de la decisión en `10_DEPLOYMENT.md`, `08_SECURITY.md` y `09_TEST_PLAN.md`; y (7) generación de evidencia completa en `tests/evidence/f3_revalidation5_*` y `evidence_f3_revalidation5.json`.
+**Solicitado por:** Antigravity / Prompt Final Quinta Revalidación Correctiva F3 (Revisión Controlada DRIVE-ROOT-001)
+**Documentos afectados:** `11_CHANGELOG.md`, `10_DEPLOYMENT.md`, `08_SECURITY.md`, `09_TEST_PLAN.md`, `.gitignore`, `infra/docker/compose.dev.yml`, `infra/scripts/render_n8n_workflows.py`, `n8n/workflows/ai/WF-AI-001_TRANSCRIBE.json`, `n8n/workflows/ingestion/WF-ING-003_PROCESS_MEDIA.json`, `n8n/workflows/ingestion/WF-ING-004_DRIVE_WATCH.json`, `n8n/workflows/ingestion/WF-ING-005_DRIVE_RECONCILIATION.json`, `tests/security/test_drive_root_renderer.py`, `tests/security/test_f3_package_config.py`, `tests/workflows/test_gemini_static_contract.py`, `tests/integration/test_f3_media_drive.js`, `tests/evidence/f3_revalidation5_*`, `tests/evidence/evidence_f3_revalidation5.json`
+
+### Resoluciones Factuales y Estado de Verificación:
+1. **DRIVE-ROOT-001 Implementado:** El ID real de la carpeta raíz de Google Drive permanece en `infra/docker/.env` fuera de Git. Las plantillas versionadas utilizan `__SVIA_DRIVE_ROOT_FOLDER_ID__` y el renderer `render_n8n_workflows.py` genera los workflows en `build/rendered_workflows` (ignorado en `.gitignore`).
+2. **Hardening de Entorno Preservado:** Se mantiene activa la protección `N8N_BLOCK_ENV_ACCESS_IN_NODE=true` en `compose.dev.yml`, bloqueando el acceso a variables de proceso desde expresiones y Code nodes.
+3. **Gemini 3.5 Transcribe Static Contract Certificado:** Adaptador en `WF-AI-001` verificado con 8 unit tests automatizados cubriendo el protocolo Files API resumable, `contentType: binaryData`, `language_codes: ["es-AR"]` y `mode: { type: "verbatim" }`.
+4. **Paridad Lógica Runtime 100%:** Se demostró paridad estricta entre la lógica de las plantillas renderizadas y los workflows importados/exportados en n8n 2.35.4.
+5. **Base de Datos y Regresión:** 25 tablas públicas V1 en Supabase DEV (migración 13 head, 2 resets exitosos, 67 unit tests Python y suites F1/F2 100% PASS).
+
+### Gobernanza y Estado del Sistema:
+- **Estado de Fase:** `F3 BLOCKED_EXTERNAL_PRECONDITION`
+- **Total Workflows:** Exactamente 23 workflows activos en n8n 2.35.4 (6 F3, 0 F4+).
+- **Tablas en DB:** Exactamente 25 tablas públicas V1 en Supabase DEV.
+- **Benchmark Transcripción:** `transcription_primary = null` (Pendiente de dataset privado con evaluación humana según `AI-DEC-007`).
+- **Gobernanza P2:** `queryReplacement` y `Code Nodes` en `P2_PENDING_EXPLICIT_USER_ACCEPTANCE`.
+- **Producción:** NAS UGREEN, Supabase PROD, Immich y Cloudflare permanecen totalmente intactos y fuera de alcance.
+- **Fase F4 (Memoria Semántica):** NO INICIADA.
+

@@ -2832,6 +2832,18 @@ La configuración real deberá volver a verificarse en `10_DEPLOYMENT.md` porque
 
 ---
 
+# 108.1 Seguridad de Entorno y Configuración DRIVE-ROOT-001
+
+Para preservar el hardening estricto del runtime de n8n y evitar la exposición indebida de secretos del proceso a expressions y Code Nodes, se establecen las siguientes reglas operativas bajo `DRIVE-ROOT-001`:
+
+1. **Bloqueo Inviolable de `$env` en n8n:** La variable de configuración `N8N_BLOCK_ENV_ACCESS_IN_NODE=true` se mantiene obligatoriamente activa en Docker Compose. Bajo ninguna circunstancia se desactiva esta protección para resolver rutas o configuraciones de carpetas.
+2. **No Exposición de Secretos Globales:** Se prohíbe inyectar variables de configuración no secreta o rutas al entorno del contenedor si ello pudiera debilitar el aislamiento de `process.env` (que aloja `N8N_ENCRYPTION_KEY` y passwords de bases de datos).
+3. **Aislamiento del Renderer:** El script determinista `infra/scripts/render_n8n_workflows.py` lee exclusivamente la clave `SVIA_DRIVE_ROOT_FOLDER_ID_DEV` desde el archivo local de deployment `.env`. No imprime ni registra el contenido de dicho archivo.
+4. **No Versionado de Salidas Renderizadas:** Los artefactos generados por el renderer se ubican en directorios ignorados por Git (`build/`, `.rendered_workflows/`). El repositorio Git versiona únicamente plantillas deterministas con placeholders (`__SVIA_DRIVE_ROOT_FOLDER_ID__`).
+5. **Secret Scan Obligatorio:** Antes de cada despliegue o commit, se ejecuta un escaneo estático automatizado para garantizar 0 fugas de claves, tokens o IDs sensibles.
+
+---
+
 # 108. Próximo documento
 
 El siguiente documento será:

@@ -14,7 +14,7 @@
         "folderToWatch": {
           "__rl": true,
           "mode": "id",
-          "value": "={{ $env.SVIA_DRIVE_ROOT_FOLDER_ID_DEV }}"
+          "value": "__SVIA_DRIVE_ROOT_FOLDER_ID__"
         },
         "event": "fileCreated",
         "options": {}
@@ -47,7 +47,7 @@
         "folderToWatch": {
           "__rl": true,
           "mode": "id",
-          "value": "={{ $env.SVIA_DRIVE_ROOT_FOLDER_ID_DEV }}"
+          "value": "__SVIA_DRIVE_ROOT_FOLDER_ID__"
         },
         "event": "fileUpdated",
         "options": {}
